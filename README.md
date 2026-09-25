@@ -24,7 +24,7 @@ public/                      Tudo que o servidor expõe como estático
       httpClient.js               Fetch + tratamento de erro generico
       ativosApi.js                 Endpoints de /ativos
       ativosMonitoradosApi.js       Endpoint de /ativos/registrados
-      analisesApi.js                Endpoint de /analises
+      analisesApi.js                Endpoint de /analises (analise consolidada e fundamentos)
       historicoApi.js              Endpoint de historico OHLCV
     utils/
       recomendacaoBadge.js          Recomendacao -> classe de badge Bootstrap (compartilhado)
@@ -33,7 +33,8 @@ public/                      Tudo que o servidor expõe como estático
       AtivoSearchForm.js            Captura simbolo, dispara evento
       AtivoQuoteCard.js             Renderiza cotacao
       AnaliseResultCard.js          Renderiza decisao consolidada
-      AtivosMonitoradosTable.js     Renderiza a carteira monitorada + decisao de cada ativo
+      AtivosMonitoradosTable.js     Renderiza a carteira monitorada + linha expansivel
+      FundamentosCard.js            Renderiza os fundamentos brutos de um unico ciclo
       HistoricoTable.js             Renderiza serie OHLCV
       StatusAlert.js                 Alerta de sucesso/erro/aviso
       LoadingSpinner.js              Indicador de carregamento
@@ -43,6 +44,7 @@ public/                      Tudo que o servidor expõe como estático
       ConsultaPage.js                 Orquestra a tela de consulta
       CadastroPage.js                 Orquestra a tela de cadastro
       AtivosMonitoradosPage.js        Orquestra a aba "Monitorados"
+      MetodologiaPage.js              Orquestra a aba "Como funciona"
     router.js                          Rota (hash) -> pagina
     main.js                            Ponto de entrada
 proxy/
@@ -116,6 +118,12 @@ Se nenhum dos dois responder, o servidor sobe mesmo assim (modo degradado): a UI
 Cadastrar um ativo em `#/cadastro` persiste no backend e o coloca em monitoramento recorrente (cotação + histórico a cada 30s, sem intervenção manual). A aba `#/monitorados` lista a carteira (`GET /ativos/registrados`) e, para cada ativo, busca em paralelo a última decisão consolidada (`GET /analises/{simbolo}/analise`) — mesma rota já usada em `#/consulta`. Um ativo recém-cadastrado ou sem análise ainda aparece como "Sem análise ainda"; a busca de cada símbolo falha de forma independente, então isso nunca trava a lista inteira.
 
 Não há, de propósito, UI para desativar/pausar um ativo monitorado nem para configurar o intervalo — fora do escopo pedido (ver `TASK-05` no `SPEC.md`).
+
+Clicar em qualquer linha da tabela expande, abaixo dela, a mesma visão estruturada da tela de Consulta (cotação, decisão, histórico) — clicar de novo recolhe. Os dados de cotação/histórico são buscados só na primeira expansão de cada ativo (com cache); a decisão é reaproveitada da própria listagem.
+
+## Aba "Como funciona" (`#/metodologia`)
+
+Explica, em texto, as fórmulas que o `gerar-insights` usa (valuation de Graham, earnings yield, contexto técnico de 52 semanas, sinal técnico de série, regras de recomendação/risco/confiança) e, a partir de um símbolo buscado, mostra `GET /analises/{simbolo}/fundamentos` — o retrato **de um único ciclo** (sem média), diferente da decisão consolidada mostrada em Consulta/Monitorados.
 
 Detalhes de arquitetura, contratos consumidos e backlog completo estão em [`SPEC.md`](./SPEC.md).
 

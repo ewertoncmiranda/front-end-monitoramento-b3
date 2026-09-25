@@ -19,6 +19,10 @@ export class BottomNav extends BaseComponent {
             <div>📋</div>
             <small>Monitorados</small>
           </a>
+          <a class="nav-link text-center" href="#/metodologia">
+            <div>📐</div>
+            <small>Como funciona</small>
+          </a>
         </div>
       </nav>
     `;

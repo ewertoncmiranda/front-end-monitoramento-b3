@@ -53,6 +53,22 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 
 **Implementado e testado** (rebuild da imagem, container na rede do ecossistema): `#/monitorados` lista os ativos reais cadastrados (`MGLU3`, `WEGE3`), decisão consolidada aparece pra quem já tem `insight_acao` (`MGLU3` → `VENDA_VALUATION`, 100% confiança), "Sem análise ainda" pra quem não tem; confirmado por log do `AgendadorAtivos` que o reprocessamento a cada ~30s ocorre sem ação do usuário; testado em viewport mobile (375×812) com scroll horizontal da tabela.
 
+### 2.3 Linha expansível na tabela de Monitorados + aba "Como funciona" (2026-09-25)
+
+**Motivação:** o usuário pediu (1) poder expandir uma linha da tabela de Monitorados pra ver a mesma visão estruturada da tela de Consulta, sem sair da lista, e (2) uma aba explicando a metodologia (fórmulas) e mostrando os números crus por trás da última decisão de um ativo — complementando a decisão *mediada* que já aparece em Consulta/Monitorados.
+
+**Linha expansível (`AtivosMonitoradosTable`):**
+- Clique em qualquer linha alterna um estado de expansão por símbolo (`Set` em `this._expandidos`); a seta (▸/▾) na primeira coluna reflete o estado. Um único listener de `click` no elemento host (não por linha) sobrevive aos re-renders, porque `this.innerHTML = ...` recria os `<tr>` mas não desliga listeners do host.
+- Ao expandir pela primeira vez, busca `GET /ativos/robusto/{simbolo}` e o histórico OHLCV (mesmas chamadas de `ConsultaPage`, mesmo efeito colateral conhecido de publicar em SQS) e guarda em cache por símbolo (`this._detalhesPorSimbolo`) — reabrir não refaz a chamada. A decisão (`AnaliseResultCard`) reaproveita o `analise` já buscado para a própria linha, sem chamada extra.
+- A linha de detalhe reaproveita os componentes existentes (`ativo-quote-card`, `analise-result-card`, `historico-table`) dentro de um `<tr><td colspan="8">` — zero duplicação de renderização.
+
+**Aba "Como funciona" (`MetodologiaPage`, rota `#/metodologia`):**
+- Conteúdo estático explicando as fórmulas do `gerar-insights` (valuation Graham, earnings yield/P/L, contexto técnico 52 semanas, sinal técnico de série, regras de recomendação/risco/confiança) — meramente documental, não chama API.
+- Um `AtivoSearchForm` + `FundamentosCard` busca `GET /analises/{simbolo}/fundamentos` (novo endpoint) e mostra o retrato **de um único ciclo**, sem média — os cenários completos de preço justo Graham, classificações, contexto técnico e (quando há série histórica) o sinal técnico (média móvel, z-score, score de volume), insights e fatores de decisão que o `gerar-insights` gerou naquele ciclo.
+- `FundamentosCard` renderiza o campo `detalhes` do DTO genericamente (não assume um schema Java fixo — é o mesmo JSON que o Python grava), então novos campos que o `gerar-insights` passar a gravar aparecem automaticamente se a página for atualizada para lê-los; campos ausentes (ex.: sem sinal técnico por falta de histórico) são tratados com fallback textual, não erro.
+
+**Implementado e testado**: expansão de `PETR4` na tabela de Monitorados mostrando cotação real, decisão e 22 candles de histórico; colapso funcionando; testado em mobile (375×812, card de detalhe ocupa a largura toda abaixo da linha). Aba "Como funciona" testada buscando `PETR4` — retornou os 3 cenários Graham, earnings yield 21.53%, zona 52 semanas `PROXIMO_DA_MAXIMA`, sinal técnico com 20 amostras, 3 insights e fatores de decisão.
+
 ## 3. Estrutura de componentes
 
 | Componente/módulo | Responsabilidade única | Arquivo |
@@ -71,7 +87,8 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | `AtivoSearchForm` | Capturar símbolo digitado, disparar evento | `js/components/AtivoSearchForm.js` |
 | `AtivoQuoteCard` | Renderizar cotação (`Ativo`) | `js/components/AtivoQuoteCard.js` |
 | `AnaliseResultCard` | Renderizar decisão consolidada (`RespostaAnaliseIaDTO`) | `js/components/AnaliseResultCard.js` |
-| `AtivosMonitoradosTable` | Renderizar a carteira monitorada + decisão de cada ativo | `js/components/AtivosMonitoradosTable.js` |
+| `AtivosMonitoradosTable` | Renderizar a carteira monitorada + decisão de cada ativo; linha expansível com cotação/decisão/histórico | `js/components/AtivosMonitoradosTable.js` |
+| `FundamentosCard` | Renderizar o retrato bruto (um único ciclo) de fundamentos e cálculos de um ativo | `js/components/FundamentosCard.js` |
 | `HistoricoTable` | Renderizar série OHLCV | `js/components/HistoricoTable.js` |
 | `StatusAlert` | Alerta de sucesso/erro/aviso | `js/components/StatusAlert.js` |
 | `LoadingSpinner` | Indicador de carregamento | `js/components/LoadingSpinner.js` |
@@ -80,6 +97,7 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | `ConsultaPage` | Orquestrar busca + renderização da consulta | `js/pages/ConsultaPage.js` |
 | `CadastroPage` | Orquestrar o registro de um ativo | `js/pages/CadastroPage.js` |
 | `AtivosMonitoradosPage` | Orquestrar a listagem da carteira monitorada + busca da decisão de cada ativo | `js/pages/AtivosMonitoradosPage.js` |
+| `MetodologiaPage` | Explicar a metodologia (fórmulas) e orquestrar a busca de fundamentos de um ativo | `js/pages/MetodologiaPage.js` |
 | `router` | Rota (hash) → página | `js/router.js` |
 | `main` | Ponto de entrada (registra componentes, inicia router) | `js/main.js` |
 
@@ -89,13 +107,14 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 
 | Rota | Método | Usado em | Observação |
 | --- | --- | --- | --- |
-| `/ativos/robusto/{ativo}` | GET | `ConsultaPage` | Traz `Ativo` + publica série histórica no backend (efeito colateral do próprio backend, não deste front). |
-| `/analises/{simbolo}/analise` | GET | `ConsultaPage`, `AtivosMonitoradosPage` | Decisão consolidada; se falhar, a tela continua exibindo o resto (`.catch(() => null)`). Na aba Monitorados é buscada uma vez por ativo listado, em paralelo. |
-| `/api/v2/stocks/historical` | GET | `ConsultaPage` | `symbols`, `range=1mo`, `interval=1d`, `sortOrder=asc` fixos no `historicoApi.js`. |
+| `/ativos/robusto/{ativo}` | GET | `ConsultaPage`, `AtivosMonitoradosTable` | Traz `Ativo` + publica série histórica no backend (efeito colateral do próprio backend, não deste front). Na tabela de Monitorados é chamada só ao expandir uma linha pela primeira vez (com cache). |
+| `/analises/{simbolo}/analise` | GET | `ConsultaPage`, `AtivosMonitoradosPage` | Decisão consolidada (média de todo o histórico); se falhar, a tela continua exibindo o resto (`.catch(() => null)`). Na aba Monitorados é buscada uma vez por ativo listado, em paralelo, e reaproveitada na linha expandida. |
+| `/analises/{simbolo}/fundamentos` | GET | `MetodologiaPage` | Retrato bruto (um único ciclo, sem média) usado pela aba "Como funciona". |
+| `/api/v2/stocks/historical` | GET | `ConsultaPage`, `AtivosMonitoradosTable` | `symbols`, `range=1mo`, `interval=1d`, `sortOrder=asc` fixos no `historicoApi.js`. |
 | `/ativos/registrar/{ativo}` | POST | `CadastroPage` | Persiste o cadastro no backend (`ativo_monitorado`) e entra em monitoramento recorrente de 30s; confirmação via link para `#/monitorados`. |
 | `/ativos/registrados` | GET | `AtivosMonitoradosPage` | Lista a carteira monitorada (`ISS-01`/`TASK-01` **RESOLVIDO**). |
 
-Todas as 5 rotas acima são acessadas pelo **cliente** como caminho relativo (mesma origem do front) — quem fala com o backend de verdade é o `server.js`, via proxy reverso (`proxy/apiProxy.js`). CORS habilitado no backend em `ConfigCors` (`app.cors.allowed-origins`) desde 2026-09-25 deixou de ser necessário para este front especificamente, mas continua útil pra outros clientes que queiram chamar o backend direto do browser.
+Todas as 6 rotas acima são acessadas pelo **cliente** como caminho relativo (mesma origem do front) — quem fala com o backend de verdade é o `server.js`, via proxy reverso (`proxy/apiProxy.js`). CORS habilitado no backend em `ConfigCors` (`app.cors.allowed-origins`) desde 2026-09-25 deixou de ser necessário para este front especificamente, mas continua útil pra outros clientes que queiram chamar o backend direto do browser.
 
 ## 5. Configuração
 
@@ -116,6 +135,8 @@ Não existe mais configuração do lado do cliente (`window.PAINEL_ATIVOS_API_BA
 | REQ-03 | Layout responsivo mobile-first | IMPLEMENTADO (Bootstrap grid + `BottomNav`/`AppHeader` alternados por breakpoint) |
 | REQ-04 | Zero CSS customizado além do indispensável | IMPLEMENTADO |
 | REQ-05 | Listar os ativos monitorados, com a última decisão de cada um | IMPLEMENTADO (2026-09-25, aba `#/monitorados`, ver `2.2`) |
+| REQ-06 | Ver a visão estruturada (cotação/decisão/histórico) de um ativo monitorado sem sair da lista | IMPLEMENTADO (2026-09-25, linha expansível em `AtivosMonitoradosTable`, ver `2.3`) |
+| REQ-07 | Explicar a metodologia de cálculo e mostrar os fundamentos brutos de um único ciclo de análise | IMPLEMENTADO (2026-09-25, aba `#/metodologia`, ver `2.3`) |
 | NFR-01 | Cliente sem etapa de build | ATENDIDO (o servidor Node tem `npm install`, mas o JS/CSS do browser continua sem bundler) |
 | NFR-02 | Compatível com empacotamento em WebView (Android/iOS) | ATENDIDO (ES modules + Custom Elements, sem History API; o proxy é transparente pro cliente) |
 | NFR-03 | Um arquivo = uma responsabilidade (SRP) | ATENDIDO |
