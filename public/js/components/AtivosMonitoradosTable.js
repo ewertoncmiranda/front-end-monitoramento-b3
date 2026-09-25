@@ -2,9 +2,11 @@ import { BaseComponent } from './base/BaseComponent.js';
 import { badgeClassParaRecomendacao } from '../utils/recomendacaoBadge.js';
 import { buscarCotacaoRobusta } from '../api/ativosApi.js';
 import { buscarHistorico } from '../api/historicoApi.js';
+import { buscarFundamentos } from '../api/analisesApi.js';
 import './AtivoQuoteCard.js';
 import './AnaliseResultCard.js';
 import './HistoricoTable.js';
+import './FundamentosCard.js';
 import './LoadingSpinner.js';
 
 const COLUNAS = 8;
@@ -62,11 +64,12 @@ export class AtivosMonitoradosTable extends BaseComponent {
   async carregarDetalhes(simbolo) {
     // Mesma chamada (e mesmo efeito colateral ja conhecido de publicar em SQS)
     // que a tela de Consulta usa - cada busca falha de forma independente.
-    const [ativo, historico] = await Promise.all([
+    const [ativo, historico, fundamentos] = await Promise.all([
       buscarCotacaoRobusta(simbolo).catch(() => null),
       buscarHistorico(simbolo).catch(() => null),
+      buscarFundamentos(simbolo).catch(() => null),
     ]);
-    this._detalhesPorSimbolo[simbolo] = { ativo, historico };
+    this._detalhesPorSimbolo[simbolo] = { ativo, historico, fundamentos };
     this.renderizar();
   }
 
@@ -132,6 +135,8 @@ export class AtivosMonitoradosTable extends BaseComponent {
         <analise-result-card></analise-result-card>
         <h6 class="mt-3">Historico (1 mes)</h6>
         <historico-table></historico-table>
+        <h6 class="mt-3">Fundamentos e calculos (ultimo ciclo)</h6>
+        <fundamentos-card></fundamentos-card>
       `
       : '<loading-spinner></loading-spinner>';
 
@@ -183,6 +188,10 @@ export class AtivosMonitoradosTable extends BaseComponent {
 
       const candles = detalhes.historico?.results?.[0]?.data?.historicalDataPrice;
       linhaDetalhe.querySelector('historico-table')?.setCandles(candles);
+
+      if (detalhes.fundamentos) {
+        linhaDetalhe.querySelector('fundamentos-card')?.setFundamentos(detalhes.fundamentos);
+      }
     });
   }
 }
