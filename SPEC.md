@@ -63,9 +63,20 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 - A linha de detalhe reaproveita os componentes existentes (`ativo-quote-card`, `analise-result-card`, `historico-table`) dentro de um `<tr><td colspan="8">` — zero duplicação de renderização.
 
 **Aba "Como funciona" (`MetodologiaPage`, rota `#/metodologia`):**
-- Conteúdo estático explicando as fórmulas do `gerar-insights` (valuation Graham, earnings yield/P/L, contexto técnico 52 semanas, sinal técnico de série, regras de recomendação/risco/confiança) — meramente documental, não chama API.
-- Um `AtivoSearchForm` + `FundamentosCard` busca `GET /analises/{simbolo}/fundamentos` (novo endpoint) e mostra o retrato **de um único ciclo**, sem média — os cenários completos de preço justo Graham, classificações, contexto técnico e (quando há série histórica) o sinal técnico (média móvel, z-score, score de volume), insights e fatores de decisão que o `gerar-insights` gerou naquele ciclo.
+- Um `AtivoSearchForm` + `FundamentosCard` busca `GET /analises/{simbolo}/fundamentos` e mostra o retrato **de um único ciclo**, sem média — os cenários completos de preço justo Graham, classificações, contexto técnico e (quando há série histórica) o sinal técnico (média móvel, z-score, score de volume), insights e fatores de decisão que o `gerar-insights` gerou naquele ciclo.
 - `FundamentosCard` renderiza o campo `detalhes` do DTO genericamente (não assume um schema Java fixo — é o mesmo JSON que o Python grava), então novos campos que o `gerar-insights` passar a gravar aparecem automaticamente se a página for atualizada para lê-los; campos ausentes (ex.: sem sinal técnico por falta de histórico) são tratados com fallback textual, não erro.
+- A explicação estática das fórmulas foi movida pra `FormulasPage` (ver `2.4`) — esta aba ficou só com a ferramenta interativa.
+
+### 2.4 Perfil de operação/riscos + reorganização em 3 abas (2026-09-25)
+
+**Motivação:** o usuário pediu pra reaproveitar `sinal_momentum`/`sinal_reversao` (já calculados pelo `gerar-insights`, mas ignorados até então) pra derivar perfil de operação (day trade / swing-reversão / longo prazo) e riscos separados de comprar/vender agora — e, ao ver a proposta, pediu pra dividir a antiga aba única "Como funciona" (que misturava fórmulas estáticas + busca + card) em 3 abas com responsabilidade única.
+
+- **`FundamentosCard`**: nova seção "Perfil de operação e riscos" (badges de `perfisAplicaveis`, `riscoCompraAgora`/`riscoVendaAgora`, resumo de `confluenciaSinais` — todos os 4 campos novos do `FundamentosAtivoDTO`), e a seção de sinal técnico ganhou badges de `sinal_momentum`/`sinal_reversao` (já vinham na resposta, só não eram renderizados). Como esse componente já é reaproveitado tanto em `#/metodologia` quanto na linha expandida de `#/monitorados`, os dois lugares ganharam a seção nova automaticamente, sem tocar em `AtivosMonitoradosTable`.
+- **`ArquiteturaPage`** (nova, `#/arquitetura`): conteúdo estático descrevendo os 4 componentes do ecossistema (frontend, Java, Python, infra) e um diagrama textual do fluxo entre eles.
+- **`FormulasPage`** (nova, `#/formulas`): todo o texto de fórmulas que antes estava em `MetodologiaPage` (Graham, earnings yield, contexto técnico, sinal técnico, decisão consolidada), organizado em métodos de seção — mais uma seção nova explicando as regras de perfil/risco/confluência, e uma seção final documentando a limitação (não existe taxa de acerto real, exigiria acompanhar resultado futuro).
+- Navegação (`AppHeader`, `BottomNav`, `router`, `main`) ganhou as duas rotas novas. Com 6 abas, o `BottomNav` (mobile) passou a rolar horizontalmente (`flex-nowrap overflow-x-auto`, só classes Bootstrap) em vez de quebrar linha.
+
+**Implementado e testado**: `curl /analises/PETR4/fundamentos` confirmando os 4 campos novos (`perfisAplicaveis: ["LONGO_PRAZO"]`, riscos, confluência); `MGLU3` mostrou um caso real de sinais discordantes (momentum=compra, reversão=venda, recomendação=venda → confluência "2 de 3 sinais indicam VENDA"); as 3 abas carregando conteúdo correto; `BottomNav` com scroll horizontal testado em 375×812.
 
 **Implementado e testado**: expansão de `PETR4` na tabela de Monitorados mostrando cotação real, decisão e 22 candles de histórico; colapso funcionando; testado em mobile (375×812, card de detalhe ocupa a largura toda abaixo da linha). Aba "Como funciona" testada buscando `PETR4` — retornou os 3 cenários Graham, earnings yield 21.53%, zona 52 semanas `PROXIMO_DA_MAXIMA`, sinal técnico com 20 amostras, 3 insights e fatores de decisão.
 
@@ -87,8 +98,8 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | `AtivoSearchForm` | Capturar símbolo digitado, disparar evento | `js/components/AtivoSearchForm.js` |
 | `AtivoQuoteCard` | Renderizar cotação (`Ativo`) | `js/components/AtivoQuoteCard.js` |
 | `AnaliseResultCard` | Renderizar decisão consolidada (`RespostaAnaliseIaDTO`) | `js/components/AnaliseResultCard.js` |
-| `AtivosMonitoradosTable` | Renderizar a carteira monitorada + decisão de cada ativo; linha expansível com cotação/decisão/histórico | `js/components/AtivosMonitoradosTable.js` |
-| `FundamentosCard` | Renderizar o retrato bruto (um único ciclo) de fundamentos e cálculos de um ativo | `js/components/FundamentosCard.js` |
+| `AtivosMonitoradosTable` | Renderizar a carteira monitorada + decisão de cada ativo; linha expansível com cotação/decisão/histórico/fundamentos | `js/components/AtivosMonitoradosTable.js` |
+| `FundamentosCard` | Renderizar o retrato bruto (um único ciclo) de fundamentos, sinal técnico e perfil de operação/riscos de um ativo | `js/components/FundamentosCard.js` |
 | `HistoricoTable` | Renderizar série OHLCV | `js/components/HistoricoTable.js` |
 | `StatusAlert` | Alerta de sucesso/erro/aviso | `js/components/StatusAlert.js` |
 | `LoadingSpinner` | Indicador de carregamento | `js/components/LoadingSpinner.js` |
@@ -97,7 +108,9 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | `ConsultaPage` | Orquestrar busca + renderização da consulta | `js/pages/ConsultaPage.js` |
 | `CadastroPage` | Orquestrar o registro de um ativo | `js/pages/CadastroPage.js` |
 | `AtivosMonitoradosPage` | Orquestrar a listagem da carteira monitorada + busca da decisão de cada ativo | `js/pages/AtivosMonitoradosPage.js` |
-| `MetodologiaPage` | Explicar a metodologia (fórmulas) e orquestrar a busca de fundamentos de um ativo | `js/pages/MetodologiaPage.js` |
+| `MetodologiaPage` | Orquestrar a busca interativa de fundamentos de um ativo | `js/pages/MetodologiaPage.js` |
+| `FormulasPage` | Explicar as fórmulas/regras de cálculo (conteúdo estático) | `js/pages/FormulasPage.js` |
+| `ArquiteturaPage` | Descrever os 4 componentes do ecossistema (conteúdo estático) | `js/pages/ArquiteturaPage.js` |
 | `router` | Rota (hash) → página | `js/router.js` |
 | `main` | Ponto de entrada (registra componentes, inicia router) | `js/main.js` |
 

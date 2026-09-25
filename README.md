@@ -44,7 +44,9 @@ public/                      Tudo que o servidor expõe como estático
       ConsultaPage.js                 Orquestra a tela de consulta
       CadastroPage.js                 Orquestra a tela de cadastro
       AtivosMonitoradosPage.js        Orquestra a aba "Monitorados"
-      MetodologiaPage.js              Orquestra a aba "Como funciona"
+      MetodologiaPage.js              Orquestra a busca interativa de fundamentos
+      FormulasPage.js                 Explica as formulas/regras (estatico)
+      ArquiteturaPage.js              Descreve os 4 componentes do ecossistema (estatico)
     router.js                          Rota (hash) -> pagina
     main.js                            Ponto de entrada
 proxy/
@@ -121,9 +123,13 @@ Não há, de propósito, UI para desativar/pausar um ativo monitorado nem para c
 
 Clicar em qualquer linha da tabela expande, abaixo dela, a mesma visão estruturada da tela de Consulta (cotação, decisão, histórico) — clicar de novo recolhe. Os dados de cotação/histórico são buscados só na primeira expansão de cada ativo (com cache); a decisão é reaproveitada da própria listagem.
 
-## Aba "Como funciona" (`#/metodologia`)
+## Abas de referência: "Como funciona", "Formulas" e "Arquitetura"
 
-Explica, em texto, as fórmulas que o `gerar-insights` usa (valuation de Graham, earnings yield, contexto técnico de 52 semanas, sinal técnico de série, regras de recomendação/risco/confiança) e, a partir de um símbolo buscado, mostra `GET /analises/{simbolo}/fundamentos` — o retrato **de um único ciclo** (sem média), diferente da decisão consolidada mostrada em Consulta/Monitorados.
+Três abas com responsabilidade única, cada uma:
+
+- **`#/metodologia` (Como funciona)**: busca um símbolo e mostra `GET /analises/{simbolo}/fundamentos` — o retrato **de um único ciclo** (sem média), incluindo o perfil de operação (day trade / swing-reversão / longo prazo, não exclusivos), os riscos de comprar/vender agora e a confluência entre sinais (recomendação fundamentalista + momentum + reversão — uma contagem de concordância, não uma probabilidade de sucesso).
+- **`#/formulas` (Formulas)**: conteúdo estático explicando cada fórmula/regra usada (Graham, earnings yield, contexto técnico, sinal técnico de série, perfil de operação/riscos) — sem chamar API.
+- **`#/arquitetura` (Arquitetura)**: conteúdo estático descrevendo os 4 componentes do ecossistema (este front, o Java `gestor-ativos-brutos`, o Python `gerar-insights`, a infra `infra-b3-ecossytem`) e como se conectam.
 
 Detalhes de arquitetura, contratos consumidos e backlog completo estão em [`SPEC.md`](./SPEC.md).
 

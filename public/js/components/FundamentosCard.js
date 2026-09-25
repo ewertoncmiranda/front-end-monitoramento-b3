@@ -36,6 +36,7 @@ export class FundamentosCard extends BaseComponent {
 
           ${secaoSnapshot(d.snapshot_mercado)}
           ${secaoValuation(d.valuation)}
+          ${secaoPerfilOperacao(f)}
           ${secaoContextoTecnico(d.contexto_tecnico)}
           ${secaoSinalTecnico(d.contexto_tecnico_serie)}
           ${secaoInsights(d.insights)}
@@ -124,6 +125,10 @@ function secaoSinalTecnico(s) {
   }
   return `
     <h6 class="mt-2">Sinal tecnico de serie</h6>
+    <div class="d-flex flex-wrap gap-2 mb-2">
+      ${badgeSinalTecnico('Momentum', s.sinal_momentum)}
+      ${badgeSinalTecnico('Reversao', s.sinal_reversao)}
+    </div>
     <div class="row row-cols-2 row-cols-md-4 g-2 small mb-3">
       ${campo('Media movel', formatarMoeda(s.media_movel))}
       ${campo('Z-score do fechamento', formatarNumero(s.z_score_fechamento))}
@@ -131,6 +136,50 @@ function secaoSinalTecnico(s) {
       ${campo('Amostras', s.amostras ?? '-')}
     </div>
   `;
+}
+
+function secaoPerfilOperacao(f) {
+  const temPerfil = f.perfisAplicaveis?.length || f.riscoCompraAgora || f.riscoVendaAgora || f.confluenciaSinais;
+  if (!temPerfil) return '';
+
+  const perfis = f.perfisAplicaveis?.length
+    ? f.perfisAplicaveis.map((p) => `<span class="badge bg-info text-dark me-1">${formatarPerfil(p)}</span>`).join('')
+    : '<span class="text-muted">Sem sinal claro de perfil</span>';
+
+  return `
+    <h6 class="mt-2">Perfil de operacao e riscos</h6>
+    <div class="mb-2">${perfis}</div>
+    <div class="d-flex flex-wrap gap-3 small mb-2">
+      ${campo('Risco de comprar agora', badgeRisco(f.riscoCompraAgora))}
+      ${campo('Risco de vender agora', badgeRisco(f.riscoVendaAgora))}
+    </div>
+    ${f.confluenciaSinais ? `<p class="small text-muted mb-3">${f.confluenciaSinais.resumo}</p>` : ''}
+  `;
+}
+
+function badgeSinalTecnico(rotulo, sinal) {
+  const mapa = {
+    COMPRA_TECNICA: 'bg-success',
+    VENDA_TECNICA: 'bg-danger',
+    NEUTRO_TECNICO: 'bg-secondary',
+  };
+  const classe = mapa[sinal] || 'bg-secondary';
+  return `<span class="badge ${classe}">${rotulo}: ${sinal || 'N/D'}</span>`;
+}
+
+function badgeRisco(risco) {
+  const mapa = { ALTO: 'bg-danger', MEDIO: 'bg-warning text-dark', BAIXO: 'bg-success' };
+  if (!risco) return '<span class="text-muted">-</span>';
+  return `<span class="badge ${mapa[risco] || 'bg-secondary'}">${risco}</span>`;
+}
+
+function formatarPerfil(perfil) {
+  const mapa = {
+    DAY_TRADE: 'Day trade',
+    SWING_REVERSAO: 'Swing / reversao',
+    LONGO_PRAZO: 'Longo prazo',
+  };
+  return mapa[perfil] || perfil;
 }
 
 function secaoInsights(insights) {

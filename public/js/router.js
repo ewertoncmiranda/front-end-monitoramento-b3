@@ -9,6 +9,8 @@ const rotas = {
   '#/cadastro': 'cadastro-page',
   '#/monitorados': 'ativos-monitorados-page',
   '#/metodologia': 'metodologia-page',
+  '#/formulas': 'formulas-page',
+  '#/arquitetura': 'arquitetura-page',
 };
 
 const ROTA_PADRAO = '#/consulta';

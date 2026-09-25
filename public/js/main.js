@@ -6,6 +6,8 @@ import './pages/ConsultaPage.js';
 import './pages/CadastroPage.js';
 import './pages/AtivosMonitoradosPage.js';
 import './pages/MetodologiaPage.js';
+import './pages/FormulasPage.js';
+import './pages/ArquiteturaPage.js';
 import { iniciarRouter } from './router.js';
 
 document.querySelector('#app-header-outlet').innerHTML = '<app-header></app-header>';
