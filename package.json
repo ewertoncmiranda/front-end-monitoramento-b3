@@ -1,0 +1,15 @@
+{
+  "name": "painel-ativos-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Frontend estatico do ecossistema B3 (consulta e cadastro de ativos), servido por um proxy reverso Node/Express.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.3"
+  }
+}

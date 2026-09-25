@@ -1,0 +1,10 @@
+/* Ajustes minimos que o Bootstrap nao cobre - todo o resto do estilo vem
+   100% das classes utilitarias/componentes do Bootstrap, sem CSS proprio. */
+
+body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.app-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
