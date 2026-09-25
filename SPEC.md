@@ -109,6 +109,7 @@ Não existe mais configuração do lado do cliente (`window.PAINEL_ATIVOS_API_BA
 | ISS-02 | Baixo | Bootstrap carregado via CDN | Sem internet, a UI perde todo o estilo | ABERTO — mitigação documentada no README (vendorizar local) |
 | ISS-03 | Baixo | Nenhum teste automatizado (nem do cliente, nem do `server.js`/proxy) | Regressões só são pegas manualmente | ABERTO |
 | ISS-04 | Baixo | `http-proxy-middleware` remove o prefixo da rota ao ser montado via `app.use(rota, ...)` | Sem `pathRewrite`, o backend recebia `/PETR4/analise` em vez de `/analises/PETR4/analise` (achado e corrigido durante a implementação) | RESOLVIDO — `proxy/apiProxy.js` usa `pathRewrite: (path) => rota + path` |
+| ISS-05 | Médio | O proxy repassava o header `Origin` original do browser pro backend | Browsers mandam `Origin` em requisições same-origin com método POST/PUT/DELETE (mas normalmente não em GET) — o CORS do `gestor-ativos-brutos` via esse `Origin` (ex.: `http://localhost:8082`, porta do compose), não achava na allowlist padrão (8080/5173/3000) e rejeitava com 403. `Cadastrar` (POST) quebrava; `Consultar` (GET) parecia funcionar porque o browser não mandava `Origin` nesse caso | RESOLVIDO — `proxy/apiProxy.js` remove o header `Origin` (`proxyReq.removeHeader('origin')`) antes de repassar pro backend, tornando a chamada de fato invisível pro CORS dele |
 
 ## 8. Backlog
 
