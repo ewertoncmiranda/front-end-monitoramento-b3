@@ -1,85 +1,331 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 
-// Unica responsabilidade: explicar as formulas e regras de calculo usadas
-// pelo ecossistema - conteudo 100% estatico, sem chamada de API. Cada metodo
-// de secao explica uma unica formula/conjunto de regras (mesmo espirito SRP
-// de FundamentosCard.js). Os numeros reais de um ativo ficam na aba
-// "Como funciona".
+// Unica responsabilidade: documentar, por tema, as formulas e regras de
+// calculo do ecossistema - conteudo 100% estatico, sem chamada de API. Os
+// numeros reais de um ativo ficam na aba "Como funciona".
+//
+// Estrutura pensada pra crescer: cada tema é um cartao/coluna com uma lista
+// de itens. Pra descrever um indicador novo (implementado ou so proposto),
+// basta acrescentar um item na lista `itens` do tema certo - nao é preciso
+// escrever HTML novo. `status` distingue o que já roda (implementado) do que
+// é so uma especificacao pronta pra implementar (proposta), e `cenarios`
+// marca em qual contexto de uso (day trade, swing, longo prazo, setorial,
+// macro) aquele numero faz sentido.
+
+const CENARIOS = {
+  DAY_TRADE: { rotulo: 'Day trade', classe: 'bg-danger' },
+  SWING: { rotulo: 'Swing / reversao', classe: 'bg-warning text-dark' },
+  LONGO_PRAZO: { rotulo: 'Longo prazo', classe: 'bg-success' },
+  SETORIAL: { rotulo: 'Comparacao setorial', classe: 'bg-primary' },
+  MACRO: { rotulo: 'Contexto macro', classe: 'bg-info text-dark' },
+};
+
+const STATUS = {
+  implementado: { rotulo: 'Implementado', classe: 'bg-success' },
+  proposta: { rotulo: 'Proposta futura', classe: 'bg-secondary' },
+  gratis: { rotulo: 'Gratis hoje', classe: 'bg-success' },
+  pago: { rotulo: 'Requer upgrade', classe: 'bg-warning text-dark' },
+};
+
+const TEMAS = [
+  {
+    id: 'valuation',
+    titulo: 'Valuation fundamentalista',
+    resumo: 'Quanto a acao custa hoje frente ao que a empresa entrega de lucro.',
+    fonte: 'BRAPI /quote - gratis (priceEarnings, earningsPerShare)',
+    itens: [
+      {
+        status: 'implementado',
+        nome: 'Preco justo por Graham (3 cenarios)',
+        cenarios: ['LONGO_PRAZO'],
+        descricao: 'Para crescimento conservador (0%), base (3%) e otimista (5%), o multiplo de lucro implicito e o preco justo resultante.',
+        formula: 'multiplo = 8.5 + 2 x crescimento; preco justo = LPA x multiplo; margem = (preco justo - preco atual) / preco justo',
+      },
+      {
+        status: 'implementado',
+        nome: 'Earnings yield e classificacao do P/L',
+        cenarios: ['LONGO_PRAZO'],
+        descricao: 'O inverso do P/L, em %. Quanto maior, mais a empresa "paga" pelo preco pago pela acao.',
+        formula: 'earnings yield = LPA / preco; Atrativo >=12%, Razoavel >=8%, Baixo >=6%, senao Muito baixo',
+      },
+    ],
+  },
+  {
+    id: 'contexto-tecnico',
+    titulo: 'Contexto tecnico do dia',
+    resumo: 'Onde o preco de hoje esta dentro da propria historia recente do ativo.',
+    fonte: 'BRAPI /quote - gratis (fiftyTwoWeekLow/High, regularMarketDayHigh/Low)',
+    itens: [
+      {
+        status: 'implementado',
+        nome: 'Posicao no range de 52 semanas',
+        cenarios: ['SWING', 'LONGO_PRAZO'],
+        descricao: '0% = minima das 52 semanas, 100% = maxima. Zona "Proximo da minima" (<=25%), "Proximo da maxima" (>=85%) ou "Meio do range".',
+        formula: 'posicao = (preco - minima 52s) / (maxima 52s - minima 52s)',
+      },
+      {
+        status: 'implementado',
+        nome: 'Variacoes intradiarias',
+        cenarios: ['DAY_TRADE'],
+        descricao: 'Variacao desde a abertura, contra o fechamento anterior e amplitude entre maxima e minima do dia.',
+        formula: 'variacao = (preco atual - referencia) / referencia',
+      },
+    ],
+  },
+  {
+    id: 'sinal-tecnico',
+    titulo: 'Sinal tecnico de serie',
+    resumo: 'Tendencia e anomalia estatistica nos ultimos 20 candles coletados.',
+    fonte: 'BRAPI /historical - gratis, limitado a 3 meses / candle diario',
+    itens: [
+      {
+        status: 'implementado',
+        nome: 'Sinal de momentum',
+        cenarios: ['DAY_TRADE'],
+        descricao: 'Tendencia confirmada por volume: compra tecnica com preco acima da media movel e volume acima da media; venda tecnica no inverso.',
+        formula: 'compra se preco > MM20 e volume / volume medio > 1.3; venda se preco < MM20 e essa razao < 0.7',
+      },
+      {
+        status: 'implementado',
+        nome: 'Sinal de reversao',
+        cenarios: ['SWING'],
+        descricao: 'Extremo estatistico: compra tecnica em desconto anormal perto da minima de 52 semanas; venda tecnica em sobrecompra perto da maxima.',
+        formula: 'compra se z-score < -1.5 e preco a <=10% da minima 52s; venda se z-score > 1.5 ou preco a <=5% da maxima 52s',
+      },
+    ],
+  },
+  {
+    id: 'perfil-operacao',
+    titulo: 'Perfil de operacao e riscos',
+    resumo: 'Pra qual tipo de operacao o ativo serve agora, e o risco de comprar/vender neste exato momento.',
+    fonte: 'Derivado no Java a partir dos sinais acima - sem consulta nova',
+    itens: [
+      {
+        status: 'implementado',
+        nome: 'Perfis aplicaveis (nao exclusivos)',
+        cenarios: ['DAY_TRADE', 'SWING', 'LONGO_PRAZO'],
+        descricao: 'Um ativo pode servir a mais de um perfil ao mesmo tempo.',
+        formula: 'Day trade se sinal de momentum != neutro; Swing/reversao se sinal de reversao != neutro; Longo prazo se margem conservadora >=20% e earnings yield Atrativo/Razoavel',
+      },
+      {
+        status: 'implementado',
+        nome: 'Risco de comprar / vender agora',
+        cenarios: ['DAY_TRADE', 'SWING', 'LONGO_PRAZO'],
+        descricao: 'Separado em dois numeros - o risco de comprar nao e o inverso do risco de vender.',
+        formula: 'risco de comprar: Alto se perto da maxima 52s e margem base <10%; risco de vender: Alto se perto da minima 52s e margem base >=10%',
+      },
+      {
+        status: 'implementado',
+        nome: 'Confluencia de sinais',
+        cenarios: ['DAY_TRADE', 'SWING', 'LONGO_PRAZO'],
+        descricao: 'Quantos dos 3 sinais independentes (fundamentalista, momentum, reversao) apontam pro mesmo lado. E concordancia, nao e probabilidade de sucesso.',
+        formula: 'contagem de sinais em COMPRA vs. VENDA vs. NEUTRO',
+      },
+    ],
+  },
+  {
+    id: 'decisao-consolidada',
+    titulo: 'Decisao consolidada (historico)',
+    resumo: 'A mesma logica de valuation acima, mas resumida sobre todo o historico de analises do ativo - nao um ciclo isolado.',
+    fonte: 'Media de detalhes_json de todas as analises do simbolo',
+    itens: [
+      {
+        status: 'implementado',
+        nome: 'Recomendacao, risco e confianca',
+        cenarios: ['LONGO_PRAZO'],
+        descricao: 'Regras fixas sobre margem de seguranca media e earnings yield medio, mostradas em Consulta e na coluna "Decisao" de Monitorados.',
+        formula: 'COMPRA_FORTE: margem conservadora >=20% e earnings yield >=12%; VENDA_VALUATION: margem base negativa; senao MANTER',
+      },
+    ],
+  },
+  {
+    id: 'contexto-setorial',
+    titulo: 'Contexto setorial (proposta)',
+    resumo: 'Comparar multiplos do ativo contra o proprio setor, em vez de contra limiares fixos e iguais pra qualquer empresa.',
+    fonte: 'BRAPI summaryProfile - confirmado gratis pra qualquer ticker (validado em 2026-09-25 com WEGE3)',
+    itens: [
+      {
+        status: 'proposta',
+        nome: 'Setor e industria do ativo',
+        cenarios: ['SETORIAL'],
+        descricao: 'Setor (ex.: "Bens Industriais") e industria (ex.: "Maquinas e Equipamentos") vem prontos da BRAPI. Hoje nao sao coletados nem exibidos.',
+        formula: 'campo direto: summaryProfile.sector / summaryProfile.industry',
+      },
+      {
+        status: 'proposta',
+        nome: 'P/L e earnings yield relativos ao setor',
+        cenarios: ['SETORIAL', 'LONGO_PRAZO'],
+        descricao: 'Em vez de "Atrativo >=12%" fixo pra qualquer ativo, comparar contra a media do earnings yield dos outros ativos monitorados do mesmo setor.',
+        formula: 'earnings yield relativo = earnings yield do ativo - media do earnings yield do setor (entre os ativos monitorados)',
+      },
+    ],
+  },
+  {
+    id: 'risco-mercado',
+    titulo: 'Risco relativo ao mercado (proposta)',
+    resumo: 'Quao volatil o ativo e, isolado e comparado ao Ibovespa - hoje o painel nao distingue uma recomendacao estavel de uma extremamente arriscada.',
+    fonte: 'BRAPI /historical do ativo + do indice ^BVSP - ambos gratis, limitados a 3 meses',
+    itens: [
+      {
+        status: 'proposta',
+        nome: 'Volatilidade historica',
+        cenarios: ['DAY_TRADE', 'SWING', 'LONGO_PRAZO'],
+        descricao: 'Desvio-padrao dos retornos diarios dos candles ja coletados em serie_historica. Nao exige nova coleta.',
+        formula: 'volatilidade = desvio-padrao(retorno diario); retorno diario = (fechamento[i] - fechamento[i-1]) / fechamento[i-1]',
+      },
+      {
+        status: 'proposta',
+        nome: 'Beta vs. Ibovespa',
+        cenarios: ['LONGO_PRAZO', 'SETORIAL'],
+        descricao: 'O quanto o ativo amplifica ou amortece o movimento do indice. Precisa coletar a serie do ^BVSP no mesmo range ja usado pros ativos monitorados.',
+        formula: 'beta = covariancia(retorno do ativo, retorno do Ibovespa) / variancia(retorno do Ibovespa)',
+      },
+      {
+        status: 'proposta',
+        nome: 'Persistencia do sinal',
+        cenarios: ['DAY_TRADE', 'SWING', 'LONGO_PRAZO'],
+        descricao: 'Quantos ciclos consecutivos a recomendacao se mantem no mesmo sentido. Nao mede se a recomendacao "deu certo" - so mede estabilidade do sinal atual.',
+        formula: 'contagem de analises consecutivas do simbolo com a mesma recomendacao, do mais recente pra tras',
+      },
+    ],
+  },
+  {
+    id: 'contexto-macro',
+    titulo: 'Contexto macroeconomico (proposta)',
+    resumo: 'Um earnings yield de 8% e otimo com Selic a 6% e ruim com Selic a 14% - hoje a classificacao ignora isso.',
+    fonte: 'BRAPI /macro (Selic/CDI/IPCA) exige plano Startup - alternativa gratis: API SGS do Banco Central (api.bcb.gov.br), sem chave',
+    itens: [
+      {
+        status: 'proposta',
+        nome: 'Earnings yield vs. taxa livre de risco',
+        cenarios: ['MACRO', 'LONGO_PRAZO'],
+        descricao: 'Mede o quanto o earnings yield da acao compensa (ou nao) o risco extra frente a simplesmente deixar o dinheiro na Selic.',
+        formula: 'premio de risco = earnings yield do ativo - taxa Selic anual',
+      },
+    ],
+  },
+];
+
+// Catalogo de dados da BRAPI, validado ao vivo em 2026-09-25 com curl direto
+// contra a chave real do plano Gratuito (nao e so leitura da doc) - o mesmo
+// metodo usado antes pra descobrir o limite de range do historico.
+const FONTES_DADOS = {
+  titulo: 'BRAPI: o que e gratis hoje',
+  resumo: 'Validacao ao vivo do plano Gratuito atual, dado a dado, antes de assumir que algo esta disponivel.',
+  itens: [
+    { status: 'gratis', nome: 'Cotacao (/quote)', detalhe: 'Preco, variacao, volume, range do dia e de 52 semanas, P/L, LPA - pra qualquer ticker, nao so os de demonstracao.' },
+    { status: 'gratis', nome: 'Historico OHLCV (/historical)', detalhe: 'So candle diario (1d), ate 3 meses de janela - 1y devolve 400 pra qualquer ticker fora da lista de demonstracao (PETR4, MGLU3...).' },
+    { status: 'gratis', nome: 'Perfil da empresa (summaryProfile / /profile)', detalhe: 'Setor, industria, CNPJ, endereco, resumo do negocio. Confirmado gratis mesmo em ticker real (testado com WEGE3).' },
+    { status: 'pago', nome: 'Multiplos e estatisticas (defaultKeyStatistics)', detalhe: 'ROE, ROIC, P/VP, beta, dividend yield - exige plano Startup, R$ 119,99/mes.' },
+    { status: 'pago', nome: 'Dados financeiros (financialData)', detalhe: 'Margens, divida liquida, fluxo de caixa livre - exige plano Pro, R$ 139,99/mes.' },
+    { status: 'pago', nome: 'Balanco, DRE, fluxo de caixa e valor adicionado', detalhe: 'Demonstracoes completas - Startup (so anual, ultimos 5 anos) ou Pro (trimestral, desde 2009).' },
+    { status: 'pago', nome: 'Dividendos e proventos (/dividends)', detalhe: 'JCP, bonificacoes, desdobramentos, subscricoes - exige plano Startup.' },
+    { status: 'pago', nome: 'Macroeconomia (Selic, CDI, IPCA, IGP-M...)', detalhe: 'Exige plano Startup - mas a mesma serie esta disponivel de graca direto na API do Banco Central (SGS), sem passar pela BRAPI.' },
+    { status: 'pago', nome: 'Cambio e criptomoedas', detalhe: 'Ambos exigem plano Startup.' },
+  ],
+};
+
 export class FormulasPage extends BaseComponent {
   template() {
     return `
-      <h4 class="mb-3">Formulas e calculos</h4>
-      <p class="text-muted small">Tudo calculado pelo <code>gerar-insights</code> a cada coleta, por regra fixa - sem IA. Veja os numeros reais de um ativo na aba <a href="#/metodologia">Como funciona</a>.</p>
+      <h4 class="mb-1">Fundamentos de mercado</h4>
+      <p class="text-muted small">Cada cartao abaixo e um tema. "Implementado" ja roda no ecossistema hoje; "Proposta futura" e uma especificacao pronta pra implementar, ainda sem codigo. Veja os numeros reais de um ativo na aba <a href="#/metodologia">Como funciona</a>.</p>
 
-      ${this.secaoGraham()}
-      ${this.secaoEarningsYield()}
-      ${this.secaoContextoTecnico()}
-      ${this.secaoSinalTecnico()}
-      ${this.secaoDecisaoConsolidada()}
-      ${this.secaoPerfilOperacao()}
-      ${this.secaoLimitacoes()}
+      ${legenda()}
+
+      <div class="row row-cols-1 row-cols-lg-2 g-3 mb-4">
+        ${TEMAS.map((tema) => renderTema(tema)).join('')}
+      </div>
+
+      <h5 class="mt-2">Fontes de dados</h5>
+      <div class="mb-4">
+        ${renderFonteDados(FONTES_DADOS)}
+      </div>
+
+      ${secaoLimitacoes()}
     `;
   }
+}
 
-  secaoGraham() {
-    return `
-      <h6 class="mt-3">Valuation por Graham</h6>
-      <p class="small">Para 3 cenários de crescimento (conservador 0%, base 3%, otimista 5%), o múltiplo de lucro implícito é <code>8.5 + 2 × crescimento</code>, e o preço justo é <code>lucro por ação × múltiplo</code>. A margem de segurança de cada cenário é <code>(preço justo − preço atual) ÷ preço justo</code>.</p>
-    `;
-  }
+function legenda() {
+  return `
+    <div class="d-flex flex-wrap gap-2 mb-3 small">
+      <span class="badge ${STATUS.implementado.classe}">${STATUS.implementado.rotulo}</span>
+      <span class="badge ${STATUS.proposta.classe}">${STATUS.proposta.rotulo}</span>
+      <span class="badge ${STATUS.gratis.classe}">${STATUS.gratis.rotulo}</span>
+      <span class="badge ${STATUS.pago.classe}">${STATUS.pago.rotulo}</span>
+      ${Object.values(CENARIOS).map((c) => `<span class="badge ${c.classe}">${c.rotulo}</span>`).join('')}
+    </div>
+  `;
+}
 
-  secaoEarningsYield() {
-    return `
-      <h6 class="mt-3">Earnings yield e P/L</h6>
-      <p class="small"><code>earnings yield = lucro por ação ÷ preço</code> (o inverso do P/L, em %). Classificado como Atrativo (≥12%), Razoável (≥8%), Baixo (≥6%) ou Muito baixo. O P/L é classificado como Baixo com atenção (&lt;8), Saudável (8–15), Esticado (15–20) ou Exigente (&gt;20).</p>
-    `;
-  }
+function renderTema(tema) {
+  const itens = tema.itens.map((item) => renderItem(item)).join('');
+  return `
+    <div class="col">
+      <div class="card h-100 shadow-sm" id="${tema.id}">
+        <div class="card-header"><strong>${tema.titulo}</strong></div>
+        <div class="card-body">
+          <p class="small text-muted mb-2">${tema.resumo}</p>
+          <p class="small mb-3"><em>Fonte:</em> ${tema.fonte}</p>
+          ${itens}
+        </div>
+      </div>
+    </div>
+  `;
+}
 
-  secaoContextoTecnico() {
-    return `
-      <h6 class="mt-3">Contexto técnico do dia</h6>
-      <p class="small">Posição do preço atual dentro do range de 52 semanas (0% = mínima, 100% = máxima), variação desde a abertura, variação vs. fechamento anterior e amplitude intradiária — tudo em %. A zona de 52 semanas é "Próximo da mínima" (≤25%), "Próximo da máxima" (≥85%) ou "Meio do range".</p>
-    `;
-  }
+function renderItem(item) {
+  const badgeStatus = STATUS[item.status];
+  const badgesCenarios = (item.cenarios || [])
+    .map((c) => `<span class="badge ${CENARIOS[c].classe} me-1">${CENARIOS[c].rotulo}</span>`)
+    .join('');
+  return `
+    <div class="mb-3 pb-2 border-bottom">
+      <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
+        <span class="badge ${badgeStatus.classe}">${badgeStatus.rotulo}</span>
+        ${badgesCenarios}
+      </div>
+      <div class="fw-semibold small">${item.nome}</div>
+      <p class="small mb-1">${item.descricao}</p>
+      <code class="small d-block">${item.formula}</code>
+    </div>
+  `;
+}
 
-  secaoSinalTecnico() {
-    return `
-      <h6 class="mt-3">Sinal técnico de série (quando há histórico)</h6>
-      <p class="small">Sobre os últimos 20 candles coletados: <strong>média móvel</strong> dos fechamentos, <strong>z-score</strong> do último fechamento em relação a essa média (quantos desvios-padrão de distância) e <strong>score de volume</strong> (volume do último candle ÷ volume médio). Desses três números derivam dois sinais categóricos:</p>
-      <ul class="small">
-        <li><strong>Sinal de momentum</strong> (tendência confirmada por volume): compra técnica quando o preço está acima da média móvel <em>e</em> o score de volume é maior que 1.3; venda técnica quando está abaixo da média <em>e</em> o score de volume é menor que 0.7.</li>
-        <li><strong>Sinal de reversão</strong> (extremo estatístico): compra técnica quando o z-score é menor que -1.5 <em>e</em> o preço está a até 10% da mínima de 52 semanas (desconto anormal); venda técnica quando o z-score é maior que 1.5, ou o preço está a até 5% da máxima de 52 semanas (sobrecompra).</li>
-      </ul>
-    `;
-  }
+function renderFonteDados(fonte) {
+  const linhas = fonte.itens
+    .map((item) => {
+      const badge = STATUS[item.status];
+      return `
+        <tr>
+          <td><span class="badge ${badge.classe}">${badge.rotulo}</span></td>
+          <td class="fw-semibold">${item.nome}</td>
+          <td class="text-muted">${item.detalhe}</td>
+        </tr>
+      `;
+    })
+    .join('');
+  return `
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>${fonte.titulo}</strong></div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">${fonte.resumo}</p>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <tbody>${linhas}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
-  secaoDecisaoConsolidada() {
-    return `
-      <h6 class="mt-3">Recomendação, risco e confiança (decisão de um ciclo)</h6>
-      <p class="small">Regras fixas sobre a margem de segurança e o earnings yield: <code>COMPRA_FORTE</code> exige margem conservadora ≥20% e earnings yield ≥12%; <code>COMPRA_MODERADA</code> exige margem base ≥20% e earnings yield ≥8%; <code>VENDA_VALUATION</code> quando a margem base é negativa; <code>ALERTA_RISCO</code> perto da máxima de 52 semanas com margem base baixa; senão <code>MANTER</code>. Risco e confiança seguem a mesma lógica combinando margem, earnings yield, posição no range e volatilidade intradiária.</p>
-      <p class="small">A tela de Consulta e a coluna "Decisão" da aba Monitorados mostram uma <strong>média</strong> de todo o histórico de análises do ativo (sinal mais frequente, % de vendas, média das margens) — não um único ciclo. A aba "Como funciona" mostra o oposto: o retrato <strong>exato do último ciclo</strong>, sem média.</p>
-    `;
-  }
-
-  secaoPerfilOperacao() {
-    return `
-      <h6 class="mt-3">Perfil de operação e riscos separados de compra/venda</h6>
-      <p class="small">Calculado no Java (<code>PerfilOperacaoClassificador</code>), a partir dos mesmos sinais acima — reaproveitados, não recalculados:</p>
-      <ul class="small">
-        <li><strong>Perfis aplicáveis</strong> (um ativo pode ter mais de um ao mesmo tempo): <em>Day trade</em> se o sinal de momentum não é neutro; <em>Swing/reversão</em> se o sinal de reversão não é neutro; <em>Longo prazo</em> se a margem do cenário conservador é ≥20% e a classificação de earnings yield é Atrativa ou Razoável.</li>
-        <li><strong>Risco de comprar agora</strong>: Alto se o ativo está perto da máxima de 52 semanas <em>e</em> a margem base é baixa (&lt;10%); Baixo se nenhuma das duas condições vale; Médio no meio-termo.</li>
-        <li><strong>Risco de vender agora</strong>: Alto se o ativo está perto da mínima de 52 semanas <em>e</em> a margem base ainda é boa (≥10% — você estaria vendendo barato); Baixo se está perto da máxima (bom momento pra realizar); Médio senão.</li>
-        <li><strong>Confluência de sinais</strong>: conta quantos dos 3 sinais independentes (recomendação fundamentalista, momentum, reversão) apontam compra vs. venda vs. neutro. É só uma contagem de concordância — <strong>não é uma probabilidade estatística de sucesso.</strong></li>
-      </ul>
-    `;
-  }
-
-  secaoLimitacoes() {
-    return `
-      <h6 class="mt-3">O que isso não responde (ainda)</h6>
-      <p class="small text-muted">Nenhum número desta página mede se uma recomendação passada "deu certo" (se o preço realmente se moveu como o sinal indicava). Isso exigiria acompanhar o resultado futuro de cada análise ao longo do tempo — um mecanismo que não existe hoje. Por isso o painel não mostra "taxa de acerto" nem probabilidade de sucesso de uma operação: seria um número inventado, não medido.</p>
-    `;
-  }
+function secaoLimitacoes() {
+  return `
+    <h6 class="mt-3">O que isso nao responde (ainda)</h6>
+    <p class="small text-muted">Nenhum numero desta pagina mede se uma recomendacao passada "deu certo" (se o preco realmente se moveu como o sinal indicava). Isso exigiria acompanhar o resultado futuro de cada analise ao longo do tempo - um mecanismo que nao existe hoje. Por isso o painel nao mostra "taxa de acerto" nem probabilidade de sucesso de uma operacao: seria um numero inventado, nao medido.</p>
+  `;
 }
 
 customElements.define('formulas-page', FormulasPage);
