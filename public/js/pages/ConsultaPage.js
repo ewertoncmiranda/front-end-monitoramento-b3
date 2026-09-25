@@ -1,7 +1,7 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarCotacaoRobusta } from '../api/ativosApi.js';
 import { buscarAnalise } from '../api/analisesApi.js';
-import { buscarHistorico } from '../api/historicoApi.js';
+import { buscarHistorico, extrairCandles } from '../api/historicoApi.js';
 import '../components/AtivoSearchForm.js';
 import '../components/AtivoQuoteCard.js';
 import '../components/AnaliseResultCard.js';
@@ -60,8 +60,7 @@ export class ConsultaPage extends BaseComponent {
           resultado.querySelector('analise-result-card').setAnalise(analise);
         }
 
-        const candles = historico?.results?.[0]?.data?.historicalDataPrice;
-        resultado.querySelector('historico-table').setCandles(candles);
+        resultado.querySelector('historico-table').setCandles(extrairCandles(historico));
       } catch (erro) {
         resultado.innerHTML = `<status-alert mensagem="${erro.message}" variante="danger"></status-alert>`;
       }

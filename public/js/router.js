@@ -5,15 +5,14 @@
 // dentro de WebViews sem precisar de configuracao de servidor para
 // reescrever URLs - diferente de roteamento via History API.
 const rotas = {
-  '#/consulta': 'consulta-page',
-  '#/cadastro': 'cadastro-page',
+  '#/gestao': 'gestao-page',
   '#/monitorados': 'ativos-monitorados-page',
-  '#/metodologia': 'metodologia-page',
+  '#/candles': 'candles-page',
   '#/formulas': 'formulas-page',
   '#/arquitetura': 'arquitetura-page',
 };
 
-const ROTA_PADRAO = '#/consulta';
+const ROTA_PADRAO = '#/gestao';
 
 export function iniciarRouter(outletSelector) {
   const outlet = document.querySelector(outletSelector);

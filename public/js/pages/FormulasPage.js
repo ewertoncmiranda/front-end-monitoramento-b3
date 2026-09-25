@@ -140,16 +140,16 @@ const TEMAS = [
   },
   {
     id: 'contexto-setorial',
-    titulo: 'Contexto setorial (proposta)',
+    titulo: 'Contexto setorial',
     resumo: 'Comparar multiplos do ativo contra o proprio setor, em vez de contra limiares fixos e iguais pra qualquer empresa.',
-    fonte: 'BRAPI summaryProfile - confirmado gratis pra qualquer ticker (validado em 2026-09-25 com WEGE3)',
+    fonte: 'BRAPI /v2/stocks/profile - confirmado gratis pra qualquer ticker (validado em 2026-09-25 com WEGE3)',
     itens: [
       {
-        status: 'proposta',
-        nome: 'Setor e industria do ativo',
+        status: 'implementado',
+        nome: 'Setor, industria e resumo do negocio',
         cenarios: ['SETORIAL'],
-        descricao: 'Setor (ex.: "Bens Industriais") e industria (ex.: "Maquinas e Equipamentos") vem prontos da BRAPI. Hoje nao sao coletados nem exibidos.',
-        formula: 'campo direto: summaryProfile.sector / summaryProfile.industry',
+        descricao: 'Buscado ao vivo no Java (ServicoAtivo.buscarPerfilEmpresa) e anexado a resposta de /fundamentos - degrada pra null se a BRAPI falhar, sem quebrar o resto da resposta.',
+        formula: 'campo direto: profile.sector / profile.industry / profile.longBusinessSummary',
       },
       {
         status: 'proposta',
@@ -229,7 +229,7 @@ export class FormulasPage extends BaseComponent {
   template() {
     return `
       <h4 class="mb-1">Fundamentos de mercado</h4>
-      <p class="text-muted small">Cada cartao abaixo e um tema. "Implementado" ja roda no ecossistema hoje; "Proposta futura" e uma especificacao pronta pra implementar, ainda sem codigo. Veja os numeros reais de um ativo na aba <a href="#/metodologia">Como funciona</a>.</p>
+      <p class="text-muted small">Cada cartao abaixo e um tema. "Implementado" ja roda no ecossistema hoje; "Proposta futura" e uma especificacao pronta pra implementar, ainda sem codigo. Veja os numeros reais de um ativo na aba <a href="#/gestao">Gestao</a> (sub-aba "Como funciona").</p>
 
       ${legenda()}
 

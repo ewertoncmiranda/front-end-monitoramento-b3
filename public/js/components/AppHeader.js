@@ -9,10 +9,9 @@ export class AppHeader extends BaseComponent {
         <div class="container">
           <span class="navbar-brand">Painel de Ativos B3</span>
           <div class="navbar-nav">
-            <a class="nav-link text-white" href="#/consulta">Consulta</a>
-            <a class="nav-link text-white" href="#/cadastro">Cadastro</a>
+            <a class="nav-link text-white" href="#/gestao">Gestao</a>
             <a class="nav-link text-white" href="#/monitorados">Monitorados</a>
-            <a class="nav-link text-white" href="#/metodologia">Como funciona</a>
+            <a class="nav-link text-white" href="#/candles">Candles</a>
             <a class="nav-link text-white" href="#/formulas">Formulas</a>
             <a class="nav-link text-white" href="#/arquitetura">Arquitetura</a>
           </div>

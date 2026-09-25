@@ -2,10 +2,9 @@
 // Nao contem regra de negocio nenhuma.
 import './components/AppHeader.js';
 import './components/BottomNav.js';
-import './pages/ConsultaPage.js';
-import './pages/CadastroPage.js';
+import './pages/GestaoPage.js';
 import './pages/AtivosMonitoradosPage.js';
-import './pages/MetodologiaPage.js';
+import './pages/CandlesPage.js';
 import './pages/FormulasPage.js';
 import './pages/ArquiteturaPage.js';
 import { iniciarRouter } from './router.js';

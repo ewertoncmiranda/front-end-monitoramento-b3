@@ -34,6 +34,7 @@ export class FundamentosCard extends BaseComponent {
             <span class="badge bg-secondary">Confianca ${d.resumo?.confianca_score ?? '-'}</span>
           </div>
 
+          ${secaoPerfilEmpresa(f.perfilEmpresa)}
           ${secaoSnapshot(d.snapshot_mercado)}
           ${secaoValuation(d.valuation)}
           ${secaoPerfilOperacao(f)}
@@ -45,6 +46,22 @@ export class FundamentosCard extends BaseComponent {
       </div>
     `;
   }
+}
+
+function secaoPerfilEmpresa(p) {
+  if (!p) return '';
+  return `
+    <h6 class="mt-2">Perfil da empresa</h6>
+    <div class="d-flex flex-wrap gap-2 mb-2">
+      ${p.sector ? `<span class="badge bg-primary">${p.sector}</span>` : ''}
+      ${p.industry ? `<span class="badge bg-secondary">${p.industry}</span>` : ''}
+    </div>
+    ${p.longBusinessSummary ? `<p class="small text-muted mb-3">${primeiroParagrafo(p.longBusinessSummary)}</p>` : ''}
+  `;
+}
+
+function primeiroParagrafo(texto) {
+  return texto.split('\n\n')[0];
 }
 
 function secaoSnapshot(s) {

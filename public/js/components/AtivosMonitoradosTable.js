@@ -1,7 +1,7 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { badgeClassParaRecomendacao } from '../utils/recomendacaoBadge.js';
 import { buscarCotacaoRobusta } from '../api/ativosApi.js';
-import { buscarHistorico } from '../api/historicoApi.js';
+import { buscarHistorico, extrairCandles } from '../api/historicoApi.js';
 import { buscarFundamentos } from '../api/analisesApi.js';
 import './AtivoQuoteCard.js';
 import './AnaliseResultCard.js';
@@ -186,8 +186,7 @@ export class AtivosMonitoradosTable extends BaseComponent {
         linhaDetalhe.querySelector('analise-result-card')?.setAnalise(analise);
       }
 
-      const candles = detalhes.historico?.results?.[0]?.data?.historicalDataPrice;
-      linhaDetalhe.querySelector('historico-table')?.setCandles(candles);
+      linhaDetalhe.querySelector('historico-table')?.setCandles(extrairCandles(detalhes.historico));
 
       if (detalhes.fundamentos) {
         linhaDetalhe.querySelector('fundamentos-card')?.setFundamentos(detalhes.fundamentos);
