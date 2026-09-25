@@ -23,13 +23,17 @@ public/                      Tudo que o servidor expõe como estático
     api/
       httpClient.js               Fetch + tratamento de erro generico
       ativosApi.js                 Endpoints de /ativos
-      analisesApi.js               Endpoint de /analises
+      ativosMonitoradosApi.js       Endpoint de /ativos/registrados
+      analisesApi.js                Endpoint de /analises
       historicoApi.js              Endpoint de historico OHLCV
+    utils/
+      recomendacaoBadge.js          Recomendacao -> classe de badge Bootstrap (compartilhado)
     components/
       base/BaseComponent.js        Ciclo de vida comum dos Web Components
       AtivoSearchForm.js            Captura simbolo, dispara evento
       AtivoQuoteCard.js             Renderiza cotacao
       AnaliseResultCard.js          Renderiza decisao consolidada
+      AtivosMonitoradosTable.js     Renderiza a carteira monitorada + decisao de cada ativo
       HistoricoTable.js             Renderiza serie OHLCV
       StatusAlert.js                 Alerta de sucesso/erro/aviso
       LoadingSpinner.js              Indicador de carregamento
@@ -38,6 +42,7 @@ public/                      Tudo que o servidor expõe como estático
     pages/
       ConsultaPage.js                 Orquestra a tela de consulta
       CadastroPage.js                 Orquestra a tela de cadastro
+      AtivosMonitoradosPage.js        Orquestra a aba "Monitorados"
     router.js                          Rota (hash) -> pagina
     main.js                            Ponto de entrada
 proxy/
@@ -106,10 +111,11 @@ Em qualquer um dos dois, acesse `http://localhost:8080`.
 
 Se nenhum dos dois responder, o servidor sobe mesmo assim (modo degradado): a UI estática funciona normalmente, só as chamadas de API falham até o backend aparecer.
 
-## Pendências que dependem de fora deste projeto
+## Aba "Monitorados" (`#/monitorados`)
 
-1. **Cadastro sem listagem.** `POST /ativos/registrar/{ativo}` existe, mas não há nenhum `GET` para listar o que já foi registrado (a fila é só em memória, no `AgendadorAtivos`). A tela de cadastro avisa isso ao usuário; para ficar completo, precisa de um endpoint novo no Java (`TASK-01` no `SPEC.md`).
-2. **Este serviço ainda não está no `docker-compose.yml`** do `infra-b3-ecossystem` — hoje ele é buildado/rodado manualmente. Ver `TASK-04` no `SPEC.md`.
+Cadastrar um ativo em `#/cadastro` persiste no backend e o coloca em monitoramento recorrente (cotação + histórico a cada 30s, sem intervenção manual). A aba `#/monitorados` lista a carteira (`GET /ativos/registrados`) e, para cada ativo, busca em paralelo a última decisão consolidada (`GET /analises/{simbolo}/analise`) — mesma rota já usada em `#/consulta`. Um ativo recém-cadastrado ou sem análise ainda aparece como "Sem análise ainda"; a busca de cada símbolo falha de forma independente, então isso nunca trava a lista inteira.
+
+Não há, de propósito, UI para desativar/pausar um ativo monitorado nem para configurar o intervalo — fora do escopo pedido (ver `TASK-05` no `SPEC.md`).
 
 Detalhes de arquitetura, contratos consumidos e backlog completo estão em [`SPEC.md`](./SPEC.md).
 

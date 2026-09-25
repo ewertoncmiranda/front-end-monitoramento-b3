@@ -4,6 +4,7 @@ import './components/AppHeader.js';
 import './components/BottomNav.js';
 import './pages/ConsultaPage.js';
 import './pages/CadastroPage.js';
+import './pages/AtivosMonitoradosPage.js';
 import { iniciarRouter } from './router.js';
 
 document.querySelector('#app-header-outlet').innerHTML = '<app-header></app-header>';

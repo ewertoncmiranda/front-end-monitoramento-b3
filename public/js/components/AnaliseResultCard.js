@@ -1,4 +1,5 @@
 import { BaseComponent } from './base/BaseComponent.js';
+import { badgeClassParaRecomendacao } from '../utils/recomendacaoBadge.js';
 
 // Unica responsabilidade: renderizar a decisao consolidada devolvida por
 // GET /analises/{simbolo}/analise (contrato RespostaAnaliseIaDTO).
@@ -14,16 +15,7 @@ export class AnaliseResultCard extends BaseComponent {
       return '';
     }
 
-    const badgePorRecomendacao = {
-      COMPRA: 'bg-success',
-      COMPRA_FORTE: 'bg-success',
-      COMPRA_MODERADA: 'bg-success',
-      VENDA: 'bg-danger',
-      VENDA_VALUATION: 'bg-danger',
-      NEUTRO: 'bg-secondary',
-      MANTER: 'bg-secondary',
-    };
-    const badge = badgePorRecomendacao[r.recomendacao] || 'bg-secondary';
+    const badge = badgeClassParaRecomendacao(r.recomendacao);
 
     return `
       <div class="card shadow-sm mb-3">

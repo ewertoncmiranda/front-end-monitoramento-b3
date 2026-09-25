@@ -1,14 +1,16 @@
 # SPEC - painel-ativos-frontend
 
 > Estado mapeado diretamente da implementação em 2026-09-25. Seção 2.1 documenta o plano
-> do servidor Node (proposto e implementado no mesmo dia).
+> do servidor Node (proposto e implementado no mesmo dia). Seção 2.2 documenta a aba
+> "Monitorados" (proposta e implementada no mesmo dia, mais tarde).
 
 ## 1. Visão geral
 
 Frontend em HTML + JS puro + Bootstrap 5 (sem bundler no cliente) para o `gestor-ativos-brutos`, servido por um pequeno servidor Node/Express (`server.js`) que também atua como proxy reverso para o backend. Consome as rotas HTTP existentes para:
 
 1. **Consultar** um ativo: cotação (com série histórica), decisão consolidada e histórico OHLCV.
-2. **Cadastrar** um ativo no agendador do backend (registro, sem listagem — ver `ISS-01`).
+2. **Cadastrar** um ativo no agendador do backend — o ativo entra em monitoramento recorrente (30s) com série histórica persistida.
+3. **Listar os ativos monitorados** (aba "Monitorados"), enriquecida com a última decisão consolidada de cada um (`ISS-01`/`TASK-01` **RESOLVIDO**, ver 2.2).
 
 Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técnico) é calculada no lado dos dois backends (`gestor-ativos-brutos` e `gerar-insights`); este projeto só exibe.
 
@@ -39,6 +41,18 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 
 **Implementado e testado** (build da imagem + container rodando na rede `infra-b3-ecossytem_observability`, mesma do `gestor-ativos-brutos` real): resolução do backend primário por nome de serviço, proxy das 4 rotas com dados reais (cotação, análise, histórico, registro), Consulta e Cadastro validados na tela.
 
+### 2.2 Aba "Monitorados" + cadastro persistente (2026-09-25)
+
+**Motivação:** o backend passou a persistir o cadastro de ativos em `ativo_monitorado` e reprocessá-los a cada 30s (ver `gestor-ativos-brutos/SPEC.md`, seção 2.2 Fluxo E), fechando `ISS-01`/`TASK-01` deste front (não existia `GET` para listar o que foi cadastrado).
+
+**Desenho:**
+1. Nova página `AtivosMonitoradosPage` (rota `#/monitorados`) busca `GET /ativos/registrados` e delega a renderização a `AtivosMonitoradosTable`.
+2. **Enriquecimento:** para cada ativo listado, a página busca em paralelo `GET /analises/{simbolo}/analise` (o mesmo contrato já usado em `ConsultaPage`) e repassa pra tabela via `setAnalise(simbolo, analise)` — cada busca falha de forma independente (`.catch(() => null)`), então um ativo sem análise ainda (cadastro muito recente, ou falha na BRAPI) não trava a linha dos demais; a célula mostra um spinner até a resposta chegar, e "Sem análise ainda" se não houver dado.
+3. `badgeClassParaRecomendacao` foi extraído de `AnaliseResultCard` para `js/utils/recomendacaoBadge.js` (compartilhado com `AtivosMonitoradosTable`) — sem essa extração o mapeamento recomendação→cor de badge ficaria duplicado nos dois componentes.
+4. `CadastroPage`: o aviso fixo sobre "backend não expõe listagem" virou um link para `#/monitorados`, e a mensagem de sucesso do cadastro também linka pra lá.
+
+**Implementado e testado** (rebuild da imagem, container na rede do ecossistema): `#/monitorados` lista os ativos reais cadastrados (`MGLU3`, `WEGE3`), decisão consolidada aparece pra quem já tem `insight_acao` (`MGLU3` → `VENDA_VALUATION`, 100% confiança), "Sem análise ainda" pra quem não tem; confirmado por log do `AgendadorAtivos` que o reprocessamento a cada ~30s ocorre sem ação do usuário; testado em viewport mobile (375×812) com scroll horizontal da tabela.
+
 ## 3. Estrutura de componentes
 
 | Componente/módulo | Responsabilidade única | Arquivo |
@@ -49,12 +63,15 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | `apiConfig` | Saber a URL base da API (hoje sempre relativa, ver `2.1`) | `js/config/apiConfig.js` |
 | `httpClient` | Executar fetch e traduzir erros (HTTP e rede) | `js/api/httpClient.js` |
 | `ativosApi` | Endpoints de `/ativos` | `js/api/ativosApi.js` |
+| `ativosMonitoradosApi` | Endpoint de `/ativos/registrados` | `js/api/ativosMonitoradosApi.js` |
 | `analisesApi` | Endpoint de `/analises` | `js/api/analisesApi.js` |
 | `historicoApi` | Endpoint de histórico OHLCV | `js/api/historicoApi.js` |
+| `recomendacaoBadge` | Mapear recomendação → classe de badge Bootstrap (compartilhado) | `js/utils/recomendacaoBadge.js` |
 | `BaseComponent` | Ciclo de vida comum dos Web Components | `js/components/base/BaseComponent.js` |
 | `AtivoSearchForm` | Capturar símbolo digitado, disparar evento | `js/components/AtivoSearchForm.js` |
 | `AtivoQuoteCard` | Renderizar cotação (`Ativo`) | `js/components/AtivoQuoteCard.js` |
 | `AnaliseResultCard` | Renderizar decisão consolidada (`RespostaAnaliseIaDTO`) | `js/components/AnaliseResultCard.js` |
+| `AtivosMonitoradosTable` | Renderizar a carteira monitorada + decisão de cada ativo | `js/components/AtivosMonitoradosTable.js` |
 | `HistoricoTable` | Renderizar série OHLCV | `js/components/HistoricoTable.js` |
 | `StatusAlert` | Alerta de sucesso/erro/aviso | `js/components/StatusAlert.js` |
 | `LoadingSpinner` | Indicador de carregamento | `js/components/LoadingSpinner.js` |
@@ -62,6 +79,7 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | `BottomNav` | Navegação inferior estilo app (celular) | `js/components/BottomNav.js` |
 | `ConsultaPage` | Orquestrar busca + renderização da consulta | `js/pages/ConsultaPage.js` |
 | `CadastroPage` | Orquestrar o registro de um ativo | `js/pages/CadastroPage.js` |
+| `AtivosMonitoradosPage` | Orquestrar a listagem da carteira monitorada + busca da decisão de cada ativo | `js/pages/AtivosMonitoradosPage.js` |
 | `router` | Rota (hash) → página | `js/router.js` |
 | `main` | Ponto de entrada (registra componentes, inicia router) | `js/main.js` |
 
@@ -72,11 +90,12 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | Rota | Método | Usado em | Observação |
 | --- | --- | --- | --- |
 | `/ativos/robusto/{ativo}` | GET | `ConsultaPage` | Traz `Ativo` + publica série histórica no backend (efeito colateral do próprio backend, não deste front). |
-| `/analises/{simbolo}/analise` | GET | `ConsultaPage` | Decisão consolidada; se falhar, a consulta continua exibindo cotação/histórico (`.catch(() => null)`). |
+| `/analises/{simbolo}/analise` | GET | `ConsultaPage`, `AtivosMonitoradosPage` | Decisão consolidada; se falhar, a tela continua exibindo o resto (`.catch(() => null)`). Na aba Monitorados é buscada uma vez por ativo listado, em paralelo. |
 | `/api/v2/stocks/historical` | GET | `ConsultaPage` | `symbols`, `range=1mo`, `interval=1d`, `sortOrder=asc` fixos no `historicoApi.js`. |
-| `/ativos/registrar/{ativo}` | POST | `CadastroPage` | Sem confirmação de listagem (ver `ISS-01`). |
+| `/ativos/registrar/{ativo}` | POST | `CadastroPage` | Persiste o cadastro no backend (`ativo_monitorado`) e entra em monitoramento recorrente de 30s; confirmação via link para `#/monitorados`. |
+| `/ativos/registrados` | GET | `AtivosMonitoradosPage` | Lista a carteira monitorada (`ISS-01`/`TASK-01` **RESOLVIDO**). |
 
-Todas as 4 rotas acima são acessadas pelo **cliente** como caminho relativo (mesma origem do front) — quem fala com o backend de verdade é o `server.js`, via proxy reverso (`proxy/apiProxy.js`). CORS habilitado no backend em `ConfigCors` (`app.cors.allowed-origins`) desde 2026-09-25 deixou de ser necessário para este front especificamente, mas continua útil pra outros clientes que queiram chamar o backend direto do browser.
+Todas as 5 rotas acima são acessadas pelo **cliente** como caminho relativo (mesma origem do front) — quem fala com o backend de verdade é o `server.js`, via proxy reverso (`proxy/apiProxy.js`). CORS habilitado no backend em `ConfigCors` (`app.cors.allowed-origins`) desde 2026-09-25 deixou de ser necessário para este front especificamente, mas continua útil pra outros clientes que queiram chamar o backend direto do browser.
 
 ## 5. Configuração
 
@@ -93,9 +112,10 @@ Não existe mais configuração do lado do cliente (`window.PAINEL_ATIVOS_API_BA
 | ID | Requisito | Status |
 | --- | --- | --- |
 | REQ-01 | Consultar cotação, decisão e histórico de um ativo | IMPLEMENTADO |
-| REQ-02 | Cadastrar (registrar) um ativo no backend | IMPLEMENTADO (parcial — sem confirmação de listagem, `ISS-01`) |
+| REQ-02 | Cadastrar (registrar) um ativo no backend | IMPLEMENTADO |
 | REQ-03 | Layout responsivo mobile-first | IMPLEMENTADO (Bootstrap grid + `BottomNav`/`AppHeader` alternados por breakpoint) |
 | REQ-04 | Zero CSS customizado além do indispensável | IMPLEMENTADO |
+| REQ-05 | Listar os ativos monitorados, com a última decisão de cada um | IMPLEMENTADO (2026-09-25, aba `#/monitorados`, ver `2.2`) |
 | NFR-01 | Cliente sem etapa de build | ATENDIDO (o servidor Node tem `npm install`, mas o JS/CSS do browser continua sem bundler) |
 | NFR-02 | Compatível com empacotamento em WebView (Android/iOS) | ATENDIDO (ES modules + Custom Elements, sem History API; o proxy é transparente pro cliente) |
 | NFR-03 | Um arquivo = uma responsabilidade (SRP) | ATENDIDO |
@@ -105,7 +125,7 @@ Não existe mais configuração do lado do cliente (`window.PAINEL_ATIVOS_API_BA
 
 | ID | Severidade | Descrição | Impacto | Status |
 | --- | --- | --- | --- | --- |
-| ISS-01 | Médio | `POST /ativos/registrar/{ativo}` não tem `GET` equivalente para listar o que já foi registrado | Tela de cadastro não confirma o que está na fila do agendador | ABERTO — depende de endpoint novo no `gestor-ativos-brutos` |
+| ISS-01 | Médio | ~~`POST /ativos/registrar/{ativo}` não tem `GET` equivalente para listar o que já foi registrado~~ | ~~Tela de cadastro não confirma o que está na fila do agendador~~ | RESOLVIDO (2026-09-25) — `GET /ativos/registrados` novo no backend, consumido pela aba `#/monitorados` (`AtivosMonitoradosPage`) |
 | ISS-02 | Baixo | Bootstrap carregado via CDN | Sem internet, a UI perde todo o estilo | ABERTO — mitigação documentada no README (vendorizar local) |
 | ISS-03 | Baixo | Nenhum teste automatizado (nem do cliente, nem do `server.js`/proxy) | Regressões só são pegas manualmente | ABERTO |
 | ISS-04 | Baixo | `http-proxy-middleware` remove o prefixo da rota ao ser montado via `app.use(rota, ...)` | Sem `pathRewrite`, o backend recebia `/PETR4/analise` em vez de `/analises/PETR4/analise` (achado e corrigido durante a implementação) | RESOLVIDO — `proxy/apiProxy.js` usa `pathRewrite: (path) => rota + path` |
@@ -113,9 +133,10 @@ Não existe mais configuração do lado do cliente (`window.PAINEL_ATIVOS_API_BA
 
 ## 8. Backlog
 
-| ID | Tarefa | Depende de |
-| --- | --- | --- |
-| TASK-01 | Endpoint `GET /ativos/registrados` no `gestor-ativos-brutos` (lista o conteúdo da fila em memória do `AgendadorAtivos`) | ISS-01 |
-| TASK-02 | Vendorizar Bootstrap localmente como opção para build offline/WebView | ISS-02 |
-| TASK-03 | Testes de componente (ex.: Web Test Runner) para `TechnicalSeriesAnalyzer`-like pure functions e componentes de renderização, e testes do proxy (`backendConfig`/`apiProxy`) | ISS-03 |
-| TASK-04 | Adicionar este front como serviço no `docker-compose.yml` do `infra-b3-ecossystem` (rede `infra-b3-ecossytem_observability`, mesma do `gestor-ativos-brutos`), pra subir junto com o resto do ecossistema | — |
+| ID | Tarefa | Depende de | Status |
+| --- | --- | --- | --- |
+| TASK-01 | ~~Endpoint `GET /ativos/registrados` no `gestor-ativos-brutos`~~ + aba de listagem no front | ISS-01 | RESOLVIDO (2026-09-25) |
+| TASK-02 | Vendorizar Bootstrap localmente como opção para build offline/WebView | ISS-02 | ABERTO |
+| TASK-03 | Testes de componente (ex.: Web Test Runner) para `TechnicalSeriesAnalyzer`-like pure functions e componentes de renderização, e testes do proxy (`backendConfig`/`apiProxy`) | ISS-03 | ABERTO |
+| TASK-04 | Adicionar este front como serviço no `docker-compose.yml` do `infra-b3-ecossystem` (rede `infra-b3-ecossytem_observability`, mesma do `gestor-ativos-brutos`), pra subir junto com o resto do ecossistema | — | RESOLVIDO |
+| TASK-05 | Desativar/pausar um ativo monitorado pela UI (a coluna `ativo` já existe no schema, mas nada escreve `false` ainda) | REQ-05 | ABERTO — fora do escopo do pedido original (2026-09-25) |
