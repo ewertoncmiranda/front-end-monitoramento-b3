@@ -3,7 +3,7 @@
 // backend (isso e do backendConfig.js), so aplica o proxy nas rotas certas.
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
-const ROTAS_PROXIADAS = ['/ativos', '/analises', '/api'];
+const ROTAS_PROXIADAS = ['/ativos', '/analises', '/api', '/setores', '/indices-macro'];
 
 export function registrarProxy(app, backendUrl) {
   for (const rota of ROTAS_PROXIADAS) {

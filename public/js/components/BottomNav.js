@@ -39,6 +39,14 @@ export class BottomNav extends BaseComponent {
             <div>📖</div>
             <small>Glossário</small>
           </a>
+          <a class="nav-link text-center flex-shrink-0 px-2" href="#/setores">
+            <div>🏭</div>
+            <small>Setores</small>
+          </a>
+          <a class="nav-link text-center flex-shrink-0 px-2" href="#/indices">
+            <div>📊</div>
+            <small>Índices</small>
+          </a>
         </div>
       </nav>
     `;

@@ -13,6 +13,8 @@ const rotas = {
   '#/padroes': 'padroes-page',
   '#/glossario': 'glossario-page',
   '#/estudos': 'estudos-page',
+  '#/setores': 'setores-page',
+  '#/indices': 'indices-macro-page',
 };
 
 const ROTA_PADRAO = '#/gestao';
