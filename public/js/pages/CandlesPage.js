@@ -1,6 +1,6 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarHistorico, extrairCandles, RANGES_DISPONIVEIS } from '../api/historicoApi.js';
-import '../components/AtivoSearchForm.js';
+import '../components/SeletorDeAtivos.js';
 import '../components/CandleChart.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
@@ -16,7 +16,7 @@ export class CandlesPage extends BaseComponent {
     return `
       <h4 class="mb-1">Candles</h4>
       <p class="text-muted small">Grafico de candlestick com o historico OHLC diario ja coletado pelo ecossistema. Sem candles suficientes no range escolhido, o grafico nao e desenhado.</p>
-      <ativo-search-form rotulo-botao="Ver candles" placeholder="Ex.: PETR4"></ativo-search-form>
+      <seletor-de-ativos rotulo-botao="Ver candles" placeholder="Ex.: PETR4"></seletor-de-ativos>
       <div class="btn-group my-3" role="group" aria-label="Range do grafico">
         ${RANGES_DISPONIVEIS.map(
           (r) =>
@@ -31,7 +31,7 @@ export class CandlesPage extends BaseComponent {
     this._simbolo = null;
     this._range = RANGE_PADRAO;
 
-    const form = this.querySelector('ativo-search-form');
+    const form = this.querySelector('seletor-de-ativos');
     const resultado = this.querySelector('#candles-resultado');
     const botoesRange = this.querySelectorAll('.range-btn');
 

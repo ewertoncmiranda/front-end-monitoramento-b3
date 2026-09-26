@@ -1,6 +1,6 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarFundamentos, buscarFundamentosCvm } from '../api/analisesApi.js';
-import '../components/AtivoSearchForm.js';
+import '../components/SeletorDeAtivos.js';
 import '../components/FundamentosCard.js';
 import '../components/FundamentosCvmCard.js';
 import '../components/LoadingSpinner.js';
@@ -16,13 +16,13 @@ export class MetodologiaPage extends BaseComponent {
     return `
       <h4 class="mb-3">Como funciona</h4>
       <p class="text-muted small">Mostra o retrato exato da ultima analise persistida de um ativo - os mesmos numeros calculados pelo gerar-insights naquele ciclo, sem media com o historico. Veja as formulas em <a href="#/formulas">Formulas</a> e a arquitetura em <a href="#/arquitetura">Arquitetura</a>.</p>
-      <ativo-search-form rotulo-botao="Buscar" placeholder="Ex.: PETR4"></ativo-search-form>
+      <seletor-de-ativos rotulo-botao="Buscar" placeholder="Ex.: PETR4"></seletor-de-ativos>
       <div id="fundamentos-resultado" class="mt-3"></div>
     `;
   }
 
   afterRender() {
-    const form = this.querySelector('ativo-search-form');
+    const form = this.querySelector('seletor-de-ativos');
     const resultado = this.querySelector('#fundamentos-resultado');
 
     form.addEventListener('ativo-buscado', async (event) => {

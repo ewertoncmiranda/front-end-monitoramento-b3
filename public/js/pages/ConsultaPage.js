@@ -2,7 +2,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarCotacaoRobusta } from '../api/ativosApi.js';
 import { buscarAnalise, buscarFundamentosCvm } from '../api/analisesApi.js';
 import { buscarHistorico, extrairCandles } from '../api/historicoApi.js';
-import '../components/AtivoSearchForm.js';
+import '../components/SeletorDeAtivos.js';
 import '../components/AtivoQuoteCard.js';
 import '../components/AnaliseResultCard.js';
 import '../components/FundamentosCvmCard.js';
@@ -17,13 +17,13 @@ export class ConsultaPage extends BaseComponent {
   template() {
     return `
       <h4 class="mb-3">Consulta de ativo</h4>
-      <ativo-search-form rotulo-botao="Consultar" placeholder="Ex.: PETR4"></ativo-search-form>
+      <seletor-de-ativos rotulo-botao="Consultar" placeholder="Ex.: PETR4"></seletor-de-ativos>
       <div id="consulta-resultado" class="mt-3"></div>
     `;
   }
 
   afterRender() {
-    const form = this.querySelector('ativo-search-form');
+    const form = this.querySelector('seletor-de-ativos');
     const resultado = this.querySelector('#consulta-resultado');
 
     form.addEventListener('ativo-buscado', async (event) => {
