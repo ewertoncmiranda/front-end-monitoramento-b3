@@ -68,6 +68,9 @@ export class SeletorDeAtivos extends BaseComponent {
     area.querySelectorAll('[data-simbolo]').forEach((botao) => {
       botao.addEventListener('click', () => this.selecionar(botao.dataset.simbolo));
     });
+    // Selecao feita antes de a carteira chegar (link direto com ?simbolo=)
+    // ja esta em _selecionado; os chips acabaram de nascer e precisam refleti-la.
+    this.marcarSelecionado();
 
     if (this.hasAttribute('auto-selecionar')) {
       this.selecionar(this._ativos[0].simbolo);

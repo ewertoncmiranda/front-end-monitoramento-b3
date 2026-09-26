@@ -11,6 +11,7 @@ import {
   avaliarCarteira,
   interpretar,
 } from '../analise/taxaAcerto.js';
+import { padraoDetalhado } from '../estudos/glossarioPadroes.js';
 
 // Unica responsabilidade: deixar ligar e desligar padroes sobre o grafico e
 // mostrar o que cada um significa estatisticamente naquela janela.
@@ -122,7 +123,7 @@ export class PainelPadroes extends BaseComponent {
     area.innerHTML = `
       ${this.cabecalho()}
       <div class="padroes-cartoes-scroll">
-        <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-1 g-3 mb-3">
           ${PADROES.map((p) => this.cartao(p, false)).join('')}
         </div>
 
@@ -132,7 +133,7 @@ export class PainelPadroes extends BaseComponent {
           o que parece. Cada um corresponde a uma armadilha da aba
           <a href="#/padroes">Padrões</a>.
         </p>
-        <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-1 g-3 mb-3">
           ${ALERTAS.map((a) => this.cartao(a, true)).join('')}
         </div>
 
@@ -150,7 +151,7 @@ export class PainelPadroes extends BaseComponent {
       .join('');
 
     return `
-      <div class="bg-body py-2 border-bottom mb-3">
+      <div class="padroes-cabecalho bg-body py-2 border-bottom mb-3">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
           <h6 class="mb-0">Padrões sobre o gráfico</h6>
           <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -209,6 +210,7 @@ export class PainelPadroes extends BaseComponent {
                         data-padrao="${definicao.id}">
                   ${ligado ? '✓ ' : ''}${definicao.nome}
                 </button>
+                ${this.linkGlossario(definicao, 'icone')}
                 ${
                   !ehAlerta
                     ? `<span class="badge bg-light text-dark ms-1">${definicao.direcao}</span>`
@@ -232,10 +234,36 @@ export class PainelPadroes extends BaseComponent {
             <p class="small text-muted mb-1 mt-2">${definicao.resumo}</p>
             <p class="small text-muted mb-2"><code>${definicao.regra}</code></p>
             ${corpoEstatistica}
+            ${this.linkGlossario(definicao, 'texto')}
           </div>
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Link para o verbete do padrao no glossario (fundamento, o que indica,
+   * cenarios e padroes complementares). Abre em outra aba de proposito: na
+   * mesma, o roteador desmonta esta pagina e o usuario perde o ativo, o
+   * periodo e os padroes que tinha ligado.
+   */
+  linkGlossario(definicao, formato) {
+    if (!padraoDetalhado(definicao.id)) return '';
+    const href = `#/glossario?padrao=${definicao.id}`;
+    const descricao = `Entenda o padrão ${definicao.nome} no glossário (abre em nova aba)`;
+
+    if (formato === 'icone') {
+      return `
+        <a href="${href}" target="_blank" rel="noopener"
+           class="padrao-ajuda badge rounded-pill text-bg-light border text-decoration-none ms-1"
+           title="${descricao}" aria-label="${descricao}">?</a>`;
+    }
+    return `
+      <p class="small mb-0 mt-2">
+        <a href="${href}" target="_blank" rel="noopener">
+          Fundamentos, cenários e padrões complementares no glossário ↗
+        </a>
+      </p>`;
   }
 
   totalCandlesCarteira() {

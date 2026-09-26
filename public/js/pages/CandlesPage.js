@@ -20,24 +20,30 @@ const BASE_PADRAO = 'ajustado';
 // "quantos candles bastam pra desenhar" (isso e do CandleChart) nem detecta
 // padrao (isso e do PainelPadroes).
 //
-// Layout: o grafico rola normalmente. O cabecalho do painel de padroes, com
-// calibragem e controles, fica fixo apenas a partir de telas medias. No
-// celular nada fica preso, para nao consumir a area util.
+// Layout: a partir de telas grandes, o painel de padroes vira um menu lateral
+// a esquerda, preso na tela e com rolagem propria (cabecalho fixo, cartoes
+// rolando); o grafico ocupa o resto a direita. Abaixo disso as colunas
+// empilham - grafico primeiro, padroes depois - e nada fica preso, para nao
+// consumir a area util do celular.
 export class CandlesPage extends BaseComponent {
   template() {
     return `
       <h4 class="mb-1">Velas (candles)</h4>
       <p class="text-muted small">
         Gráfico de velas com o histórico diário de abertura, máxima, mínima e fechamento já
-        coletado pelo ecossistema. Ative os padrões no painel abaixo; o significado de cada
-        um está em <a href="#/padroes">Padrões e armadilhas</a>.
+        coletado pelo ecossistema. Ative os padrões no painel lateral (abaixo do gráfico, no
+        celular); o significado de cada um está em <a href="#/padroes">Padrões e armadilhas</a>.
       </p>
 
       <seletor-de-ativos rotulo-botao="Ver candles" placeholder="Ex.: PETR4"></seletor-de-ativos>
 
-      <div id="candles-grafico" class="pt-2 pb-2 mt-2"></div>
-      <div id="candles-padroes" class="mt-3"></div>
       <div id="candles-erro"></div>
+
+      <div class="row g-3 mt-1">
+        <div id="candles-grafico" class="col-lg order-lg-2 pt-2 pb-2"></div>
+        <aside id="candles-padroes" class="candles-lateral col-lg-4 order-lg-1"
+               aria-label="Padrões sobre o gráfico"></aside>
+      </div>
     `;
   }
 

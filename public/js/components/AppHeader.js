@@ -13,6 +13,7 @@ export class AppHeader extends BaseComponent {
             <a class="nav-link text-white" href="#/gestao">Gestão</a>
             <a class="nav-link text-white" href="#/monitorados">Monitorados</a>
             <a class="nav-link text-white" href="#/candles">Velas</a>
+            <a class="nav-link text-white" href="#/comunicados">Comunicados</a>
             <a class="nav-link text-white" href="#/formulas">Fórmulas</a>
             <a class="nav-link text-white" href="#/arquitetura">Arquitetura</a>
             <a class="nav-link text-white" href="#/padroes">Padrões</a>
