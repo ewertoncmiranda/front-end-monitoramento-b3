@@ -5,8 +5,10 @@ import '../components/StatusAlert.js';
 
 // Unica responsabilidade: orquestrar a exibicao dos indices macroeconomicos -
 // busca cada serie no cache do backend e delega a renderizacao a funcoes
-// puras. Conteudo dinamico, mas fonte 100% publica e gratuita (API SGS do
-// Banco Central, https://api.bcb.gov.br - sem chave, sem custo).
+// puras. Conteudo dinamico, mas fonte 100% publica e gratuita: API SGS do
+// Banco Central (https://api.bcb.gov.br) pra Selic/CDI/IPCA/IGP-M/dolar/IBC-Br,
+// e API de agregados do IBGE/SIDRA (https://servicodados.ibge.gov.br) pra
+// series como desemprego - nenhuma das duas exige chave ou custo.
 //
 // Cada indice tem um link pra uma segunda fonte, independente do BCB, pra
 // quem quiser conferir o numero antes de confiar nele - a maioria via
@@ -21,6 +23,7 @@ const INDICES = [
   { codigo: 'IGPM', nome: 'IGP-M (mensal)', unidade: '%', fonte: 'https://portalibre.fgv.br/indicadores/igp' },
   { codigo: 'DOLAR', nome: 'Dólar comercial (PTAX venda)', unidade: 'R$', fonte: 'https://tradingeconomics.com/brazil/currency' },
   { codigo: 'IBCBR', nome: 'IBC-Br (proxy mensal do PIB)', unidade: 'índice', fonte: 'https://tradingeconomics.com/brazil/gdp-growth-annual' },
+  { codigo: 'DESEMPREGO', nome: 'Desemprego (PNAD Contínua)', unidade: '%', fonte: 'https://sidra.ibge.gov.br/tabela/6381' },
 ];
 
 export class IndicesMacroPage extends BaseComponent {
@@ -28,7 +31,7 @@ export class IndicesMacroPage extends BaseComponent {
     return `
       <h4 class="mb-1">Indices macroeconomicos</h4>
       <p class="text-muted small">
-        Direto da API SGS do Banco Central - sem chave, sem custo. Serve de referencia de custo
+        Direto das APIs publicas do Banco Central e do IBGE - sem chave, sem custo. Serve de referencia de custo
         de oportunidade: o earnings yield calculado em <a href="#/formulas">Formulas</a> so diz
         algo quando comparado contra a Selic do momento. Cada cartao linka pra uma segunda fonte,
         independente do BCB, pra conferir o numero antes de confiar nele.
