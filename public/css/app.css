@@ -112,3 +112,19 @@ body {
     padding-right: 0.25rem;
   }
 }
+.curso-pdf-ratio {
+  --bs-aspect-ratio: 75%;
+  min-height: 32rem;
+  overflow: hidden;
+}
+
+.curso-pdf-ratio iframe {
+  border: 0;
+}
+
+@media (max-width: 767.98px) {
+  .curso-pdf-ratio {
+    --bs-aspect-ratio: 140%;
+    min-height: 28rem;
+  }
+}

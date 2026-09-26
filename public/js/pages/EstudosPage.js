@@ -4,12 +4,13 @@ import { niveis, apimec } from '../estudos/conteudo.js';
 import { ProgressoEstudos } from '../estudos/progresso.js';
 import { normalizar } from '../estudos/texto.js';
 import { renderTrilhas, renderConhecimento, renderOrientacoes, renderMateriais, renderReferencia } from '../estudos/apresentacao.js';
+import { renderCatalogoCursos, renderCurso, abrirPdf } from '../estudos/apresentacaoCursos.js';
 import '../pages/FormulasPage.js';
 import '../pages/ArquiteturaPage.js';
 import '../pages/PadroesPage.js';
 import '../pages/GlossarioPage.js';
 
-const secoes = { trilhas: 'Planos de estudo', conhecimento: 'Conhecimento', orientacoes: 'Orientações', materiais: 'Material didático', referencia: 'Referência' };
+const secoes = { cursos: 'Cursos', trilhas: 'Planos de estudo', conhecimento: 'Conhecimento', orientacoes: 'Orientações', materiais: 'Material didático', referencia: 'Referência' };
 
 export class EstudosPage extends BaseComponent {
   constructor() {
@@ -17,7 +18,8 @@ export class EstudosPage extends BaseComponent {
     let armazenamento;
     try { armazenamento = window.localStorage; } catch { /* O estudo funciona sem persistência. */ }
     this.progresso = new ProgressoEstudos(armazenamento, [...niveis, ...apimec].map(n => n.id));
-    this.secao = 'trilhas';
+    this.secao = 'cursos';
+    this.cursoAberto = null;
     this.percurso = 'formacao';
     this.subReferencia = 'formulas';
   }
@@ -42,6 +44,7 @@ export class EstudosPage extends BaseComponent {
       const secao = evento.target.closest('[data-secao]');
       if (secao) {
         this.secao = secao.dataset.secao;
+        this.cursoAberto = null;
         this.querySelectorAll('[data-secao]').forEach(btn => {
           const ativa = btn.dataset.secao === this.secao;
           btn.classList.toggle('btn-primary', ativa);
@@ -50,6 +53,25 @@ export class EstudosPage extends BaseComponent {
         });
         this.querySelector('#estudos-busca').value = '';
         this.renderConteudo();
+      }
+      const curso = evento.target.closest('[data-abrir-curso]');
+      if (curso) {
+        this.cursoAberto = curso.dataset.abrirCurso;
+        this.querySelector('#estudos-busca').value = '';
+        this.renderConteudo();
+        this.querySelector('#estudos-conteudo').scrollIntoView({ block: 'start' });
+      }
+      if (evento.target.closest('[data-voltar-cursos]')) {
+        this.cursoAberto = null;
+        this.renderConteudo();
+      }
+      const pdf = evento.target.closest('[data-abrir-pdf]');
+      if (pdf) abrirPdf(this.querySelector('[data-pdf-container]'), pdf.dataset.abrirPdf, pdf.dataset.pagina);
+      if (evento.target.closest('[data-fechar-pdf]')) {
+        const container = this.querySelector('[data-pdf-container]');
+        container.innerHTML = '';
+        container.classList.add('d-none');
+        evento.target.closest('[data-fechar-pdf]').classList.add('d-none');
       }
       const percurso = evento.target.closest('[data-percurso]');
       if (percurso) { this.percurso = percurso.dataset.percurso; this.renderConteudo(); }
@@ -92,14 +114,14 @@ export class EstudosPage extends BaseComponent {
   }
 
   renderConteudo() {
-    const renderizadores = { trilhas: () => renderTrilhas(this.progresso, this.percurso), conhecimento: renderConhecimento, orientacoes: renderOrientacoes, materiais: renderMateriais, referencia: () => renderReferencia(this.subReferencia) };
+    const renderizadores = { cursos: () => this.cursoAberto ? renderCurso(this.cursoAberto) : renderCatalogoCursos(), trilhas: () => renderTrilhas(this.progresso, this.percurso), conhecimento: renderConhecimento, orientacoes: renderOrientacoes, materiais: renderMateriais, referencia: () => renderReferencia(this.subReferencia) };
     this.querySelector('#estudos-conteudo').innerHTML = renderizadores[this.secao]();
     this.atualizarSalvamento();
     this.filtrar();
   }
 
   filtrar() {
-    if (this.secao === 'referencia') {
+    if (this.secao === 'referencia' || (this.secao === 'cursos' && this.cursoAberto)) {
       // Cada pagina embutida em Referencia tem sua propria busca interna
       // (ex.: o Glossario ja filtra os proprios verbetes) - a busca global
       // de Estudos nao se aplica aqui.
