@@ -7,7 +7,7 @@ export const cursos = [
     autoria: 'Diego Felipe Borges de Amorim',
     nivel: 'Introdutório', paginas: 17, ano: '2015',
     descricao: 'Formação histórica do mercado financeiro, sua evolução no Brasil e o papel econômico do mercado de capitais.',
-    pdf: 'assets/pdfs/historia-mercado-capitais.pdf',
+    pdf: 'assets/pdfs/01-historia-evolucao-mercado-capitais.pdf',
     aviso: 'Material histórico. Nomes de instituições, regras e dados de mercado devem ser conferidos em fontes atuais.',
     modulos: [
       { titulo: 'Origens do mercado financeiro', aulas: [
@@ -30,7 +30,7 @@ export const cursos = [
     autoria: 'Willian Capriata / Capriata Educação',
     nivel: 'Introdutório', paginas: 30, ano: '2025',
     descricao: 'Canais digitais, novos modelos de negócio, meios de pagamento, moedas digitais e mudanças no relacionamento bancário.',
-    pdf: 'assets/pdfs/atualidades-mercado-financeiro.pdf',
+    pdf: 'assets/pdfs/02-atualidades-transformacao-digital-bancaria.pdf',
     aviso: 'Apostila preparatória. Produtos, regulações e cronologias digitais mudam rapidamente; valide-os em fontes oficiais.',
     modulos: [
       { titulo: 'Da automação ao banco digital', aulas: [
@@ -54,7 +54,7 @@ export const cursos = [
     autoria: 'B3 - Brasil, Bolsa, Balcão',
     nivel: 'Intermediário', paginas: 53, ano: '1T25',
     descricao: 'Leitura orientada dos dados sobre participação de pessoas físicas nos mercados administrados pela B3.',
-    pdf: 'assets/pdfs/pessoa-fisica-b3-1t25.pdf',
+    pdf: 'assets/pdfs/03-investidor-pessoa-fisica-b3-1t25.pdf',
     aviso: 'Retrato estatístico do primeiro trimestre de 2025. Não extrapole percentuais para outros períodos sem nova medição.',
     modulos: [
       { titulo: 'Como ler o relatório', aulas: [
@@ -77,7 +77,7 @@ export const cursos = [
     autoria: 'Thiago Medeiros Vidal',
     nivel: 'Básico', paginas: 10, ano: '2014',
     descricao: 'Métodos qualitativos e quantitativos para compreender uma empresa antes de estimar seu valor.',
-    pdf: 'assets/pdfs/analise-empresas-vidal.pdf',
+    pdf: 'assets/pdfs/04-introducao-analise-empresas.pdf',
     aviso: 'Texto acadêmico introdutório. Exemplos e referências refletem o período de elaboração.',
     modulos: [
       { titulo: 'Valor, preço e contexto', aulas: [
@@ -97,7 +97,7 @@ export const cursos = [
     autoria: 'Equipe de Análise Técnica e Derivativos da Ágora',
     nivel: 'Básico', paginas: 48, ano: '2018',
     descricao: 'Da leitura das demonstrações financeiras aos indicadores, múltiplos e modelos de valor justo.',
-    pdf: 'assets/pdfs/analise-fundamentalista.pdf',
+    pdf: 'assets/pdfs/05-fundamentos-analise-fundamentalista.pdf',
     aviso: 'Material educacional de 2018. Regras societárias e referências normativas precisam de verificação atual.',
     modulos: [
       { titulo: 'Fundamentos e retorno', aulas: [
@@ -122,7 +122,7 @@ export const cursos = [
     autoria: 'Bruno Estevam de Almeida e Émerson Nogueira Sales',
     nivel: 'Avançado', paginas: 20, ano: '2020',
     descricao: 'Estudo sobre indicadores fundamentalistas e retornos das ações do IBrX 100 entre 2009 e 2018.',
-    pdf: 'assets/pdfs/value-investing-ibrx100.pdf',
+    pdf: 'assets/pdfs/06-value-investing-evidencia-ibrx100.pdf',
     aviso: 'Resultados pertencem à amostra e ao método do artigo; associação estatística não garante retorno futuro.',
     modulos: [
       { titulo: 'Problema de pesquisa', aulas: [
@@ -143,7 +143,7 @@ export const cursos = [
     autoria: 'Matheus de Brito Rosselli',
     nivel: 'Intermediário', paginas: 31, ano: '2023',
     descricao: 'Conceitos de análise fundamentalista aplicados a um estudo de caso com dados da Neoenergia.',
-    pdf: 'assets/pdfs/analise-fundamentalista-neoenergia.pdf',
+    pdf: 'assets/pdfs/07-analise-fundamentalista-neoenergia.pdf',
     aviso: 'O estudo de caso usa informações de um período específico e não constitui recomendação de investimento.',
     modulos: [
       { titulo: 'Base conceitual e método', aulas: [
@@ -165,7 +165,7 @@ export const cursos = [
     autoria: 'Ronaldo Pesente / UFBA',
     nivel: 'Formação completa', paginas: 119, ano: '2019',
     descricao: 'Curso abrangente sobre intermediação, estrutura institucional, produtos financeiros, mercado de capitais e derivativos.',
-    pdf: 'assets/pdfs/mercados-financeiros-ufba.pdf',
+    pdf: 'assets/pdfs/08-mercados-financeiros-sfn.pdf',
     aviso: 'Obra de 2019. Estruturas institucionais, tributação, limites e características de produtos podem ter mudado.',
     modulos: [
       { titulo: 'Funcionamento do mercado financeiro', aulas: [
@@ -193,7 +193,7 @@ export const cursos = [
     autoria: 'ANBIMA - Material de Estudos CPA-10',
     nivel: 'Básico', paginas: 49, ano: '2023',
     descricao: 'Conceitos econômicos, juros, matemática financeira, risco, retorno e diversificação.',
-    pdf: 'assets/pdfs/economia-financas-cpa10.pdf',
+    pdf: 'assets/pdfs/09-economia-financas-cpa10.pdf',
     aviso: 'Material de certificação publicado em 2023. Consulte o programa e a versão vigentes da ANBIMA antes de estudar para prova.',
     modulos: [
       { titulo: 'Indicadores econômicos', aulas: [
