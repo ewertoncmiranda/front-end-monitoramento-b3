@@ -2,6 +2,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarHistorico, extrairCandles, RANGES_DISPONIVEIS } from '../api/historicoApi.js';
 import '../components/SeletorDeAtivos.js';
 import '../components/CandleChart.js';
+import '../components/PainelPadroes.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -61,8 +62,20 @@ export class CandlesPage extends BaseComponent {
       resultado.innerHTML = `
         <h6 class="mt-2">${this._simbolo} - ${rotuloRange(this._range)} (${candles.length} candle${candles.length === 1 ? '' : 's'})</h6>
         <candle-chart></candle-chart>
+        <div class="mt-3"><painel-padroes></painel-padroes></div>
       `;
-      resultado.querySelector('candle-chart').setCandles(candles);
+
+      const grafico = resultado.querySelector('candle-chart');
+      const painel = resultado.querySelector('painel-padroes');
+
+      grafico.setCandles(candles);
+      painel.setCandles(candles);
+
+      // O painel decide o que mostrar; o grafico sabe desenhar. A ligacao
+      // entre os dois e um evento, nao uma referencia direta.
+      painel.addEventListener('padroes-alterados', (evento) => {
+        grafico.setMarcadores(evento.detail.marcadores);
+      });
     } catch (erro) {
       resultado.innerHTML = `<status-alert mensagem="${erro.message}" variante="danger"></status-alert>`;
     }

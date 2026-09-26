@@ -38,6 +38,7 @@ public/                      Tudo que o servidor expõe como estático
       AtivosMonitoradosTable.js     Renderiza a carteira monitorada + linha expansivel
       FundamentosCard.js            Renderiza os fundamentos brutos de um unico ciclo
       FundamentosCvmCard.js         Renderiza os fundamentos contabeis da CVM (completo ou resumo)
+      PainelPadroes.js              Liga/desliga padroes no grafico e mostra a estatistica
       HistoricoTable.js             Renderiza serie OHLCV
       StatusAlert.js                 Alerta de sucesso/erro/aviso
       LoadingSpinner.js              Indicador de carregamento
@@ -53,6 +54,9 @@ public/                      Tudo que o servidor expõe como estático
       ArquiteturaPage.js              Descreve as 5 pecas, com links de GitHub e Docker Hub (estatico)
       PadroesPage.js                  Leitura de grafico e armadilhas de analise (estatico)
       GlossarioPage.js                Glossario de mercado e de engenharia, com busca (estatico)
+    analise/
+      detectorPadroes.js            Deteccao de padroes e alertas (puro, testavel)
+      taxaAcerto.js                 Taxa de acerto sempre com taxa-base (puro)
     router.js                          Rota (hash) -> pagina
     main.js                            Ponto de entrada
 proxy/
@@ -145,6 +149,71 @@ um atalho para a aba de Cadastro.
 A aba Cadastro usa o `CarteiraResumo`, uma variante **somente leitura** — ali os simbolos
 nao sao clicaveis, porque clicar num ativo ja registrado so o recadastraria. Serve para
 voce nao tentar cadastrar algo que ja esta la, e se atualiza sozinha apos um cadastro.
+
+## Padroes sobre o grafico de candles (`#/candles`)
+
+Alem de desenhar o candlestick, a aba deixa ligar e desligar detectores de padrao
+sobre o grafico, por clique, sem recarregar nada. Cada padrao aceso vira marcador na
+vela correspondente.
+
+A deteccao roda **no cliente**, sobre os candles ja carregados
+(`public/js/analise/detectorPadroes.js`, modulo puro, sem DOM e sem fetch). Isso torna
+o toggle instantaneo e permite rodar o mesmo detector sobre dados sinteticos — o que e
+a base da calibragem descrita abaixo.
+
+### O que e detectado, e o que nao e
+
+Entram apenas padroes com definicao precisa o bastante para um programa aplicar sem
+julgamento humano: doji, martelo, enforcado, estrela cadente, marubozu (alta e baixa),
+engolfo (alta e baixa), harami, estrela da manha e estrela da noite.
+
+Ombro-cabeca-ombro, topo duplo, triangulos e bandeiras **nao** sao detectados, e a
+propria interface explica por que. Nao e falta de esforco: sao figuras cuja definicao
+depende de tolerancias arbitrarias, e automatiza-las produziria um detector que dispara
+em ruido — a apofenia descrita na aba Padroes. O OCO, alem disso, leva de 3 a 6 meses
+para se formar e nao cabe na janela maxima de 3 meses.
+
+### Taxa de acerto: por que ela nunca aparece sozinha
+
+O criterio e explicito: para um padrao de alta, acerto significa que o fechamento H
+pregoes depois foi maior (o horizonte H e configuravel: 1, 3, 5 ou 10). Ocorrencias
+proximas ao fim da serie sao descartadas, porque nao ha H pregoes adiante para julgar.
+
+Duas salvaguardas, ambas deliberadas:
+
+- **Taxa-base ao lado.** Se o ativo subiu em 55% de todos os pregoes da janela, um
+  padrao de alta que acerta 58% esta praticamente empatado com escolher um dia ao acaso.
+  O numero que informa e a *vantagem* — a diferenca entre os dois.
+- **Sem percentual abaixo de 5 ocorrencias.** Nesse caso a interface mostra a contagem
+  crua ("2 acertos em 3 ocorrencias"). Transformar 2/3 em "66,7%" daria a esses poucos
+  casos uma precisao que eles nao tem.
+
+### Calibragem no ruido
+
+Cada cartao mostra quantas vezes aquele padrao aparece numa serie **aleatoria** do mesmo
+tamanho, ao lado da contagem real. Os valores vem de `npm test`, que roda o detector
+sobre 20 passeios aleatorios de 63 candles:
+
+| Padrao | Ocorrencias por serie aleatoria |
+| --- | --- |
+| Harami | 16,1 — uma a cada quatro velas |
+| Engolfo de baixa | 8,8 |
+| Engolfo de alta | 7,4 |
+| Doji | 3,8 |
+| Estrela da manha | 2,7 |
+| Martelo | 0,2 |
+
+E o numero mais desconfortavel: em ruido puro, a estrela da manha exibiu **+12,1 pontos
+de vantagem** sobre a taxa-base, e a estrela da noite, −10,8. Ou seja, vantagem medida em
+amostra pequena e ruido com aparencia de estatistica. Por isso o limite para o painel
+chamar algo de "acima da base" e exigente (15 pontos).
+
+### Alertas
+
+Uma segunda familia de marcadores sinaliza armadilhas visiveis no proprio OHLCV: gap de
+abertura (que pode ser provento nao ajustado, nao movimento), volume anomalo e liquidez
+baixa. Nao sao sinais de operacao — sao avisos de que aquela vela pode nao significar o
+que parece.
 
 ## Aba "Monitorados" (`#/monitorados`)
 

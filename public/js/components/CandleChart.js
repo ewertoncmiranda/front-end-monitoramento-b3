@@ -14,6 +14,7 @@ export class CandleChart extends BaseComponent {
   setCandles(candles) {
     this.destruirGrafico();
     this._candles = candles || [];
+    this._marcadores = this._marcadores || [];
     this.innerHTML = this.template();
 
     if (this._candles.length >= MIN_CANDLES) {
@@ -66,6 +67,33 @@ export class CandleChart extends BaseComponent {
     chart.timeScale().fitContent();
 
     this._chart = chart;
+    this._serie = serie;
+    this.aplicarMarcadores();
+  }
+
+  /**
+   * Marca velas no grafico. Cada marcador e
+   * { dataIso, posicao: 'acima'|'abaixo', cor, texto }.
+   *
+   * Usa series.setMarkers da lightweight-charts, que substitui o conjunto
+   * inteiro a cada chamada - por isso passar [] limpa tudo, e e assim que o
+   * toggle de padrao desliga o desenho.
+   */
+  setMarcadores(marcadores) {
+    this._marcadores = marcadores || [];
+    this.aplicarMarcadores();
+  }
+
+  aplicarMarcadores() {
+    if (!this._serie) return;
+    const marcadores = (this._marcadores || []).map((m) => ({
+      time: m.dataIso,
+      position: m.posicao === 'abaixo' ? 'belowBar' : 'aboveBar',
+      color: m.cor,
+      shape: m.posicao === 'abaixo' ? 'arrowUp' : 'arrowDown',
+      text: m.texto,
+    }));
+    this._serie.setMarkers(marcadores);
   }
 
   disconnectedCallback() {
@@ -76,6 +104,7 @@ export class CandleChart extends BaseComponent {
     if (this._chart) {
       this._chart.remove();
       this._chart = null;
+      this._serie = null;
     }
   }
 }

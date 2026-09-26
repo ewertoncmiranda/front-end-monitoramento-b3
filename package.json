@@ -6,7 +6,8 @@
   "description": "Frontend estatico do ecossistema B3 (consulta e cadastro de ativos), servido por um proxy reverso Node/Express.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node tests/detector.test.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",
