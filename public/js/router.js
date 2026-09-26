@@ -12,6 +12,7 @@ const rotas = {
   '#/arquitetura': 'arquitetura-page',
   '#/padroes': 'padroes-page',
   '#/glossario': 'glossario-page',
+  '#/estudos': 'estudos-page',
 };
 
 const ROTA_PADRAO = '#/gestao';

@@ -7,6 +7,10 @@ export class BottomNav extends BaseComponent {
     return `
       <nav class="app-bottom-nav navbar fixed-bottom navbar-light bg-white border-top d-flex d-md-none">
         <div class="container d-flex flex-nowrap overflow-x-auto justify-content-start justify-content-sm-around">
+          <a class="nav-link text-center flex-shrink-0 px-2" href="#/estudos">
+            <div aria-hidden="true">🎓</div>
+            <small>Estudos</small>
+          </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/gestao">
             <div>🗂️</div>
             <small>Gestão</small>

@@ -1,4 +1,6 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
+import { glossarioAcademico } from '../estudos/glossarioAcademico.js';
+import { normalizar } from '../estudos/texto.js';
 
 // Unica responsabilidade: explicar o vocabulario do mercado financeiro pra
 // quem nunca comprou uma acao. Conteudo 100% estatico, sem chamada de API.
@@ -621,23 +623,23 @@ export class GlossarioPage extends BaseComponent {
     return `
       <h4 class="mb-1">Glossário</h4>
       <p class="text-muted small">
-        O vocabulario do mercado explicado do zero, sem pressupor conhecimento previo.
-        Cada verbete diz o que o termo significa e onde ele aparece neste sistema.
-        Para como se le um grafico e onde a leitura da errado, veja
-        <a href="#/padroes">Padroes e armadilhas</a>.
+        Do primeiro contato aos conceitos acadêmicos: definições, exemplos e cuidados de interpretação.
+        Organize seu aprendizado em <a href="#/estudos">Estudos</a> ou explore
+        <a href="#/padroes">Padrões e armadilhas</a>.
       </p>
 
       ${avisoEducativo()}
 
       <div class="mb-3">
+        <label for="glossario-busca" class="form-label">Buscar no glossário</label>
         <input id="glossario-busca" type="search" class="form-control"
-               placeholder="Buscar termo ou definicao (ex.: ROE, dividendo, balanco)"
+               placeholder="Termo, definição ou exemplo (ex.: ROE, WACC, sobreajuste)"
                autocomplete="off">
-        <div id="glossario-contador" class="form-text"></div>
+        <div id="glossario-contador" class="form-text" role="status"></div>
       </div>
 
       <div id="glossario-grupos">
-        ${GLOSSARIO.map((grupo) => renderGrupo(grupo)).join('')}
+        ${[...GLOSSARIO, ...glossarioAcademico].map((grupo) => renderGrupo(grupo)).join('')}
       </div>
     `;
   }
@@ -647,7 +649,7 @@ export class GlossarioPage extends BaseComponent {
     const contador = this.querySelector('#glossario-contador');
 
     busca.addEventListener('input', () => {
-      const termo = busca.value.trim().toLowerCase();
+      const termo = normalizar(busca.value.trim());
       let visiveis = 0;
 
       this.querySelectorAll('[data-verbete]').forEach((elemento) => {
@@ -664,8 +666,9 @@ export class GlossarioPage extends BaseComponent {
 
       contador.textContent = termo
         ? `${visiveis} termo(s) encontrado(s)`
-        : '';
+        : `${visiveis} verbetes disponíveis`;
     });
+    busca.dispatchEvent(new Event('input'));
   }
 }
 
@@ -696,10 +699,9 @@ function renderGrupo(grupo) {
 
 function renderTermo(t) {
   // O dataset concentra tudo que a busca varre: termo, sigla e definicao.
-  const indice = [t.termo, t.sigla, t.definicao, t.pergunta, t.onde]
+  const indice = normalizar([t.termo, t.sigla, t.definicao, t.pergunta, t.onde, t.exemplo, t.cuidado]
     .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+    .join(' '));
 
   return `
     <div class="col" data-verbete="${escapar(indice)}">
@@ -707,6 +709,8 @@ function renderTermo(t) {
         <div class="fw-semibold">${t.termo}</div>
         ${t.sigla ? `<div class="text-muted small fst-italic">${t.sigla}</div>` : ''}
         <p class="small mb-1 mt-1">${t.definicao}</p>
+        ${t.exemplo ? `<p class="small mb-1"><strong>Exemplo:</strong> ${t.exemplo}</p>` : ''}
+        ${t.cuidado ? `<p class="small mb-1 text-secondary"><strong>Cuidado:</strong> ${t.cuidado}</p>` : ''}
         ${t.pergunta ? `<p class="small mb-1"><span class="text-muted">Responde:</span> ${t.pergunta}</p>` : ''}
         ${t.referencia ? `<p class="small mb-1"><span class="badge bg-light text-dark">Referencia</span> ${t.referencia}</p>` : ''}
         ${t.onde ? `<p class="small text-muted mb-0">Aqui: ${t.onde}</p>` : ''}

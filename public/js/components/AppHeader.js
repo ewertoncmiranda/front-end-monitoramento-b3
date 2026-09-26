@@ -8,7 +8,8 @@ export class AppHeader extends BaseComponent {
       <nav class="navbar navbar-expand-md navbar-dark bg-primary d-none d-md-flex">
         <div class="container">
           <span class="navbar-brand">Painel de Ativos B3</span>
-          <div class="navbar-nav">
+          <div class="navbar-nav flex-wrap">
+            <a class="nav-link text-white" href="#/estudos">Estudos</a>
             <a class="nav-link text-white" href="#/gestao">Gestão</a>
             <a class="nav-link text-white" href="#/monitorados">Monitorados</a>
             <a class="nav-link text-white" href="#/candles">Velas</a>

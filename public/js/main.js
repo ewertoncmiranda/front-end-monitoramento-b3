@@ -9,6 +9,7 @@ import './pages/FormulasPage.js';
 import './pages/ArquiteturaPage.js';
 import './pages/PadroesPage.js';
 import './pages/GlossarioPage.js';
+import './pages/EstudosPage.js';
 import { iniciarRouter } from './router.js';
 
 document.querySelector('#app-header-outlet').innerHTML = '<app-header></app-header>';
