@@ -28,9 +28,49 @@ export function buscarNewsletter({ semana, categorias } = {}) {
 }
 
 /** Linha do tempo de um ticker, paginada, mais recente primeiro. */
-export function buscarComunicadosDoAtivo(simbolo, { categorias, pagina, tamanho } = {}) {
+export function buscarComunicadosDoAtivo(
+  simbolo,
+  { categorias, desde, ate, pagina, tamanho } = {},
+) {
   const alvo = encodeURIComponent(String(simbolo).trim().toUpperCase());
-  return httpGet(`/empresas/${alvo}/comunicados${consulta({ categorias, pagina, tamanho })}`);
+  return httpGet(
+    `/empresas/${alvo}/comunicados${consulta({ categorias, desde, ate, pagina, tamanho })}`,
+  );
+}
+
+/**
+ * Todos os comunicados de um periodo, juntando as paginas. Serve ao grafico
+ * de velas: o range maximo e de 3 meses, que costuma caber em uma pagina de
+ * 100; o limite de paginas so protege contra periodo enorme por engano.
+ */
+export async function buscarComunicadosDoPeriodo(
+  simbolo,
+  { desde, ate, categorias = categoriasPadrao() } = {},
+  limitePaginas = 5,
+) {
+  const documentos = [];
+  let resposta = null;
+  for (let pagina = 0; pagina < limitePaginas; pagina++) {
+    resposta = await buscarComunicadosDoAtivo(simbolo, {
+      categorias,
+      desde,
+      ate,
+      pagina,
+      tamanho: 100,
+    });
+    documentos.push(...(resposta.comunicados || []));
+    if (pagina + 1 >= resposta.totalPaginas) break;
+  }
+  return {
+    comunicados: documentos,
+    dadosAte: resposta ? resposta.dadosAte : null,
+    fonte: resposta ? resposta.fonte : null,
+    aviso: resposta ? resposta.aviso : null,
+  };
+}
+
+export function categoriasPadrao() {
+  return CATEGORIAS_COMUNICADO.filter((c) => c.padrao).map((c) => c.valor);
 }
 
 function consulta(parametros) {
