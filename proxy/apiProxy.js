@@ -12,6 +12,8 @@ const ROTAS_PROXIADAS = [
   // Comunicados oficiais da CVM (infra#CTR-10)
   '/empresas',
   '/comunicados',
+  // Diario de sinais / validacao das regras (infra#CTR-11)
+  '/validacao',
 ];
 
 export function registrarProxy(app, backendUrl) {
@@ -23,7 +25,11 @@ export function registrarProxy(app, backendUrl) {
         changeOrigin: true,
         // Express remove o prefixo da rota (ex.: /analises) antes de chamar o
         // middleware; sem isso o proxy reenviaria so "/PETR4/analise" para o backend.
-        pathRewrite: (path) => rota + path,
+        // Quando a chamada e a propria raiz da rota (ex.: GET /setores, sem nada
+        // depois), o Express normaliza o path remanescente para "/" - sem este
+        // caso especial o proxy reenviaria "/setores/" (com barra final), que o
+        // backend nao mapeia para o mesmo endpoint e responde 500.
+        pathRewrite: (path) => (path === '/' ? rota : rota + path),
         on: {
           proxyReq: (proxyReq) => {
             // O backend tem CORS proprio (para outros clientes). Sem remover o
