@@ -8,3 +8,7 @@ export function buscarAnalise(simbolo) {
 export function buscarFundamentos(simbolo) {
   return httpGet(`/analises/${encodeURIComponent(simbolo)}/fundamentos`);
 }
+
+export function buscarFundamentosCvm(simbolo) {
+  return httpGet(`/analises/${encodeURIComponent(simbolo)}/fundamentos-cvm`);
+}

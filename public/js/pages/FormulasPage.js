@@ -216,12 +216,27 @@ const FONTES_DADOS = {
     { status: 'gratis', nome: 'Cotacao (/quote)', detalhe: 'Preco, variacao, volume, range do dia e de 52 semanas, P/L, LPA - pra qualquer ticker, nao so os de demonstracao.' },
     { status: 'gratis', nome: 'Historico OHLCV (/historical)', detalhe: 'So candle diario (1d), ate 3 meses de janela - 1y devolve 400 pra qualquer ticker fora da lista de demonstracao (PETR4, MGLU3...).' },
     { status: 'gratis', nome: 'Perfil da empresa (summaryProfile / /profile)', detalhe: 'Setor, industria, CNPJ, endereco, resumo do negocio. Confirmado gratis mesmo em ticker real (testado com WEGE3).' },
-    { status: 'pago', nome: 'Multiplos e estatisticas (defaultKeyStatistics)', detalhe: 'ROE, ROIC, P/VP, beta, dividend yield - exige plano Startup, R$ 119,99/mes.' },
-    { status: 'pago', nome: 'Dados financeiros (financialData)', detalhe: 'Margens, divida liquida, fluxo de caixa livre - exige plano Pro, R$ 139,99/mes.' },
-    { status: 'pago', nome: 'Balanco, DRE, fluxo de caixa e valor adicionado', detalhe: 'Demonstracoes completas - Startup (so anual, ultimos 5 anos) ou Pro (trimestral, desde 2009).' },
+    { status: 'pago', nome: 'Multiplos e estatisticas (defaultKeyStatistics)', detalhe: 'ROE, ROIC, P/VP, beta, dividend yield - exige plano Startup, R$ 119,99/mes. SUBSTITUIDO: ROE, ROIC, LPA, VPA, P/L e P/VP agora vem da CVM de graca (ver card abaixo).' },
+    { status: 'pago', nome: 'Dados financeiros (financialData)', detalhe: 'Margens, divida liquida, fluxo de caixa livre - exige plano Pro, R$ 139,99/mes. SUBSTITUIDO: os tres vem da CVM de graca (ver card abaixo).' },
+    { status: 'pago', nome: 'Balanco, DRE, fluxo de caixa e valor adicionado', detalhe: 'Demonstracoes completas - Startup (so anual, ultimos 5 anos) ou Pro (trimestral, desde 2009). SUBSTITUIDO: a CVM publica as mesmas demonstracoes de graca, e e a fonte primaria delas.' },
     { status: 'pago', nome: 'Dividendos e proventos (/dividends)', detalhe: 'JCP, bonificacoes, desdobramentos, subscricoes - exige plano Startup.' },
     { status: 'pago', nome: 'Macroeconomia (Selic, CDI, IPCA, IGP-M...)', detalhe: 'Exige plano Startup - mas a mesma serie esta disponivel de graca direto na API do Banco Central (SGS), sem passar pela BRAPI.' },
     { status: 'pago', nome: 'Cambio e criptomoedas', detalhe: 'Ambos exigem plano Startup.' },
+  ],
+};
+
+// Fontes gratuitas que substituem o que a BRAPI cobra. Validadas ao vivo em
+// 2026-09-25/26 com requisicao real, nao leitura de documentacao.
+const FONTES_CVM = {
+  titulo: 'CVM Dados Abertos: o substituto gratuito',
+  resumo: 'As demonstracoes financeiras sao publicas por obrigacao legal. Sao a fonte primaria que os servicos pagos revendem - oficiais, auditadas e sem limite de requisicao.',
+  itens: [
+    { status: 'gratis', nome: 'DFP - Demonstracoes Financeiras Padronizadas', detalhe: 'Balanco, DRE, fluxo de caixa e DVA do exercicio fechado, por ano. Alimenta ROE, ROIC, margem, divida liquida e FCL.' },
+    { status: 'gratis', nome: 'ITR - Informacoes Trimestrais', detalhe: 'As mesmas demonstracoes a cada trimestre. Necessario para calcular TTM (12 meses moveis) - ainda nao implementado.' },
+    { status: 'gratis', nome: 'FCA - Formulario Cadastral', detalhe: 'Liga o ticker ao CNPJ da companhia (WEGE3 -> 84.429.695/0001-11). Sem ele nao da para juntar cotacao com balanco.' },
+    { status: 'gratis', nome: 'FRE - Formulario de Referencia', detalhe: 'Quantidade de acoes com unidade consistente. E o denominador de LPA e VPA: a composicao do DFP mistura unidades e milhares entre companhias.' },
+    { status: 'gratis', nome: 'Banco Central SGS', detalhe: 'Selic, CDI, IPCA, IGP-M e cambio PTAX, series completas e oficiais. Substitui o pacote de macroeconomia da BRAPI.' },
+    { status: 'proposta', nome: 'B3 - proventos e eventos corporativos', detalhe: 'Dividendos, JCP, bonificacoes e desdobramentos na fonte oficial. Ainda nao integrado.' },
   ],
 };
 
@@ -238,8 +253,12 @@ export class FormulasPage extends BaseComponent {
       </div>
 
       <h5 class="mt-2">Fontes de dados</h5>
-      <div class="mb-4">
+      <p class="text-muted small">O que a BRAPI cobra e o que conseguimos de graca em outro lugar. Termos desconhecidos estao explicados no <a href="#/glossario">Glossario</a>.</p>
+      <div class="mb-3">
         ${renderFonteDados(FONTES_DADOS)}
+      </div>
+      <div class="mb-4">
+        ${renderFonteDados(FONTES_CVM)}
       </div>
 
       ${secaoLimitacoes()}

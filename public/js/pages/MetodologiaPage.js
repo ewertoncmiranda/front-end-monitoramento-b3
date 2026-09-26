@@ -1,7 +1,8 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
-import { buscarFundamentos } from '../api/analisesApi.js';
+import { buscarFundamentos, buscarFundamentosCvm } from '../api/analisesApi.js';
 import '../components/AtivoSearchForm.js';
 import '../components/FundamentosCard.js';
+import '../components/FundamentosCvmCard.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -29,8 +30,24 @@ export class MetodologiaPage extends BaseComponent {
       resultado.innerHTML = '<loading-spinner></loading-spinner>';
 
       try {
-        const fundamentos = await buscarFundamentos(simbolo);
-        resultado.innerHTML = '<fundamentos-card></fundamentos-card>';
+        // Duas fontes independentes: a analise do gerar-insights e os
+        // fundamentos contabeis da CVM. Uma falhar nao pode esconder a outra.
+        const [fundamentos, fundamentosCvm] = await Promise.all([
+          buscarFundamentos(simbolo).catch(() => null),
+          buscarFundamentosCvm(simbolo).catch(() => null),
+        ]);
+
+        if (!fundamentos && !fundamentosCvm) {
+          resultado.innerHTML =
+            '<status-alert mensagem="Nao foi possivel obter dados para esse ativo." variante="danger"></status-alert>';
+          return;
+        }
+
+        resultado.innerHTML = `
+          <fundamentos-cvm-card></fundamentos-cvm-card>
+          <fundamentos-card></fundamentos-card>
+        `;
+        resultado.querySelector('fundamentos-cvm-card').setFundamentos(fundamentosCvm);
         resultado.querySelector('fundamentos-card').setFundamentos(fundamentos);
       } catch (erro) {
         resultado.innerHTML = `<status-alert mensagem="${erro.message}" variante="danger"></status-alert>`;

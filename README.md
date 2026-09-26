@@ -129,7 +129,8 @@ Três abas com responsabilidade única, cada uma:
 
 - **`#/metodologia` (Como funciona)**: busca um símbolo e mostra `GET /analises/{simbolo}/fundamentos` — o retrato **de um único ciclo** (sem média), incluindo o perfil de operação (day trade / swing-reversão / longo prazo, não exclusivos), os riscos de comprar/vender agora e a confluência entre sinais (recomendação fundamentalista + momentum + reversão — uma contagem de concordância, não uma probabilidade de sucesso).
 - **`#/formulas` (Formulas)**: conteúdo estático explicando cada fórmula/regra usada (Graham, earnings yield, contexto técnico, sinal técnico de série, perfil de operação/riscos) — sem chamar API.
-- **`#/arquitetura` (Arquitetura)**: conteúdo estático descrevendo os 4 componentes do ecossistema (este front, o Java `gestor-ativos-brutos`, o Python `gerar-insights`, a infra `infra-b3-ecossytem`) e como se conectam.
+- **`#/arquitetura` (Arquitetura)**: conteúdo estático descrevendo os 5 componentes do ecossistema (este front, o Java `gestor-ativos-brutos`, o Python `gerar-insights`, o ETL `etl-fundamentos-cvm`, a infra `infra-b3-ecossytem`) e como se conectam.
+- **`#/glossario` (Glossario)**: vocabulario de mercado e de engenharia explicado do zero, com busca. Fonte canonica em [`infra-b3-ecossytem/GLOSSARIO.md`](../infra-b3-ecossytem/GLOSSARIO.md) — os dois devem ser atualizados juntos.
 
 Detalhes de arquitetura, contratos consumidos e backlog completo estão em [`SPEC.md`](./SPEC.md).
 

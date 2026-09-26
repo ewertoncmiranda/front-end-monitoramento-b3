@@ -64,6 +64,8 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 
 **Aba "Como funciona" (`MetodologiaPage`, rota `#/metodologia`):**
 - Um `AtivoSearchForm` + `FundamentosCard` busca `GET /analises/{simbolo}/fundamentos` e mostra o retrato **de um único ciclo**, sem média — os cenários completos de preço justo Graham, classificações, contexto técnico e (quando há série histórica) o sinal técnico (média móvel, z-score, score de volume), insights e fatores de decisão que o `gerar-insights` gerou naquele ciclo.
+- Na mesma aba, um `FundamentosCvmCard` busca `GET /analises/{simbolo}/fundamentos-cvm` em paralelo e mostra os fundamentos contábeis da CVM, incluindo a seção de cobertura que explica cada métrica ausente. Na aba Consulta o mesmo componente aparece em `modo="resumo"`, com ROE, P/L e P/VP.
+- `GlossarioPage` (`#/glossario`) explica o vocabulário usado nas outras telas. Conteúdo estático, sem API; espelha `infra-b3-ecossytem/GLOSSARIO.md`.
 - `FundamentosCard` renderiza o campo `detalhes` do DTO genericamente (não assume um schema Java fixo — é o mesmo JSON que o Python grava), então novos campos que o `gerar-insights` passar a gravar aparecem automaticamente se a página for atualizada para lê-los; campos ausentes (ex.: sem sinal técnico por falta de histórico) são tratados com fallback textual, não erro.
 - A explicação estática das fórmulas foi movida pra `FormulasPage` (ver `2.4`) — esta aba ficou só com a ferramenta interativa.
 
@@ -123,6 +125,7 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | `/ativos/robusto/{ativo}` | GET | `ConsultaPage`, `AtivosMonitoradosTable` | Traz `Ativo` + publica série histórica no backend (efeito colateral do próprio backend, não deste front). Na tabela de Monitorados é chamada só ao expandir uma linha pela primeira vez (com cache). |
 | `/analises/{simbolo}/analise` | GET | `ConsultaPage`, `AtivosMonitoradosPage` | Decisão consolidada (média de todo o histórico); se falhar, a tela continua exibindo o resto (`.catch(() => null)`). Na aba Monitorados é buscada uma vez por ativo listado, em paralelo, e reaproveitada na linha expandida. |
 | `/analises/{simbolo}/fundamentos` | GET | `MetodologiaPage` | Retrato bruto (um único ciclo, sem média) usado pela aba "Como funciona". |
+| `/analises/{simbolo}/fundamentos-cvm` | GET | `MetodologiaPage` (completo) e `ConsultaPage` (resumo) | Fundamentos contábeis da CVM, com P/L e P/VP derivados do preço atual pelo backend. Campo nulo pode ser deliberado — `cobertura` diz por quê. |
 | `/api/v2/stocks/historical` | GET | `ConsultaPage`, `AtivosMonitoradosTable` | `symbols`, `range=1mo`, `interval=1d`, `sortOrder=asc` fixos no `historicoApi.js`. |
 | `/ativos/registrar/{ativo}` | POST | `CadastroPage` | Persiste o cadastro no backend (`ativo_monitorado`) e entra em monitoramento recorrente de 30s; confirmação via link para `#/monitorados`. |
 | `/ativos/registrados` | GET | `AtivosMonitoradosPage` | Lista a carteira monitorada (`ISS-01`/`TASK-01` **RESOLVIDO**). |

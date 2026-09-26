@@ -1,18 +1,19 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 
-// Unica responsabilidade: descrever os 4 componentes que formam o ecossistema
+// Unica responsabilidade: descrever os 5 componentes que formam o ecossistema
 // e como eles se conectam. Conteudo 100% estatico, sem chamada de API - a
 // contrapartida "com numeros reais" fica na aba "Como funciona".
 export class ArquiteturaPage extends BaseComponent {
   template() {
     return `
       <h4 class="mb-3">Arquitetura</h4>
-      <p class="text-muted small">O ecossistema é formado por 4 peças independentes, cada uma com uma responsabilidade única.</p>
+      <p class="text-muted small">O ecossistema é formado por 5 peças independentes, cada uma com uma responsabilidade única.</p>
 
       ${this.diagrama()}
       ${this.secaoFrontend()}
       ${this.secaoJava()}
       ${this.secaoPython()}
+      ${this.secaoEtl()}
       ${this.secaoInfra()}
     `;
   }
@@ -29,7 +30,15 @@ export class ArquiteturaPage extends BaseComponent {
                         Python (gerar-insights) --grava--> MySQL (insight_acao, serie_historica)
                                     ^
                                     |
-                    Java le o MySQL e devolve pro Front --------------------</pre>
+                    Java le o MySQL e devolve pro Front --------------------
+
+CVM (dados abertos) --HTTP--> Python (etl-fundamentos-cvm, lote semanal)
+                                    |
+                                    v
+                        MySQL (fato_contabil, indicador_fundamentalista)
+                                    ^
+                                    |
+                    Java le e deriva P/L e P/VP com o preco atual</pre>
     `;
   }
 
@@ -54,10 +63,17 @@ export class ArquiteturaPage extends BaseComponent {
     `;
   }
 
+  secaoEtl() {
+    return `
+      <h6 class="mt-2">4. ETL de fundamentos — <code>etl-fundamentos-cvm</code></h6>
+      <p class="small">Job Python em lote — não é serviço: roda, grava e encerra. Baixa as demonstrações financeiras dos dados abertos da CVM (DFP, ITR, FCA e FRE) e grava os indicadores contábeis no MySQL. É a peça que fornece ROE, ROIC, margens, dívida líquida e fluxo de caixa livre, justamente o que o plano gratuito da BRAPI não entrega. Roda semanalmente e pula o download quando o arquivo da CVM não mudou.</p>
+    `;
+  }
+
   secaoInfra() {
     return `
-      <h6 class="mt-2">4. Infra — <code>infra-b3-ecossytem</code></h6>
-      <p class="small">Docker Compose orquestrando os 3 serviços acima, mais MySQL, LocalStack (simula SQS/AWS localmente) e a pilha de observabilidade (Prometheus, Grafana, Elasticsearch, Logstash, Kibana). O schema do banco é definido uma única vez ali (<code>mysql-init</code>) e compartilhado pelos dois backends.</p>
+      <h6 class="mt-2">5. Infra — <code>infra-b3-ecossytem</code></h6>
+      <p class="small">Docker Compose orquestrando os 4 serviços acima, mais MySQL, LocalStack (simula SQS/AWS localmente) e a pilha de observabilidade (Prometheus, Grafana, Elasticsearch, Logstash, Kibana). O schema do banco é definido uma única vez ali (<code>mysql-init</code>) e compartilhado por todos. O ETL sobe sob demanda, não no <code>up</code> normal.</p>
     `;
   }
 }

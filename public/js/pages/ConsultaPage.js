@@ -1,10 +1,11 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarCotacaoRobusta } from '../api/ativosApi.js';
-import { buscarAnalise } from '../api/analisesApi.js';
+import { buscarAnalise, buscarFundamentosCvm } from '../api/analisesApi.js';
 import { buscarHistorico, extrairCandles } from '../api/historicoApi.js';
 import '../components/AtivoSearchForm.js';
 import '../components/AtivoQuoteCard.js';
 import '../components/AnaliseResultCard.js';
+import '../components/FundamentosCvmCard.js';
 import '../components/HistoricoTable.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
@@ -33,10 +34,11 @@ export class ConsultaPage extends BaseComponent {
         // Cada chamada falha de forma independente: a cotacao publica em SQS como
         // efeito colateral do backend e pode falhar (ex.: fila indisponivel) sem que
         // isso deva esconder a analise e o historico, que ja podem ter respondido.
-        const [ativo, analise, historico] = await Promise.all([
+        const [ativo, analise, historico, fundamentosCvm] = await Promise.all([
           buscarCotacaoRobusta(simbolo).catch(() => null),
           buscarAnalise(simbolo).catch(() => null),
           buscarHistorico(simbolo).catch(() => null),
+          buscarFundamentosCvm(simbolo).catch(() => null),
         ]);
 
         if (!ativo && !analise && !historico) {
@@ -47,6 +49,7 @@ export class ConsultaPage extends BaseComponent {
 
         resultado.innerHTML = `
           ${!ativo ? '<status-alert mensagem="Cotacao indisponivel no momento." variante="warning"></status-alert>' : '<ativo-quote-card></ativo-quote-card>'}
+          <fundamentos-cvm-card modo="resumo"></fundamentos-cvm-card>
           <analise-result-card></analise-result-card>
           <h6 class="mt-3">Historico (1 mes)</h6>
           <historico-table></historico-table>
@@ -59,6 +62,10 @@ export class ConsultaPage extends BaseComponent {
         if (analise) {
           resultado.querySelector('analise-result-card').setAnalise(analise);
         }
+
+        // Sem fundamento carregado o card se apaga sozinho (template vazio no
+        // modo resumo), entao nao precisa de guarda aqui.
+        resultado.querySelector('fundamentos-cvm-card').setFundamentos(fundamentosCvm);
 
         resultado.querySelector('historico-table').setCandles(extrairCandles(historico));
       } catch (erro) {
