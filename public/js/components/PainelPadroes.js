@@ -121,21 +121,23 @@ export class PainelPadroes extends BaseComponent {
 
     area.innerHTML = `
       ${this.cabecalho()}
-      <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
-        ${PADROES.map((p) => this.cartao(p, false)).join('')}
-      </div>
+      <div class="padroes-cartoes-scroll">
+        <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
+          ${PADROES.map((p) => this.cartao(p, false)).join('')}
+        </div>
 
-      <h6 class="mt-4">Alertas: armadilhas visiveis no proprio candle</h6>
-      <p class="small text-muted">
-        Não são sinais de operação. São avisos de que aquela vela pode não significar
-        o que parece. Cada um corresponde a uma armadilha da aba
-        <a href="#/padroes">Padrões</a>.
-      </p>
-      <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
-        ${ALERTAS.map((a) => this.cartao(a, true)).join('')}
-      </div>
+        <h6 class="mt-4">Alertas: armadilhas visiveis no proprio candle</h6>
+        <p class="small text-muted">
+          Não são sinais de operação. São avisos de que aquela vela pode não significar
+          o que parece. Cada um corresponde a uma armadilha da aba
+          <a href="#/padroes">Padrões</a>.
+        </p>
+        <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
+          ${ALERTAS.map((a) => this.cartao(a, true)).join('')}
+        </div>
 
-      ${this.naoDetectaveis()}
+        ${this.naoDetectaveis()}
+      </div>
     `;
   }
 
@@ -148,7 +150,7 @@ export class PainelPadroes extends BaseComponent {
       .join('');
 
     return `
-      <div class="sticky-md-top bg-body py-2 border-bottom mb-3">
+      <div class="bg-body py-2 border-bottom mb-3">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
           <h6 class="mb-0">Padrões sobre o gráfico</h6>
           <div class="d-flex align-items-center gap-2 flex-wrap">

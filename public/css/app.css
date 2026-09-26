@@ -8,3 +8,15 @@ body {
 .app-bottom-nav {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
+
+/* Aba de Candles: a partir de telas medias, os cartoes de padroes rolam numa
+   area propria, sem levar junto o cabecalho (controles + caixa de
+   calibragem), que fica sempre visivel logo abaixo do grafico. No celular a
+   rolagem continua sendo a da pagina inteira, pra nao desperdicar area util
+   numa tela pequena com uma caixa de rolagem aninhada. */
+@media (min-width: 768px) {
+  .padroes-cartoes-scroll {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
