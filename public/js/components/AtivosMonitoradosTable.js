@@ -3,10 +3,12 @@ import { badgeClassParaRecomendacao } from '../utils/recomendacaoBadge.js';
 import { buscarCotacaoRobusta } from '../api/ativosApi.js';
 import { buscarHistorico, extrairCandles } from '../api/historicoApi.js';
 import { buscarFundamentos } from '../api/analisesApi.js';
+import { buscarNoticias } from '../api/noticiasApi.js';
 import './AtivoQuoteCard.js';
 import './AnaliseResultCard.js';
 import './HistoricoTable.js';
 import './FundamentosCard.js';
+import './NoticiasSecao.js';
 import './LoadingSpinner.js';
 
 const COLUNAS = 10;
@@ -91,12 +93,15 @@ export class AtivosMonitoradosTable extends BaseComponent {
   async carregarDetalhes(simbolo) {
     // Mesma chamada (e mesmo efeito colateral ja conhecido de publicar em SQS)
     // que a tela de Consulta usa - cada busca falha de forma independente.
-    const [ativo, historico, fundamentos] = await Promise.all([
+    // Noticias vem null em erro (nao []), pra NoticiasSecao distinguir "ainda
+    // nao chegou resposta" de "chegou resposta vazia".
+    const [ativo, historico, fundamentos, noticias] = await Promise.all([
       buscarCotacaoRobusta(simbolo).catch(() => null),
       buscarHistorico(simbolo).catch(() => null),
       buscarFundamentos(simbolo).catch(() => null),
+      buscarNoticias(simbolo).catch(() => null),
     ]);
-    this._detalhesPorSimbolo[simbolo] = { ativo, historico, fundamentos };
+    this._detalhesPorSimbolo[simbolo] = { ativo, historico, fundamentos, noticias };
     this.renderizar();
   }
 
@@ -174,6 +179,8 @@ export class AtivosMonitoradosTable extends BaseComponent {
         <historico-table></historico-table>
         <h6 class="mt-3">Fundamentos e calculos (ultimo ciclo)</h6>
         <fundamentos-card></fundamentos-card>
+        <h6 class="mt-3">Notícias recentes</h6>
+        <noticias-secao></noticias-secao>
       `
       : '<loading-spinner></loading-spinner>';
 
@@ -227,6 +234,13 @@ export class AtivosMonitoradosTable extends BaseComponent {
 
       if (detalhes.fundamentos) {
         linhaDetalhe.querySelector('fundamentos-card')?.setFundamentos(detalhes.fundamentos);
+      }
+
+      const noticiasSecao = linhaDetalhe.querySelector('noticias-secao');
+      if (detalhes.noticias === null) {
+        noticiasSecao?.setErro();
+      } else if (detalhes.noticias !== undefined) {
+        noticiasSecao?.setNoticias(detalhes.noticias);
       }
     });
   }
