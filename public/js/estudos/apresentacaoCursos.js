@@ -3,6 +3,11 @@ import { escapar, normalizar } from './texto.js';
 
 const totalAulas = curso => curso.modulos.reduce((total, modulo) => total + modulo.aulas.length, 0);
 const busca = valor => escapar(normalizar(JSON.stringify(valor)));
+const metadados = curso => [
+  ['Autor', curso.autoria], ['Faculdade', curso.faculdade], ['Instituto', curso.instituto],
+  ['Curso', curso.curso], ['Origem', curso.origem], ['Instituição', curso.instituicao], ['Ano', curso.ano],
+].filter(([, valor]) => valor);
+const renderMetadados = (curso, compacto = false) => `<dl class="${compacto ? 'small' : ''} row g-0 mb-3">${metadados(curso).map(([rotulo, valor]) => `<dt class="col-4 text-secondary fw-normal">${rotulo}</dt><dd class="col-8 mb-1">${escapar(valor)}</dd>`).join('')}</dl>`;
 
 export function renderCatalogoCursos() {
   return `<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
@@ -12,7 +17,7 @@ export function renderCatalogoCursos() {
   <div class="row g-3">${cursos.map(curso => `<article class="col-12 col-md-6 col-xl-4" data-estudo-busca="${busca(curso)}">
     <div class="card h-100 border-0 shadow-sm"><div class="card-body p-4 d-flex flex-column">
       <div class="d-flex flex-wrap gap-2 mb-3"><span class="badge text-bg-light">${escapar(curso.nivel)}</span><span class="badge text-bg-light">${curso.paginas} páginas</span><span class="badge text-bg-light">${escapar(curso.ano)}</span></div>
-      <h3 class="h5">${escapar(curso.titulo)}</h3><p class="small text-secondary mb-2">${escapar(curso.autoria)}</p>
+      <h3 class="h5">${escapar(curso.titulo)}</h3>${renderMetadados(curso, true)}
       <p class="flex-grow-1">${escapar(curso.descricao)}</p>
       <p class="small text-secondary">${curso.modulos.length} módulos · ${totalAulas(curso)} aulas documentais</p>
       <button class="btn btn-primary align-self-start" data-abrir-curso="${curso.id}">Abrir curso</button>
@@ -28,7 +33,7 @@ export function renderCurso(id) {
     <header class="card border-0 bg-dark text-white mb-4"><div class="card-body p-4 p-md-5">
       <div class="d-flex flex-wrap gap-2 mb-3"><span class="badge text-bg-light">${escapar(curso.nivel)}</span><span class="badge text-bg-light">${curso.paginas} páginas</span><span class="badge text-bg-light">${escapar(curso.ano)}</span></div>
       <h2 class="display-6 fw-semibold">${escapar(curso.titulo)}</h2><p class="lead text-white-50">${escapar(curso.descricao)}</p>
-      <p class="small text-white-50">Fonte: ${escapar(curso.autoria)}</p>
+      <div class="curso-metadados text-white-50">${renderMetadados(curso, true)}</div>
       <div class="d-flex flex-wrap gap-2"><button class="btn btn-light" data-abrir-pdf="${curso.id}" data-pagina="1">Ler PDF</button><a class="btn btn-outline-light" href="${curso.pdf}" target="_blank" rel="noopener">Abrir em nova aba ↗</a></div>
     </div></header>
     <div class="alert alert-warning" role="note"><strong>Contexto da fonte:</strong> ${escapar(curso.aviso)}</div>

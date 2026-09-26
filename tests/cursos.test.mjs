@@ -3,11 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cursos, obterCurso } from '../public/js/estudos/cursos.js';
+import { glossarioAcademico } from '../public/js/estudos/glossarioAcademico.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ids = new Set(cursos.map(curso => curso.id));
 
-assert.equal(cursos.length, 9, 'Cada um dos nove PDFs deve originar um curso.');
+assert.equal(cursos.length, 29, 'Os nove cursos anteriores e os vinte novos documentos únicos devem estar no catálogo.');
 assert.equal(ids.size, cursos.length, 'Os IDs dos cursos devem ser únicos.');
 
 for (const curso of cursos) {
@@ -27,4 +28,9 @@ for (const curso of cursos) {
   }
 }
 
-console.log('  ok  nove cursos documentais, PDFs e referências de páginas validados');
+const termos = new Set(glossarioAcademico.flatMap(grupo => grupo.termos.map(item => item.termo)));
+for (const termo of ['ETTJ — Estrutura a Termo da Taxa de Juros', 'Contrato futuro', 'VaR — Value at Risk', 'MQO — Mínimos Quadrados Ordinários', 'Microestrutura de mercado']) {
+  assert.ok(termos.has(termo), `Termo técnico ausente do glossário: ${termo}`);
+}
+
+console.log('  ok  29 cursos documentais, PDFs, metadados, páginas e glossário técnico validados');

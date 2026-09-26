@@ -1,6 +1,8 @@
+import { cursosAvancados } from './cursosAvancados.js';
+
 // Catálogo documental derivado dos PDFs disponíveis na biblioteca de estudos.
 // As páginas mantêm a rastreabilidade entre cada aula e a fonte original.
-export const cursos = [
+const cursosBase = [
   {
     id: 'historia-mercado-capitais',
     titulo: 'História e evolução do mercado de capitais',
@@ -211,5 +213,7 @@ export const cursos = [
     ],
   },
 ];
+
+export const cursos = [...cursosBase, ...cursosAvancados];
 
 export const obterCurso = id => cursos.find(curso => curso.id === id);
