@@ -91,10 +91,11 @@ const NOTAS = [
 ];
 
 const PROGRESSO = [
-  { data: '26/09', item: 'Motor de avaliação único (backtest e diário): entrada na abertura seguinte, custo, excesso sobre CDI e BOVA11, janela de desdobramento marcada.' },
+  { data: '26/09', item: 'Motor de avaliação único (backtest e diário): entrada na abertura seguinte, custo, excesso sobre o CDI e sobre a média da carteira, janela de desdobramento marcada.' },
   { data: '26/09', item: 'Versão da regra gravada em todo insight: regras diferentes nunca caem no mesmo placar.' },
   { data: '26/09', item: 'Diário de sinais: um sinal por ativo por pregão, só inclusão, com resultado por horizonte quando ele vence. Rotina diária ativa no Agendador do Windows.' },
   { data: '26/09', item: 'Histórico diário do CDI desde 2016 (2.693 pontos), completado sozinho na subida do gestor.' },
+  { data: '26/09', item: 'Régua de mercado do diário: média simples da carteira monitorada no lugar do BOVA11 (que não é coletado). Mede se a regra escolhe melhor do que pegar todos por igual.' },
   { data: '26/09', item: 'Comunicados oficiais da CVM por ativo e por vela do gráfico.' },
 ];
 
@@ -157,7 +158,7 @@ const STATUS = {
 
 const MELHORIAS = [
   { item: 'Diário de sinais (paper trading)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Rotina ativa (dias úteis, 19h). Primeiro sinal no pregão de 28/09; primeiros resultados ~21 pregões depois.' },
-  { item: 'Backtest walk-forward sem viés de futuro', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Motor de avaliação e CDI prontos; faltam a data de entrega dos balanços (DT_RECEB) e o COTAHIST desde 2016 com o BOVA11.' },
+  { item: 'Backtest walk-forward sem viés de futuro', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Motor de avaliação e CDI prontos; faltam a data de entrega dos balanços (DT_RECEB) e o COTAHIST desde 2016 (a régua de mercado é a média da carteira, com os mesmos preços).' },
   { item: 'Mapa de tickers renomeados', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Liga AXIA3/ELET3, EMBJ3/EMBR3, JBSS32/JBSS3 e MBRF3/MRFG3: hoje preço e balanço dessas empresas não se encontram.' },
   { item: 'Graham com juros reais', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Usar a Selic ou a NTN-B como Y, pela série do Banco Central que o sistema já consulta.' },
   { item: 'TTM no valuation e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Aproveita o que o ETL já produz e evita "venda" para toda empresa sem margem de segurança.' },
@@ -184,7 +185,7 @@ const CAMADAS = [
     pergunta: 'Modelo: a regra funciona?',
     itens: [
       'Backtest com período fora da amostra: calibrar até 2022 e avaliar de 2023 em diante.',
-      'Comparar sempre com BOVA11 comprado e mantido e com o CDI; sem vencer o CDI após custos, a regra não serve.',
+      'Comparar sempre com a média da carteira (pegar todos por igual) e com o CDI; sem vencer o CDI após custos, a regra não serve.',
       'Confiança calibrada: "80%" precisa significar acertar ~80% das vezes no histórico.',
       'Versão em cada regra, para comparar uma com a outra (já em uso).',
     ],
@@ -217,7 +218,7 @@ const NEGOCIO = [
 
 const ROTEIRO = [
   { periodo: 'Dias 1–30', foco: 'Base confiável', itens: 'Backup diário, agendamento das cargas, mapa de tickers renomeados, aviso legal, Graham com juros reais, faixa neutra e janela na consolidação.' },
-  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Backtest walk-forward com COTAHIST, CVM pela data de entrega, proventos e custos, contra BOVA11 e CDI; recalibrar limiares só com dados até 2022.' },
+  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Backtest walk-forward com COTAHIST, CVM pela data de entrega, proventos e custos, contra a média da carteira e o CDI; recalibrar limiares só com dados até 2022.' },
   { periodo: 'Dias 61–90', foco: 'Prova em tempo real', itens: 'Primeiros placares do diário com amostra mínima, painel de saúde e revisão: manter, ajustar ou descartar cada regra pelos números.' },
 ];
 
@@ -248,7 +249,7 @@ export class AvaliacaoPage extends BaseComponent {
         <p class="small text-muted">
           Depois de cada pregão, o sinal de cada ativo é gravado com a versão da regra, e o resultado
           é medido 21, 63 e 126 pregões depois — entrando na abertura do pregão seguinte, com custo, contra o
-          CDI e o BOVA11. É o placar que decide se a nota de "qualidade do sinal" sobe.
+          CDI e a média da carteira monitorada. É o placar que decide se a nota de "qualidade do sinal" sobe.
         </p>`)}
       ${secao('Nota por dimensão — e o que falta para subir', renderNotas())}
       ${secao('Progresso desde a avaliação', renderProgresso())}

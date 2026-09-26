@@ -121,7 +121,7 @@ function renderPlacar(dados) {
         <thead><tr>
           <th>Recomendação</th><th>Horizonte</th><th class="text-end">n</th>
           <th class="text-end">Acerto</th><th class="text-end">Taxa-base</th>
-          <th class="text-end">Excesso s/ CDI</th><th class="text-end">Excesso s/ BOVA11</th>
+          <th class="text-end">Excesso s/ CDI</th><th class="text-end" title="Média simples dos ativos monitorados no mesmo período">Excesso s/ carteira</th>
           <th>Leitura</th><th>Regra</th>
         </tr></thead>
         <tbody>
@@ -134,7 +134,7 @@ function renderPlacar(dados) {
               <td class="text-end">${formatarTaxa(l.taxaAcerto)}</td>
               <td class="text-end text-muted">${formatarTaxa(l.taxaBase)}</td>
               <td class="text-end">${formatarPercentual(l.excessoMedioCdi)}</td>
-              <td class="text-end">${formatarPercentual(l.excessoMedioBova11)}</td>
+              <td class="text-end">${formatarPercentual(l.excessoMedioCarteira)}</td>
               <td><span class="badge ${leitura.classe}">${leitura.rotulo}</span></td>
               <td class="text-muted">${escaparHtml(l.versaoRegra)}</td>
             </tr>`;

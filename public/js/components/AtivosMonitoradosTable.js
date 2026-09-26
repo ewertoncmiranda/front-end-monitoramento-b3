@@ -9,7 +9,7 @@ import './HistoricoTable.js';
 import './FundamentosCard.js';
 import './LoadingSpinner.js';
 
-const COLUNAS = 8;
+const COLUNAS = 10;
 
 // Unica responsabilidade: renderizar a lista de ativos monitorados
 // (contrato de GET /ativos/registrados), enriquecida com a ultima decisao
@@ -123,6 +123,8 @@ export class AtivosMonitoradosTable extends BaseComponent {
               ${this.th('coleta', 'Coleta')}
               ${this.th('intervalo', 'Intervalo')}
               ${this.th('atualizadoEm', 'Ultima atualizacao')}
+              ${this.th('valorAnterior', 'Valor anterior')}
+              ${this.th('valorAtual', 'Valor atual')}
               ${this.th('decisao', 'Decisao')}
               ${this.th('confianca', 'Confiança')}
             </tr>
@@ -153,6 +155,8 @@ export class AtivosMonitoradosTable extends BaseComponent {
         <td>${formatarTipoColeta(a.tipoColeta)}</td>
         <td>${a.intervaloSegundos}s</td>
         <td>${formatarData(a.atualizadoEm)}</td>
+        ${celulaValorAnterior(a)}
+        ${celulaValorAtual(a)}
         ${this.celulaDecisao(a.simbolo)}
       </tr>
     `;
@@ -239,6 +243,31 @@ function formatarData(valor) {
   return String(valor).replace('T', ' ').slice(0, 19);
 }
 
+// So mostra o par anterior/atual quando ha uma mudanca de preco de fato
+// registrada (precoAnterior != null) - o proprio pedido de "recuperar o
+// ativo so se ele teve mudanca": sem mudanca, essas duas colunas ficam com
+// "Sem mudança registrada" em vez de repetir o mesmo preco duas vezes.
+function celulaValorAnterior(a) {
+  if (a.precoAnterior == null) {
+    return '<td class="text-muted small">Sem mudança registrada</td>';
+  }
+  return `<td>${formatarMoeda(a.precoAnterior)}<br><span class="text-muted small">${formatarData(a.precoAnteriorEm)}</span></td>`;
+}
+
+function celulaValorAtual(a) {
+  if (a.precoAtual == null) {
+    return '<td class="text-muted small">-</td>';
+  }
+  if (a.precoAnterior == null) {
+    return `<td>${formatarMoeda(a.precoAtual)}<br><span class="text-muted small">Sem mudança registrada</span></td>`;
+  }
+  return `<td>${formatarMoeda(a.precoAtual)}<br><span class="text-muted small">${formatarData(a.precoAtualDesde)}</span></td>`;
+}
+
+function formatarMoeda(valor) {
+  return valor == null ? '-' : `R$ ${Number(valor).toFixed(2)}`;
+}
+
 function formatarConfianca(valor) {
   if (valor === undefined || valor === null) {
     return '-';
@@ -272,6 +301,8 @@ const COMPARADORES = {
   coleta: (a, b) => formatarTipoColeta(a.tipoColeta).localeCompare(formatarTipoColeta(b.tipoColeta)),
   intervalo: (a, b) => a.intervaloSegundos - b.intervaloSegundos,
   atualizadoEm: (a, b) => new Date(a.atualizadoEm || 0) - new Date(b.atualizadoEm || 0),
+  valorAnterior: (a, b) => (a.precoAnterior ?? -1) - (b.precoAnterior ?? -1),
+  valorAtual: (a, b) => (a.precoAtual ?? -1) - (b.precoAtual ?? -1),
   decisao: (a, b, analisesPorSimbolo) =>
     rankRecomendacao(analisesPorSimbolo[a.simbolo]) - rankRecomendacao(analisesPorSimbolo[b.simbolo]),
   confianca: (a, b, analisesPorSimbolo) => {
