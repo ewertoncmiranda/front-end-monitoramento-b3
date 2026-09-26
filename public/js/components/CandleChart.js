@@ -66,33 +66,68 @@ export class CandleChart extends BaseComponent {
     );
     chart.timeScale().fitContent();
 
+    // Clique numa vela vira evento com a data; quem escuta decide o que
+    // mostrar (a CandlesPage abre os comunicados do dia). Clique fora de vela
+    // (area vazia, escala) nao traz `time` e e ignorado.
+    chart.subscribeClick((parametro) => {
+      const dataIso = dataDoClique(parametro && parametro.time);
+      if (!dataIso) return;
+      this.dispatchEvent(
+        new CustomEvent('candle-clicado', { detail: { dataIso }, bubbles: true }),
+      );
+    });
+
     this._chart = chart;
     this._serie = serie;
     this.aplicarMarcadores();
+
+    // Largura mudou (janela, barra lateral, painel de comunicados aberto):
+    // reenquadra todas as velas. Registrado DEPOIS do createChart de
+    // proposito - o ResizeObserver interno do autoSize dispara antes deste, e
+    // o fitContent precisa ver a largura ja atualizada. Chamado antes (num
+    // requestAnimationFrame, por exemplo), ele enquadra pela largura antiga e
+    // o redimensionamento seguinte corta ou sobra velas nas bordas.
+    if (typeof ResizeObserver === 'function') {
+      let larguraAnterior = container.clientWidth;
+      this._observador = new ResizeObserver(() => {
+        if (container.clientWidth === larguraAnterior) return;
+        larguraAnterior = container.clientWidth;
+        chart.timeScale().fitContent();
+      });
+      this._observador.observe(container);
+    }
   }
 
   /**
    * Marca velas no grafico. Cada marcador e
-   * { dataIso, posicao: 'acima'|'abaixo', cor, texto }.
+   * { dataIso, posicao: 'acima'|'abaixo', cor, texto, forma? }.
    *
-   * Usa series.setMarkers da lightweight-charts, que substitui o conjunto
-   * inteiro a cada chamada - por isso passar [] limpa tudo, e e assim que o
-   * toggle de padrao desliga o desenho.
+   * Duas camadas independentes - padroes e comunicados - porque
+   * series.setMarkers substitui o conjunto inteiro: sem separar, ligar um
+   * padrao apagaria os marcadores de comunicado e vice-versa.
    */
   setMarcadores(marcadores) {
     this._marcadores = marcadores || [];
     this.aplicarMarcadores();
   }
 
+  setMarcadoresComunicados(marcadores) {
+    this._marcadoresComunicados = marcadores || [];
+    this.aplicarMarcadores();
+  }
+
   aplicarMarcadores() {
     if (!this._serie) return;
-    const marcadores = (this._marcadores || []).map((m) => ({
-      time: m.dataIso,
-      position: m.posicao === 'abaixo' ? 'belowBar' : 'aboveBar',
-      color: m.cor,
-      shape: m.posicao === 'abaixo' ? 'arrowUp' : 'arrowDown',
-      text: m.texto,
-    }));
+    const marcadores = [...(this._marcadores || []), ...(this._marcadoresComunicados || [])]
+      .map((m) => ({
+        time: m.dataIso,
+        position: m.posicao === 'abaixo' ? 'belowBar' : 'aboveBar',
+        color: m.cor,
+        shape: m.forma || (m.posicao === 'abaixo' ? 'arrowUp' : 'arrowDown'),
+        text: m.texto,
+      }))
+      // A lightweight-charts exige os marcadores em ordem crescente de data.
+      .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
     this._serie.setMarkers(marcadores);
   }
 
@@ -101,12 +136,31 @@ export class CandleChart extends BaseComponent {
   }
 
   destruirGrafico() {
+    if (this._observador) {
+      this._observador.disconnect();
+      this._observador = null;
+    }
     if (this._chart) {
       this._chart.remove();
       this._chart = null;
       this._serie = null;
     }
   }
+}
+
+/**
+ * A lightweight-charts devolve o `time` do clique no formato em que achar
+ * melhor: a string 'AAAA-MM-DD' que recebeu ou um BusinessDay
+ * { year, month, day }. Normaliza para ISO.
+ */
+function dataDoClique(tempo) {
+  if (!tempo) return null;
+  if (typeof tempo === 'string') return tempo;
+  if (typeof tempo === 'object' && tempo.year) {
+    const doisDigitos = (n) => String(n).padStart(2, '0');
+    return `${tempo.year}-${doisDigitos(tempo.month)}-${doisDigitos(tempo.day)}`;
+  }
+  return null;
 }
 
 customElements.define('candle-chart', CandleChart);

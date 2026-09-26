@@ -3,14 +3,24 @@ import { buscarIndiceMacro } from '../api/indicesMacroApi.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
-// Unica responsabilidade: orquestrar a exibicao dos indices macroeconomicos
-// (Selic, CDI, IPCA) - busca cada serie no cache do backend e delega a
-// renderizacao a funcoes puras. Conteudo dinamico, mas fonte 100% publica e
-// gratuita (API SGS do Banco Central).
+// Unica responsabilidade: orquestrar a exibicao dos indices macroeconomicos -
+// busca cada serie no cache do backend e delega a renderizacao a funcoes
+// puras. Conteudo dinamico, mas fonte 100% publica e gratuita (API SGS do
+// Banco Central, https://api.bcb.gov.br - sem chave, sem custo).
+//
+// Cada indice tem um link pra uma segunda fonte, independente do BCB, pra
+// quem quiser conferir o numero antes de confiar nele - a maioria via
+// Trading Economics (agregador publico), IGP-M e IPCA vao direto pro orgao
+// que efetivamente calcula a serie (FGV e IBGE), mais confiavel que uma
+// segunda leitura do proprio BCB.
 const INDICES = [
-  { codigo: 'SELIC', nome: 'Selic (meta)', unidade: '% a.a.' },
-  { codigo: 'CDI', nome: 'CDI', unidade: '% a.a.' },
-  { codigo: 'IPCA', nome: 'IPCA (mensal)', unidade: '%' },
+  { codigo: 'SELIC', nome: 'Selic (meta)', unidade: '% a.a.', fonte: 'https://tradingeconomics.com/brazil/interest-rate' },
+  { codigo: 'SELIC_DIARIA', nome: 'Selic (over, diária)', unidade: '% a.d.', fonte: 'https://tradingeconomics.com/brazil/interest-rate' },
+  { codigo: 'CDI', nome: 'CDI', unidade: '% a.d.', fonte: 'https://www.b3.com.br/pt_br/market-data-e-indices/indices/renda-fixa/taxas-referenciais-bm-fbovespa.htm' },
+  { codigo: 'IPCA', nome: 'IPCA (mensal)', unidade: '%', fonte: 'https://www.ibge.gov.br/estatisticas/economicas/precos-e-custos/9256-indice-nacional-de-precos-ao-consumidor-amplo.html' },
+  { codigo: 'IGPM', nome: 'IGP-M (mensal)', unidade: '%', fonte: 'https://portalibre.fgv.br/indicadores/igp' },
+  { codigo: 'DOLAR', nome: 'Dólar comercial (PTAX venda)', unidade: 'R$', fonte: 'https://tradingeconomics.com/brazil/currency' },
+  { codigo: 'IBCBR', nome: 'IBC-Br (proxy mensal do PIB)', unidade: 'índice', fonte: 'https://tradingeconomics.com/brazil/gdp-growth-annual' },
 ];
 
 export class IndicesMacroPage extends BaseComponent {
@@ -18,9 +28,10 @@ export class IndicesMacroPage extends BaseComponent {
     return `
       <h4 class="mb-1">Indices macroeconomicos</h4>
       <p class="text-muted small">
-        Selic, CDI e IPCA direto da API SGS do Banco Central - sem chave, sem custo. Serve de
-        referencia de custo de oportunidade: o earnings yield calculado em
-        <a href="#/formulas">Formulas</a> so diz algo quando comparado contra a Selic do momento.
+        Direto da API SGS do Banco Central - sem chave, sem custo. Serve de referencia de custo
+        de oportunidade: o earnings yield calculado em <a href="#/formulas">Formulas</a> so diz
+        algo quando comparado contra a Selic do momento. Cada cartao linka pra uma segunda fonte,
+        independente do BCB, pra conferir o numero antes de confiar nele.
       </p>
       <div id="indices-conteudo" class="row row-cols-1 row-cols-md-3 g-3"><loading-spinner></loading-spinner></div>
     `;
@@ -67,6 +78,9 @@ function renderIndice(indice, pontos) {
                  </table>`
               : ''
           }
+          <a href="${indice.fonte}" target="_blank" rel="noopener noreferrer" class="small d-block mt-2">
+            Conferir em outra fonte ↗<span class="visually-hidden"> (nova aba)</span>
+          </a>
         </div>
       </div>
     </div>

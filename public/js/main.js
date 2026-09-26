@@ -8,6 +8,7 @@ import './pages/CandlesPage.js';
 import './pages/ComunicadosPage.js';
 import './pages/FormulasPage.js';
 import './pages/ArquiteturaPage.js';
+import './pages/AvaliacaoPage.js';
 import './pages/PadroesPage.js';
 import './pages/GlossarioPage.js';
 import './pages/EstudosPage.js';

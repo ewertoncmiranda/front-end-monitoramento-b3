@@ -6,6 +6,14 @@ import {
   extrairCandles,
 } from '../api/historicoApi.js';
 import { listarAtivosMonitorados } from '../api/ativosMonitoradosApi.js';
+import { buscarComunicadosDoPeriodo } from '../api/comunicadosApi.js';
+import {
+  agruparPorCandle,
+  marcadoresDeComunicados,
+} from '../analise/comunicadosPorCandle.js';
+import { formatarData } from '../components/ComunicadoItem.js';
+import { renderNoticiasDoCandle } from '../components/NoticiasDoCandle.js';
+import { escaparHtml } from '../utils/html.js';
 import '../components/SeletorDeAtivos.js';
 import '../components/CandleChart.js';
 import '../components/PainelPadroes.js';
@@ -25,6 +33,12 @@ const BASE_PADRAO = 'ajustado';
 // rolando); o grafico ocupa o resto a direita. Abaixo disso as colunas
 // empilham - grafico primeiro, padroes depois - e nada fica preso, para nao
 // consumir a area util do celular.
+//
+// Clicar numa vela abre, no lado oposto ao dos padroes, um painel deslizante
+// (offcanvas do Bootstrap) com os comunicados da CVM daquele dia. Sem fundo
+// escuro e sem travar a rolagem, para dar para clicar em outras velas com ele
+// aberto. Os comunicados do periodo inteiro sao buscados uma vez, junto com o
+// grafico, e tambem viram marcadores nas velas.
 export class CandlesPage extends BaseComponent {
   template() {
     return `
@@ -33,6 +47,7 @@ export class CandlesPage extends BaseComponent {
         Gráfico de velas com o histórico diário de abertura, máxima, mínima e fechamento já
         coletado pelo ecossistema. Ative os padrões no painel lateral (abaixo do gráfico, no
         celular); o significado de cada um está em <a href="#/padroes">Padrões e armadilhas</a>.
+        Clique numa vela para ver os comunicados oficiais da CVM daquele dia.
       </p>
 
       <seletor-de-ativos rotulo-botao="Ver candles" placeholder="Ex.: PETR4"></seletor-de-ativos>
@@ -44,6 +59,18 @@ export class CandlesPage extends BaseComponent {
         <aside id="candles-padroes" class="candles-lateral col-lg-4 order-lg-1"
                aria-label="Padrões sobre o gráfico"></aside>
       </div>
+
+      <div class="offcanvas offcanvas-end candles-noticias" tabindex="-1" id="candles-noticias"
+           data-bs-backdrop="false" data-bs-scroll="true" aria-labelledby="candles-noticias-titulo">
+        <div class="offcanvas-header border-bottom">
+          <div>
+            <h5 class="offcanvas-title mb-0" id="candles-noticias-titulo"></h5>
+            <small class="text-muted">Comunicados oficiais da CVM</small>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
+        </div>
+        <div class="offcanvas-body" id="candles-noticias-corpo"></div>
+      </div>
     `;
   }
 
@@ -51,6 +78,27 @@ export class CandlesPage extends BaseComponent {
     this._simbolo = null;
     this._range = RANGE_PADRAO;
     this._base = BASE_PADRAO;
+    this._candles = [];
+    this._comunicados = null;
+    this._dataAberta = null;
+    this._requisicaoComunicados = 0;
+
+    this.addEventListener('candle-clicado', (evento) => {
+      this.abrirNoticias(evento.detail.dataIso);
+    });
+
+    // Em tela grande o painel empurra a pagina (ver app.css). O grafico se
+    // reenquadra sozinho quando a largura muda (ResizeObserver no CandleChart).
+    const painelNoticias = this.querySelector('#candles-noticias');
+    painelNoticias.addEventListener('show.bs.offcanvas', () => {
+      document.body.classList.add('painel-noticias-aberto');
+    });
+    painelNoticias.addEventListener('hide.bs.offcanvas', () => {
+      document.body.classList.remove('painel-noticias-aberto');
+    });
+    painelNoticias.addEventListener('hidden.bs.offcanvas', () => {
+      this._dataAberta = null;
+    });
 
     this.querySelector('seletor-de-ativos').addEventListener('ativo-buscado', (evento) => {
       this._simbolo = evento.detail.simbolo;
@@ -83,6 +131,8 @@ export class CandlesPage extends BaseComponent {
     erro.innerHTML = '';
     areaGrafico.innerHTML = '<loading-spinner></loading-spinner>';
     areaPadroes.innerHTML = '';
+    // Vela aberta de outro ativo ou periodo deixaria o painel mentindo.
+    this.fecharNoticias();
 
     let candles;
     try {
@@ -109,7 +159,91 @@ export class CandlesPage extends BaseComponent {
       grafico.setMarcadores(evento.detail.marcadores);
     });
 
+    this._candles = candles;
+    this.carregarComunicados(grafico, candles);
     this.carregarCarteira(painel);
+  }
+
+  /**
+   * Busca os comunicados do periodo do grafico numa chamada so, marca as
+   * velas que os tem e deixa tudo pronto para o clique. Falha nao derruba o
+   * grafico: so deixa as velas sem marcador e o painel explica.
+   */
+  async carregarComunicados(grafico, candles) {
+    if (!candles.length) return;
+    const requisicao = ++this._requisicaoComunicados;
+    const simbolo = this._simbolo;
+    this._comunicados = { carregando: true };
+
+    let estado;
+    try {
+      const resultado = await buscarComunicadosDoPeriodo(simbolo, {
+        desde: candles[0].dataIso,
+        ate: candles[candles.length - 1].dataIso,
+      });
+      estado = { ...resultado, grupos: agruparPorCandle(candles, resultado.comunicados) };
+    } catch (erro) {
+      estado = { erro: erro.message };
+    }
+    if (requisicao !== this._requisicaoComunicados) return;
+
+    this._comunicados = estado;
+    if (estado.grupos) {
+      grafico.setMarcadoresComunicados(marcadoresDeComunicados(candles, estado.grupos));
+    }
+    // Clicaram numa vela antes de os dados chegarem: atualiza o que ja esta aberto.
+    if (this._dataAberta) this.renderizarNoticias(this._dataAberta);
+  }
+
+  abrirNoticias(dataIso) {
+    if (!this._candles.some((c) => c.dataIso === dataIso)) return;
+    this._dataAberta = dataIso;
+    this.renderizarNoticias(dataIso);
+
+    const bootstrap = window.bootstrap;
+    const elemento = this.querySelector('#candles-noticias');
+    if (bootstrap && elemento) bootstrap.Offcanvas.getOrCreateInstance(elemento).show();
+  }
+
+  renderizarNoticias(dataIso) {
+    const indice = this._candles.findIndex((c) => c.dataIso === dataIso);
+    if (indice < 0) return;
+    const estado = this._comunicados || {};
+
+    this.querySelector('#candles-noticias-titulo').innerHTML =
+      `${escaparHtml(this._simbolo)} · ${formatarData(dataIso)}`;
+    this.querySelector('#candles-noticias-corpo').innerHTML = renderNoticiasDoCandle({
+      simbolo: this._simbolo,
+      candle: this._candles[indice],
+      candleAnterior: indice > 0 ? this._candles[indice - 1] : null,
+      grupo: estado.grupos ? estado.grupos.get(dataIso) : null,
+      carregando: Boolean(estado.carregando),
+      erro: estado.erro || null,
+      dadosAte: estado.dadosAte || null,
+      fonte: estado.fonte || null,
+      aviso: estado.aviso || null,
+    });
+  }
+
+  fecharNoticias() {
+    this._dataAberta = null;
+    const elemento = this.querySelector('#candles-noticias');
+    const instancia = window.bootstrap && elemento
+      ? window.bootstrap.Offcanvas.getInstance(elemento)
+      : null;
+    if (instancia) instancia.hide();
+  }
+
+  disconnectedCallback() {
+    // Troca de aba com o painel aberto: o offcanvas vive dentro desta pagina,
+    // mas o Bootstrap guarda estado global da instancia - e a margem que o
+    // painel abre na pagina ficaria presa nas outras abas.
+    document.body.classList.remove('painel-noticias-aberto');
+    const elemento = this.querySelector('#candles-noticias');
+    const instancia = window.bootstrap && elemento
+      ? window.bootstrap.Offcanvas.getInstance(elemento)
+      : null;
+    if (instancia) instancia.dispose();
   }
 
   /**
@@ -179,6 +313,11 @@ export class CandlesPage extends BaseComponent {
         </div>
       </div>
       ${this.avisoBase(ajustados, candles.length)}
+      <p class="small text-muted mb-1">
+        Clique numa vela para ver os comunicados da CVM do dia.
+        <span class="text-danger" aria-hidden="true">●</span> fato relevante
+        <span class="text-primary ms-2" aria-hidden="true">●</span> outros comunicados
+      </p>
       <candle-chart></candle-chart>
     `;
   }

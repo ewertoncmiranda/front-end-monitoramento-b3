@@ -3,9 +3,13 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { niveis, apimec } from '../estudos/conteudo.js';
 import { ProgressoEstudos } from '../estudos/progresso.js';
 import { normalizar } from '../estudos/texto.js';
-import { renderTrilhas, renderConhecimento, renderOrientacoes, renderMateriais } from '../estudos/apresentacao.js';
+import { renderTrilhas, renderConhecimento, renderOrientacoes, renderMateriais, renderReferencia } from '../estudos/apresentacao.js';
+import '../pages/FormulasPage.js';
+import '../pages/ArquiteturaPage.js';
+import '../pages/PadroesPage.js';
+import '../pages/GlossarioPage.js';
 
-const secoes = { trilhas: 'Planos de estudo', conhecimento: 'Conhecimento', orientacoes: 'Orientações', materiais: 'Material didático' };
+const secoes = { trilhas: 'Planos de estudo', conhecimento: 'Conhecimento', orientacoes: 'Orientações', materiais: 'Material didático', referencia: 'Referência' };
 
 export class EstudosPage extends BaseComponent {
   constructor() {
@@ -15,6 +19,7 @@ export class EstudosPage extends BaseComponent {
     this.progresso = new ProgressoEstudos(armazenamento, [...niveis, ...apimec].map(n => n.id));
     this.secao = 'trilhas';
     this.percurso = 'formacao';
+    this.subReferencia = 'formulas';
   }
 
   template() {
@@ -48,6 +53,8 @@ export class EstudosPage extends BaseComponent {
       }
       const percurso = evento.target.closest('[data-percurso]');
       if (percurso) { this.percurso = percurso.dataset.percurso; this.renderConteudo(); }
+      const subref = evento.target.closest('[data-subref]');
+      if (subref) { this.subReferencia = subref.dataset.subref; this.renderConteudo(); }
       if (evento.target.closest('[data-continuar]')) {
         this.querySelector('#estudos-busca').value = '';
         this.filtrar();
@@ -85,13 +92,22 @@ export class EstudosPage extends BaseComponent {
   }
 
   renderConteudo() {
-    const renderizadores = { trilhas: () => renderTrilhas(this.progresso, this.percurso), conhecimento: renderConhecimento, orientacoes: renderOrientacoes, materiais: renderMateriais };
+    const renderizadores = { trilhas: () => renderTrilhas(this.progresso, this.percurso), conhecimento: renderConhecimento, orientacoes: renderOrientacoes, materiais: renderMateriais, referencia: () => renderReferencia(this.subReferencia) };
     this.querySelector('#estudos-conteudo').innerHTML = renderizadores[this.secao]();
     this.atualizarSalvamento();
     this.filtrar();
   }
 
   filtrar() {
+    if (this.secao === 'referencia') {
+      // Cada pagina embutida em Referencia tem sua propria busca interna
+      // (ex.: o Glossario ja filtra os proprios verbetes) - a busca global
+      // de Estudos nao se aplica aqui.
+      this.querySelector('#estudos-vazio').classList.add('d-none');
+      this.querySelector('#estudos-contagem').textContent = '';
+      return;
+    }
+
     const termo = normalizar(this.querySelector('#estudos-busca').value.trim());
     let visiveis = 0;
     this.querySelectorAll('[data-estudo-busca]').forEach(el => {

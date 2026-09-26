@@ -27,21 +27,9 @@ export class BottomNav extends BaseComponent {
             <div aria-hidden="true">📰</div>
             <small>Comunicados</small>
           </a>
-          <a class="nav-link text-center flex-shrink-0 px-2" href="#/formulas">
-            <div>🧮</div>
-            <small>Fórmulas</small>
-          </a>
-          <a class="nav-link text-center flex-shrink-0 px-2" href="#/arquitetura">
-            <div>🧩</div>
-            <small>Arquitetura</small>
-          </a>
-          <a class="nav-link text-center flex-shrink-0 px-2" href="#/padroes">
-            <div>📉</div>
-            <small>Padrões</small>
-          </a>
-          <a class="nav-link text-center flex-shrink-0 px-2" href="#/glossario">
-            <div>📖</div>
-            <small>Glossário</small>
+          <a class="nav-link text-center flex-shrink-0 px-2" href="#/avaliacao">
+            <div aria-hidden="true">🩺</div>
+            <small>Avaliação</small>
           </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/setores">
             <div>🏭</div>

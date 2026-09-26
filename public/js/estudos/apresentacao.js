@@ -43,6 +43,17 @@ export function renderOrientacoes() {
   return `<h2 class="h4">Orientações para estudar e decidir melhor</h2><p class="text-secondary">Hábitos, critérios e limites que acompanham todos os níveis.</p><div class="row g-3">${orientacoes.map(o => `<article class="col-12 col-lg-6" ${pesquisavel(o)}><div class="card h-100 border-0 shadow-sm"><div class="card-body p-4"><h3 class="h5">${o.titulo}</h3><p class="mb-0">${o.texto}</p>${o.fonte ? linksFontes([o.fonte]) : ''}</div></div></article>`).join('')}</div>`;
 }
 
+const SUBSECOES_REFERENCIA = { formulas: 'Fórmulas', arquitetura: 'Arquitetura', padroes: 'Padrões', glossario: 'Glossário' };
+const TAG_POR_SUBSECAO = { formulas: 'formulas-page', arquitetura: 'arquitetura-page', padroes: 'padroes-page', glossario: 'glossario-page' };
+
+export function renderReferencia(subSecao) {
+  const atual = SUBSECOES_REFERENCIA[subSecao] ? subSecao : 'formulas';
+  const tag = TAG_POR_SUBSECAO[atual];
+  return `<h2 class="h4">Referência</h2><p class="text-secondary">Fórmulas, arquitetura, padrões de gráfico e glossário reunidos - o mesmo conteúdo que antes vivia em abas separadas.</p>
+  <div class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Escolher referência">${Object.entries(SUBSECOES_REFERENCIA).map(([id, nome]) => `<button class="btn ${id === atual ? 'btn-primary' : 'btn-outline-primary'}" data-subref="${id}" aria-pressed="${id === atual}">${nome}</button>`).join('')}</div>
+  <${tag}></${tag}>`;
+}
+
 export function renderMateriais() {
   return `<h2 class="h4">Material didático e prática guiada</h2><p class="text-secondary">Exercícios, ficha de pesquisa e fontes para transformar leitura em entregas.</p>
   <div class="vstack gap-3 mb-4">${exercicios.map(e => `<details class="card" ${pesquisavel(e)}><summary class="card-header bg-white p-3"><span class="badge text-bg-light me-2">${e.nivel}</span><strong>${e.titulo}</strong></summary><div class="card-body p-4">${e.formula ? `<p class="bg-light rounded p-3 font-monospace text-break">${escapar(e.formula)}</p>` : ''}<ol>${e.passos.map(p => `<li class="mb-2">${escapar(p)}</li>`).join('')}</ol><p><strong>Entrega:</strong> ${escapar(e.entrega)}</p>${atalhos(e.rotas)}</div></details>`).join('')}</div>

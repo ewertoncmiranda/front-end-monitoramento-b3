@@ -29,6 +29,36 @@ body {
   padding-bottom: 0.5rem;
 }
 
+/* Painel deslizante de comunicados da vela clicada: largo o bastante para o
+   assunto dos documentos, sem cobrir o grafico inteiro; tela cheia no celular. */
+.candles-noticias {
+  --bs-offcanvas-width: 420px;
+}
+
+@media (max-width: 575.98px) {
+  .candles-noticias {
+    --bs-offcanvas-width: 100vw;
+  }
+}
+
+/* Em tela grande, painel aberto empurra a pagina em vez de cobrir o grafico:
+   sem isso as velas mais recentes - as mais clicadas - ficam embaixo dele.
+   Vai no body, e nao no #app-outlet: o .container do Bootstrap tem
+   width: 100%, e margem nele e ignorada (o conteudo so transborda). */
+@media (min-width: 992px) {
+  body.painel-noticias-aberto {
+    padding-right: 420px;
+  }
+}
+
+/* Coluna do grafico precisa poder encolher. Item flex nao fica menor que o
+   proprio conteudo, e o canvas ja desenhado tem largura fixa em pixels: sem
+   isto, estreitar a pagina (janela menor ou painel de comunicados aberto)
+   derruba o grafico para baixo dos padroes em vez de redimensiona-lo. */
+#candles-grafico {
+  min-width: 0;
+}
+
 .candles-lateral:empty {
   display: none;
 }

@@ -9,7 +9,7 @@ import './HistoricoTable.js';
 import './FundamentosCard.js';
 import './LoadingSpinner.js';
 
-const COLUNAS = 8;
+const COLUNAS = 10;
 
 // Unica responsabilidade: renderizar a lista de ativos monitorados
 // (contrato de GET /ativos/registrados), enriquecida com a ultima decisao
@@ -24,13 +24,40 @@ export class AtivosMonitoradosTable extends BaseComponent {
     this._analisesPorSimbolo = {};
     this._expandidos = new Set();
     this._detalhesPorSimbolo = {};
+    this._ordenacao = { coluna: null, direcao: 1 };
     this.innerHTML = this.template();
     this.addEventListener('click', (evento) => this.aoClicarLinha(evento));
+    this.addEventListener('click', (evento) => this.aoClicarCabecalho(evento));
   }
 
   setAtivos(ativos) {
     this._ativos = ativos || [];
     this.renderizar();
+  }
+
+  aoClicarCabecalho(evento) {
+    const cabecalho = evento.target.closest('th[data-coluna]');
+    if (!cabecalho) {
+      return;
+    }
+
+    const coluna = cabecalho.dataset.coluna;
+    if (this._ordenacao.coluna === coluna) {
+      this._ordenacao.direcao *= -1;
+    } else {
+      this._ordenacao = { coluna, direcao: 1 };
+    }
+    this.renderizar();
+  }
+
+  ativosOrdenados() {
+    const { coluna, direcao } = this._ordenacao;
+    if (!coluna) {
+      return this._ativos;
+    }
+
+    const comparador = COMPARADORES[coluna];
+    return [...this._ativos].sort((a, b) => direcao * comparador(a, b, this._analisesPorSimbolo));
   }
 
   setAnalise(simbolo, analise) {
@@ -83,7 +110,7 @@ export class AtivosMonitoradosTable extends BaseComponent {
       return '<p class="text-muted">Nenhum ativo monitorado ainda.</p>';
     }
 
-    const linhas = this._ativos.map((a) => this.linhas(a)).join('');
+    const linhas = this.ativosOrdenados().map((a) => this.linhas(a)).join('');
 
     return `
       <div class="table-responsive">
@@ -91,19 +118,27 @@ export class AtivosMonitoradosTable extends BaseComponent {
           <thead>
             <tr>
               <th></th>
-              <th>Simbolo</th>
-              <th>Status</th>
-              <th>Coleta</th>
-              <th>Intervalo</th>
-              <th>Ultima atualizacao</th>
-              <th>Decisao</th>
-              <th>Confiança</th>
+              ${this.th('simbolo', 'Simbolo')}
+              ${this.th('status', 'Status')}
+              ${this.th('coleta', 'Coleta')}
+              ${this.th('intervalo', 'Intervalo')}
+              ${this.th('atualizadoEm', 'Ultima atualizacao')}
+              ${this.th('valorAnterior', 'Valor anterior')}
+              ${this.th('valorAtual', 'Valor atual')}
+              ${this.th('decisao', 'Decisao')}
+              ${this.th('confianca', 'Confiança')}
             </tr>
           </thead>
           <tbody>${linhas}</tbody>
         </table>
       </div>
     `;
+  }
+
+  th(coluna, rotulo) {
+    const ativo = this._ordenacao.coluna === coluna;
+    const indicador = ativo ? (this._ordenacao.direcao === 1 ? ' ▲' : ' ▼') : '';
+    return `<th data-coluna="${coluna}" style="cursor: pointer;" class="${ativo ? 'table-active' : ''}">${rotulo}${indicador}</th>`;
   }
 
   linhas(a) {
@@ -120,6 +155,8 @@ export class AtivosMonitoradosTable extends BaseComponent {
         <td>${formatarTipoColeta(a.tipoColeta)}</td>
         <td>${a.intervaloSegundos}s</td>
         <td>${formatarData(a.atualizadoEm)}</td>
+        ${celulaValorAnterior(a)}
+        ${celulaValorAtual(a)}
         ${this.celulaDecisao(a.simbolo)}
       </tr>
     `;
@@ -206,11 +243,73 @@ function formatarData(valor) {
   return String(valor).replace('T', ' ').slice(0, 19);
 }
 
+// So mostra o par anterior/atual quando ha uma mudanca de preco de fato
+// registrada (precoAnterior != null) - o proprio pedido de "recuperar o
+// ativo so se ele teve mudanca": sem mudanca, essas duas colunas ficam com
+// "Sem mudança registrada" em vez de repetir o mesmo preco duas vezes.
+function celulaValorAnterior(a) {
+  if (a.precoAnterior == null) {
+    return '<td class="text-muted small">Sem mudança registrada</td>';
+  }
+  return `<td>${formatarMoeda(a.precoAnterior)}<br><span class="text-muted small">${formatarData(a.precoAnteriorEm)}</span></td>`;
+}
+
+function celulaValorAtual(a) {
+  if (a.precoAtual == null) {
+    return '<td class="text-muted small">-</td>';
+  }
+  if (a.precoAnterior == null) {
+    return `<td>${formatarMoeda(a.precoAtual)}<br><span class="text-muted small">Sem mudança registrada</span></td>`;
+  }
+  return `<td>${formatarMoeda(a.precoAtual)}<br><span class="text-muted small">${formatarData(a.precoAtualDesde)}</span></td>`;
+}
+
+function formatarMoeda(valor) {
+  return valor == null ? '-' : `R$ ${Number(valor).toFixed(2)}`;
+}
+
 function formatarConfianca(valor) {
   if (valor === undefined || valor === null) {
     return '-';
   }
   return `${(Number(valor) * 100).toFixed(0)}%`;
 }
+
+// Ordem semantica das recomendacoes, da mais otimista pra mais pessimista -
+// usada pra ordenar a coluna Decisao por sentido, nao por ordem alfabetica.
+const ORDEM_RECOMENDACAO = [
+  'COMPRA_FORTE',
+  'COMPRA',
+  'COMPRA_MODERADA',
+  'NEUTRO',
+  'MANTER',
+  'VENDA',
+  'VENDA_VALUATION',
+];
+
+function rankRecomendacao(analise) {
+  if (!analise || !analise.recomendacao) {
+    return ORDEM_RECOMENDACAO.length;
+  }
+  const indice = ORDEM_RECOMENDACAO.indexOf(analise.recomendacao);
+  return indice === -1 ? ORDEM_RECOMENDACAO.length : indice;
+}
+
+const COMPARADORES = {
+  simbolo: (a, b) => a.simbolo.localeCompare(b.simbolo),
+  status: (a, b) => Number(a.ativo) - Number(b.ativo),
+  coleta: (a, b) => formatarTipoColeta(a.tipoColeta).localeCompare(formatarTipoColeta(b.tipoColeta)),
+  intervalo: (a, b) => a.intervaloSegundos - b.intervaloSegundos,
+  atualizadoEm: (a, b) => new Date(a.atualizadoEm || 0) - new Date(b.atualizadoEm || 0),
+  valorAnterior: (a, b) => (a.precoAnterior ?? -1) - (b.precoAnterior ?? -1),
+  valorAtual: (a, b) => (a.precoAtual ?? -1) - (b.precoAtual ?? -1),
+  decisao: (a, b, analisesPorSimbolo) =>
+    rankRecomendacao(analisesPorSimbolo[a.simbolo]) - rankRecomendacao(analisesPorSimbolo[b.simbolo]),
+  confianca: (a, b, analisesPorSimbolo) => {
+    const confA = analisesPorSimbolo[a.simbolo]?.confianca_analise ?? -1;
+    const confB = analisesPorSimbolo[b.simbolo]?.confianca_analise ?? -1;
+    return confA - confB;
+  },
+};
 
 customElements.define('ativos-monitorados-table', AtivosMonitoradosTable);
