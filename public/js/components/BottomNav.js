@@ -35,6 +35,10 @@ export class BottomNav extends BaseComponent {
             <div>🧩</div>
             <small>Arquitetura</small>
           </a>
+          <a class="nav-link text-center flex-shrink-0 px-2" href="#/avaliacao">
+            <div aria-hidden="true">🩺</div>
+            <small>Avaliação</small>
+          </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/padroes">
             <div>📉</div>
             <small>Padrões</small>

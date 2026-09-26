@@ -11,6 +11,7 @@ const rotas = {
   '#/comunicados': 'comunicados-page',
   '#/formulas': 'formulas-page',
   '#/arquitetura': 'arquitetura-page',
+  '#/avaliacao': 'avaliacao-page',
   '#/padroes': 'padroes-page',
   '#/glossario': 'glossario-page',
   '#/estudos': 'estudos-page',
