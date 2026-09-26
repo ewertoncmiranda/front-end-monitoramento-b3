@@ -191,16 +191,16 @@ const TEMAS = [
   },
   {
     id: 'contexto-macro',
-    titulo: 'Contexto macroeconomico (proposta)',
-    resumo: 'Um earnings yield de 8% e otimo com Selic a 6% e ruim com Selic a 14% - hoje a classificacao ignora isso.',
-    fonte: 'BRAPI /macro (Selic/CDI/IPCA) exige plano Startup - alternativa gratis: API SGS do Banco Central (api.bcb.gov.br), sem chave',
+    titulo: 'Contexto macroeconomico',
+    resumo: 'Um earnings yield de 8% e otimo com Selic a 6% e ruim com Selic a 14% - a classificacao fixa por si so ignora isso.',
+    fonte: 'API SGS do Banco Central (api.bcb.gov.br) - gratis, sem chave. Ver a serie em <a href="#/indices">Indices</a>.',
     itens: [
       {
-        status: 'proposta',
+        status: 'implementado',
         nome: 'Earnings yield vs. taxa livre de risco',
         cenarios: ['MACRO', 'LONGO_PRAZO'],
-        descricao: 'Mede o quanto o earnings yield da acao compensa (ou nao) o risco extra frente a simplesmente deixar o dinheiro na Selic.',
-        formula: 'premio de risco = earnings yield do ativo - taxa Selic anual',
+        descricao: 'Mede o quanto o earnings yield da acao compensa (ou nao) o risco extra frente a simplesmente deixar o dinheiro na Selic. Selic buscada 1x/dia e cacheada (indice_macro); nunca ao vivo na hora do clique.',
+        formula: 'premio de risco = earnings yield do ativo - taxa Selic anual (o mais recente ponto de indice_macro)',
       },
     ],
   },

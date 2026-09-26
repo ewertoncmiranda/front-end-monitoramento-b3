@@ -135,6 +135,8 @@ Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técn
 | `/api/v2/stocks/historical` | GET | `ConsultaPage`, `AtivosMonitoradosTable` | `symbols`, `range=1mo`, `interval=1d`, `sortOrder=asc` fixos no `historicoApi.js`. |
 | `/ativos/registrar/{ativo}` | POST | `CadastroPage` | Persiste o cadastro no backend (`ativo_monitorado`) e entra em monitoramento recorrente de 30s; confirmação via link para `#/monitorados`. |
 | `/ativos/registrados` | GET | `AtivosMonitoradosPage` | Lista a carteira monitorada (`ISS-01`/`TASK-01` **RESOLVIDO**). |
+| `/comunicados/newsletter` | GET | `ComunicadosPage` | Edição semanal da carteira agrupada por ticker (`infra#CTR-10`). Sem `semana`, o backend devolve a do documento mais recente; a página guarda a semana resolvida na URL. |
+| `/empresas/{simbolo}/comunicados` | GET | `ComunicadosPage` | Linha do tempo paginada (20 por vez, "Carregar mais"). `categorias` sempre enviado na mesma ordem fixa. |
 
 Todas as 6 rotas acima são acessadas pelo **cliente** como caminho relativo (mesma origem do front) — quem fala com o backend de verdade é o `server.js`, via proxy reverso (`proxy/apiProxy.js`). CORS habilitado no backend em `ConfigCors` (`app.cors.allowed-origins`) desde 2026-09-25 deixou de ser necessário para este front especificamente, mas continua útil pra outros clientes que queiram chamar o backend direto do browser.
 
@@ -159,6 +161,7 @@ Não existe mais configuração do lado do cliente (`window.PAINEL_ATIVOS_API_BA
 | REQ-05 | Listar os ativos monitorados, com a última decisão de cada um | IMPLEMENTADO (2026-09-25, aba `#/monitorados`, ver `2.2`) |
 | REQ-06 | Ver a visão estruturada (cotação/decisão/histórico) de um ativo monitorado sem sair da lista | IMPLEMENTADO (2026-09-25, linha expansível em `AtivosMonitoradosTable`, ver `2.3`) |
 | REQ-07 | Explicar a metodologia de cálculo e mostrar os fundamentos brutos de um único ciclo de análise | IMPLEMENTADO (2026-09-25, aba `#/metodologia`, ver `2.3`) |
+| REQ-08 | Aba `#/comunicados`: edição semanal dos comunicados oficiais da CVM por ticker (navegação ‹ semana ›, filtro por categoria, fato relevante primeiro) e linha do tempo do ativo com link "Abrir documento na CVM ↗" | IMPLEMENTADO (2026-09-26). Link direto `#/comunicados?simbolo=PETR4&semana=2026-W38`; estado volta à URL por `history.replaceState` (não dispara `hashchange`). Texto da CVM sempre passa por `utils/html.js#escaparHtml`. Aviso de defasagem conta só dias úteis: dados até sexta cobrem a semana |
 | NFR-01 | Cliente sem etapa de build | ATENDIDO (o servidor Node tem `npm install`, mas o JS/CSS do browser continua sem bundler) |
 | NFR-02 | Compatível com empacotamento em WebView (Android/iOS) | ATENDIDO (ES modules + Custom Elements, sem History API; o proxy é transparente pro cliente) |
 | NFR-03 | Um arquivo = uma responsabilidade (SRP) | ATENDIDO |

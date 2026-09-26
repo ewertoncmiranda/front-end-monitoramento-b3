@@ -1,5 +1,6 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { badgeClassParaRecomendacao } from '../utils/recomendacaoBadge.js';
+import { buscarIndiceMacro } from '../api/indicesMacroApi.js';
 
 // Unica responsabilidade: renderizar o retrato bruto (nao mediado) da ultima
 // analise de um ativo (contrato de GET /analises/{simbolo}/fundamentos) - os
@@ -10,6 +11,38 @@ export class FundamentosCard extends BaseComponent {
   setFundamentos(fundamentos) {
     this._fundamentos = fundamentos;
     this.innerHTML = this.template();
+    this.carregarPremioSelic();
+  }
+
+  /**
+   * Busca a Selic mais recente (cache do backend, indice_macro) e completa a
+   * linha "premio sobre a Selic" que o template ja deixou marcada. Assincrono
+   * e a parte, pra nao acoplar o render principal (sincrono) a uma chamada de
+   * rede - se a Selic falhar ou nao existir ainda, a secao de valuation
+   * continua completa sem essa linha.
+   */
+  async carregarPremioSelic() {
+    const earningsYield = this._fundamentos?.detalhes?.valuation?.earnings_yield_percent;
+    const alvo = this.querySelector('#premio-selic');
+    if (!alvo) return;
+    if (earningsYield == null) {
+      alvo.remove();
+      return;
+    }
+
+    try {
+      const pontos = await buscarIndiceMacro('SELIC');
+      const selic = pontos?.[0]?.valor;
+      if (selic == null) {
+        alvo.remove();
+        return;
+      }
+      const premio = Number(earningsYield) - Number(selic);
+      const classe = premio >= 0 ? 'text-success' : 'text-danger';
+      alvo.innerHTML = `Earnings yield <strong class="${classe}">${premio >= 0 ? '+' : ''}${premio.toFixed(2)} pts</strong> em relação à Selic atual (${Number(selic).toFixed(2)}% a.a.)`;
+    } catch {
+      alvo.remove();
+    }
   }
 
   template() {
@@ -117,6 +150,7 @@ function secaoValuation(v) {
         <tbody>${linhas}</tbody>
       </table>
     </div>
+    <p class="small text-muted mb-3" id="premio-selic">Comparando earnings yield com a Selic...</p>
   `;
 }
 

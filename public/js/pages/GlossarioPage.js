@@ -1,5 +1,6 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { glossarioAcademico } from '../estudos/glossarioAcademico.js';
+import { PADROES_DETALHADOS, padraoDetalhado } from '../estudos/glossarioPadroes.js';
 import { normalizar } from '../estudos/texto.js';
 
 // Unica responsabilidade: explicar o vocabulario do mercado financeiro pra
@@ -121,6 +122,37 @@ const GLOSSARIO = [
         definicao:
           'O consolidado soma a empresa e todas as suas controladas; o individual e so a matriz. Comparacoes de mercado usam o consolidado.',
         onde: 'O campo "grupo" indica qual foi usado (con ou ind).',
+      },
+      {
+        termo: 'IPE',
+        sigla: 'Informações Periódicas e Eventuais',
+        definicao:
+          'A base da CVM que lista todo documento eventual entregue pelas companhias: fatos relevantes, comunicados, avisos, atas. Cada linha traz o link oficial do documento.',
+        onde: 'Fonte da aba Comunicados. A CVM a republica cerca de uma vez por semana, por isso a aba informa até que data há dados.',
+      },
+      {
+        termo: 'Fato relevante',
+        definicao:
+          'Comunicado obrigatório sobre qualquer decisão ou acontecimento capaz de influenciar o preço da ação ou a decisão de investir: aquisição, mudança de controle, resultado fora do esperado, renegociação de dívida. Deve ser divulgado a todos ao mesmo tempo.',
+        onde: 'Aparece primeiro na edição semanal da aba Comunicados, em vermelho.',
+        cuidado:
+          'Nem todo fato relevante é notícia boa ou ruim; é o fato que a companhia considera capaz de mover o preço. Leia o documento antes de tirar conclusão.',
+      },
+      {
+        termo: 'Comunicado ao mercado',
+        definicao:
+          'Informação que a companhia decide divulgar sem que seja fato relevante: esclarecimentos sobre notícias, contratos, eventos operacionais.',
+      },
+      {
+        termo: 'Aviso aos acionistas',
+        definicao:
+          'Informação dirigida a quem tem a ação: datas de pagamento de proventos, direito de subscrição, prazos de assembleia.',
+      },
+      {
+        termo: 'RAD',
+        sigla: 'Rede de Atendimento Digital (ENET)',
+        definicao:
+          'O sistema da CVM onde os documentos das companhias ficam disponíveis. O link "Abrir documento na CVM" leva direto a ele.',
       },
     ],
   },
@@ -640,6 +672,7 @@ export class GlossarioPage extends BaseComponent {
 
       <div id="glossario-grupos">
         ${[...GLOSSARIO, ...glossarioAcademico].map((grupo) => renderGrupo(grupo)).join('')}
+        ${renderPadroesDetalhados()}
       </div>
     `;
   }
@@ -647,6 +680,7 @@ export class GlossarioPage extends BaseComponent {
   afterRender() {
     const busca = this.querySelector('#glossario-busca');
     const contador = this.querySelector('#glossario-contador');
+    this.destacarPadraoDoLink();
 
     busca.addEventListener('input', () => {
       const termo = normalizar(busca.value.trim());
@@ -670,6 +704,81 @@ export class GlossarioPage extends BaseComponent {
     });
     busca.dispatchEvent(new Event('input'));
   }
+
+  /**
+   * Chegando por `#/glossario?padrao=<id>` (o "?" dos cartoes da aba Velas),
+   * rola ate o verbete e o destaca. Ancora com `#` nao serve aqui: o hash ja
+   * e a rota.
+   */
+  destacarPadraoDoLink() {
+    const consulta = window.location.hash.split('?')[1] || '';
+    const id = new URLSearchParams(consulta).get('padrao');
+    if (!id || !padraoDetalhado(id)) return;
+
+    const verbete = this.querySelector(`#padrao-${id}`);
+    if (!verbete) return;
+
+    verbete.classList.add('glossario-destaque');
+
+    // O "?" do cartao abre esta pagina numa aba nova, ou seja, carga
+    // completa. Rolar antes do `load` nao adianta: o navegador reposiciona a
+    // pagina depois dele. Ja na navegacao interna (hashchange) o load passou.
+    const rolar = () => requestAnimationFrame(() => verbete.scrollIntoView({ block: 'start' }));
+    if (document.readyState === 'complete') rolar();
+    else window.addEventListener('load', rolar, { once: true });
+  }
+}
+
+function renderPadroesDetalhados() {
+  return `
+    <div class="card shadow-sm mb-3" data-grupo="padroes-detalhados" id="padroes-detalhados">
+      <div class="card-header">
+        <strong>Padrões de velas em detalhe</strong>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-3">
+          Um verbete para cada padrão que a aba <a href="#/candles">Velas</a> detecta:
+          o fundamento, o que indica, em que cenários costuma ser usado e quais outros
+          padrões fazem sentido observar junto. Nenhum deles é sinal de compra ou venda
+          sozinho — compare sempre com a taxa-base e com a contagem no ruído mostradas no cartão.
+        </p>
+        <div class="row row-cols-1 g-3">
+          ${PADROES_DETALHADOS.map((p) => renderPadraoDetalhado(p)).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPadraoDetalhado(p) {
+  const indice = normalizar(
+    [p.termo, p.fundamento, p.indica, ...p.cenarios, p.nestePainel].join(' '),
+  );
+
+  const combina = p.combinaCom
+    .map((id) => padraoDetalhado(id))
+    .filter(Boolean)
+    .map(
+      (outro) =>
+        `<a href="#/glossario?padrao=${outro.id}" class="badge rounded-pill text-bg-light border text-decoration-none">${outro.termo}</a>`,
+    )
+    .join(' ');
+
+  return `
+    <div class="col" data-verbete="${escapar(indice)}">
+      <div id="padrao-${p.id}" class="glossario-padrao border-start border-3 ps-3 h-100">
+        <div class="fw-semibold">${p.termo}</div>
+        <p class="small mb-1 mt-2"><strong>Fundamento:</strong> ${p.fundamento}</p>
+        <p class="small mb-1"><strong>O que indica:</strong> ${p.indica}</p>
+        <p class="small mb-1"><strong>Cenários de uso:</strong></p>
+        <ul class="small mb-2">
+          ${p.cenarios.map((c) => `<li>${c}</li>`).join('')}
+        </ul>
+        <p class="small mb-1"><strong>Faz sentido observar junto:</strong> ${combina}</p>
+        <p class="small text-muted mb-0">Neste painel: ${p.nestePainel}</p>
+      </div>
+    </div>
+  `;
 }
 
 function avisoEducativo() {

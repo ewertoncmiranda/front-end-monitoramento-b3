@@ -8,11 +8,14 @@ const rotas = {
   '#/gestao': 'gestao-page',
   '#/monitorados': 'ativos-monitorados-page',
   '#/candles': 'candles-page',
+  '#/comunicados': 'comunicados-page',
   '#/formulas': 'formulas-page',
   '#/arquitetura': 'arquitetura-page',
   '#/padroes': 'padroes-page',
   '#/glossario': 'glossario-page',
   '#/estudos': 'estudos-page',
+  '#/setores': 'setores-page',
+  '#/indices': 'indices-macro-page',
 };
 
 const ROTA_PADRAO = '#/gestao';
@@ -21,7 +24,9 @@ export function iniciarRouter(outletSelector) {
   const outlet = document.querySelector(outletSelector);
 
   function renderizarRotaAtual() {
-    const hash = window.location.hash || ROTA_PADRAO;
+    // `#/glossario?padrao=martelo`: o que vem depois do `?` e parametro da
+    // pagina (ela mesma le), nao parte da rota.
+    const hash = (window.location.hash || ROTA_PADRAO).split('?')[0];
     const tagName = rotas[hash] || rotas[ROTA_PADRAO];
     outlet.innerHTML = `<${tagName}></${tagName}>`;
   }

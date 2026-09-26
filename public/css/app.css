@@ -9,14 +9,64 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-/* Aba de Candles: a partir de telas medias, os cartoes de padroes rolam numa
-   area propria, sem levar junto o cabecalho (controles + caixa de
-   calibragem), que fica sempre visivel logo abaixo do grafico. No celular a
-   rolagem continua sendo a da pagina inteira, pra nao desperdicar area util
+/* Aba de Candles.
+   Telas grandes: o painel de padroes e um menu lateral a esquerda, preso na
+   tela com a altura da janela. O cabecalho (controles + caixa de calibragem)
+   fica fixo no topo do menu e so os cartoes rolam, sem levar a pagina junto.
+   Tablet: colunas empilhadas; os cartoes rolam numa area propria abaixo do
+   grafico. Celular: rolagem da pagina inteira, pra nao desperdicar area util
    numa tela pequena com uma caixa de rolagem aninhada. */
-@media (min-width: 768px) {
+/* Glossario: verbete de padrao aberto pelo "?" de um cartao da aba Velas. */
+.glossario-padrao {
+  scroll-margin-top: 1rem;
+}
+
+.glossario-destaque {
+  border-color: var(--bs-primary) !important;
+  background-color: var(--bs-primary-bg-subtle);
+  border-radius: 0 0.25rem 0.25rem 0;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.candles-lateral:empty {
+  display: none;
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
   .padroes-cartoes-scroll {
     max-height: 60vh;
     overflow-y: auto;
+  }
+}
+
+@media (min-width: 992px) {
+  .candles-lateral {
+    position: sticky;
+    top: 1rem;
+    align-self: flex-start;
+    /* 1rem de folga em cima + os 3rem do pb-5 do <main>: sem descontar o
+       pb-5, no fim da rolagem o sticky bate no fim da linha e o topo do
+       menu sobe para fora da tela. */
+    height: calc(100vh - 4rem);
+  }
+
+  .candles-lateral painel-padroes,
+  .candles-lateral #painel-padroes {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .candles-lateral .padroes-cabecalho {
+    flex-shrink: 0;
+  }
+
+  .candles-lateral .padroes-cartoes-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
   }
 }
