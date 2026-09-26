@@ -6,6 +6,7 @@ import {
   formatarPercentual,
   formatarTaxa,
   leituraDoPlacar,
+  nomeDaVersaoDoDiario,
 } from '../analise/diarioDeSinais.js';
 import { formatarData } from './ComunicadoItem.js';
 import { escaparHtml } from '../utils/html.js';
@@ -136,7 +137,7 @@ function renderPlacar(dados) {
               <td class="text-end">${formatarPercentual(l.excessoMedioCdi)}</td>
               <td class="text-end">${formatarPercentual(l.excessoMedioCarteira)}</td>
               <td><span class="badge ${leitura.classe}">${leitura.rotulo}</span></td>
-              <td class="text-muted">${escaparHtml(l.versaoRegra)}</td>
+              <td class="text-muted text-nowrap" title="${escaparHtml(l.versaoRegra)}">${escaparHtml(nomeDaVersaoDoDiario(l.versaoRegra))}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -186,6 +187,7 @@ function renderSinal(sinal, horizontes) {
     <div class="border rounded px-2 py-1 small" title="Regra ${escaparHtml(sinal.versaoRegra)}">
       <div class="d-flex align-items-center gap-1">
         <strong>${escaparHtml(sinal.simbolo)}</strong>
+        <span class="text-muted">${escaparHtml(nomeDaVersaoDoDiario(sinal.versaoRegra).split(' ')[0])}</span>
         <span class="badge ${CLASSE_DIRECAO[sinal.direcao]}">${escaparHtml(ROTULO[sinal.recomendacao] || sinal.recomendacao)}</span>
       </div>
       <div class="text-nowrap">${marcas}</div>
