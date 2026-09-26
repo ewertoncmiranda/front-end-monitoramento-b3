@@ -5,7 +5,12 @@ import {
   PADROES_NAO_DETECTAVEIS,
   detectar,
 } from '../analise/detectorPadroes.js';
-import { HORIZONTE_PADRAO, avaliar, interpretar } from '../analise/taxaAcerto.js';
+import {
+  HORIZONTE_PADRAO,
+  avaliar,
+  avaliarCarteira,
+  interpretar,
+} from '../analise/taxaAcerto.js';
 
 // Unica responsabilidade: deixar ligar e desligar padroes sobre o grafico e
 // mostrar o que cada um significa estatisticamente naquela janela.
@@ -28,6 +33,8 @@ const CORES = {
 export class PainelPadroes extends BaseComponent {
   connectedCallback() {
     this._candles = [];
+    this._carteira = [];
+    this._escopo = 'ativo';
     this._ligados = new Set();
     this._horizonte = HORIZONTE_PADRAO;
     this.innerHTML = this.template();
@@ -38,6 +45,15 @@ export class PainelPadroes extends BaseComponent {
     this._candles = candles || [];
     this.renderizar();
     this.emitirMarcadores();
+  }
+
+  /**
+   * Series dos demais ativos monitorados, para o modo "carteira".
+   * Chegam prontas de fora: o painel nao busca nada.
+   */
+  setCarteira(series) {
+    this._carteira = series || [];
+    this.renderizar();
   }
 
   template() {
@@ -52,9 +68,14 @@ export class PainelPadroes extends BaseComponent {
     });
 
     this.addEventListener('change', (evento) => {
-      if (evento.target.id !== 'horizonte-select') return;
-      this._horizonte = Number(evento.target.value);
-      this.renderizar();
+      if (evento.target.id === 'horizonte-select') {
+        this._horizonte = Number(evento.target.value);
+        this.renderizar();
+      }
+      if (evento.target.id === 'escopo-select') {
+        this._escopo = evento.target.value;
+        this.renderizar();
+      }
     });
   }
 
@@ -129,7 +150,16 @@ export class PainelPadroes extends BaseComponent {
     return `
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
         <h6 class="mb-0">Padroes sobre o grafico</h6>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <label class="small text-muted" for="escopo-select">Estatistica sobre</label>
+          <select id="escopo-select" class="form-select form-select-sm" style="width:auto">
+            <option value="ativo" ${this._escopo === 'ativo' ? 'selected' : ''}>
+              este ativo (${this._candles.length} candles)
+            </option>
+            <option value="carteira" ${this._escopo === 'carteira' ? 'selected' : ''}>
+              carteira inteira (${this.totalCandlesCarteira()} candles)
+            </option>
+          </select>
           <label class="small text-muted" for="horizonte-select">Julgar acerto em</label>
           <select id="horizonte-select" class="form-select form-select-sm" style="width:auto">
             ${opcoes}
@@ -155,6 +185,10 @@ export class PainelPadroes extends BaseComponent {
   cartao(definicao, ehAlerta) {
     const ligado = this._ligados.has(definicao.id);
     const ocorrencias = detectar(this._candles, definicao);
+    const naCarteira = this._escopo === 'carteira' && this._carteira.length > 0;
+    const totalCarteira = naCarteira
+      ? this._carteira.reduce((soma, s) => soma + detectar(s.candles, definicao).length, 0)
+      : null;
 
     const corpoEstatistica = ehAlerta
       ? this.corpoAlerta(definicao, ocorrencias)
@@ -180,6 +214,11 @@ export class PainelPadroes extends BaseComponent {
               <span class="text-end">
                 <span class="badge bg-secondary">${ocorrencias.length}x aqui</span>
                 ${
+                  naCarteira
+                    ? `<div class="small text-muted mt-1">${totalCarteira}x na carteira</div>`
+                    : ''
+                }
+                ${
                   definicao.ruidoPorJanela !== undefined
                     ? `<div class="small text-muted mt-1" title="Media em 20 series aleatorias de 63 candles">~${definicao.ruidoPorJanela}x no ruido</div>`
                     : ''
@@ -195,8 +234,15 @@ export class PainelPadroes extends BaseComponent {
     `;
   }
 
+  totalCandlesCarteira() {
+    return this._carteira.reduce((soma, s) => soma + (s.candles?.length || 0), 0);
+  }
+
   corpoEstatistica(definicao, ocorrencias) {
-    const resultado = avaliar(this._candles, ocorrencias, definicao.direcao, this._horizonte);
+    const naCarteira = this._escopo === 'carteira' && this._carteira.length > 0;
+    const resultado = naCarteira
+      ? avaliarCarteira(this._carteira, definicao, detectar, this._horizonte)
+      : avaliar(this._candles, ocorrencias, definicao.direcao, this._horizonte);
     const leitura = interpretar(resultado);
 
     const numeros =
@@ -219,8 +265,18 @@ export class PainelPadroes extends BaseComponent {
       ${numeros}
       <p class="small text-muted mb-0 mt-1">${leitura.texto}</p>
       ${
+        naCarteira
+          ? `<p class="small text-muted mb-0"><em>Somando ${resultado.ativos} ativo(s) monitorado(s). Os contadores sao somados; as series nunca sao concatenadas, para nao criar salto artificial na emenda.</em></p>`
+          : ''
+      }
+      ${
         resultado.descartadas
-          ? `<p class="small text-muted mb-0"><em>${resultado.descartadas} ocorrencia(s) perto do fim da serie foram descartadas: nao ha ${this._horizonte} pregao(oes) adiante para julgar.</em></p>`
+          ? `<p class="small text-muted mb-0"><em>${resultado.descartadas} ocorrencia(s) sem ${this._horizonte} pregao(oes) adiante para julgar.</em></p>`
+          : ''
+      }
+      ${
+        resultado.sobrepostas
+          ? `<p class="small text-muted mb-0"><em>${resultado.sobrepostas} ocorrencia(s) descartada(s) por sobreposicao: estavam a menos de ${this._horizonte} pregao(oes) de outra e dividiriam o mesmo futuro.</em></p>`
           : ''
       }
     `;

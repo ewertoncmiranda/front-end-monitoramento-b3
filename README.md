@@ -188,6 +188,39 @@ Duas salvaguardas, ambas deliberadas:
   crua ("2 acertos em 3 ocorrencias"). Transformar 2/3 em "66,7%" daria a esses poucos
   casos uma precisao que eles nao tem.
 
+### Preco ajustado, e o switch que mostra a armadilha
+
+O grafico e os detectores usam por padrao o preco **ajustado por proventos**. O ajuste e
+aplicado as quatro pontas da vela, nao so ao fechamento: ajustar so o close faria o valor
+cair fora do intervalo entre minima e maxima, e o candle viraria um desenho impossivel.
+A BRAPI entrega apenas `adjustedClose`, entao usamos o fator `adjustedClose / close`,
+que vale igualmente para open, high e low daquele dia.
+
+Medido no PETR4 em 3 meses: 40 das 64 velas vinham com fator 0,97303 — um dividendo de
+2,7%. Sem ajuste, o grafico mostra um gap de baixa onde ninguem vendeu.
+
+Um switch permite voltar ao preco bruto. Nao e configuracao: e demonstracao. Desligue e
+os gaps de provento reaparecem na tela, que e a armadilha sendo mostrada em vez de
+explicada.
+
+### Escopo: este ativo ou a carteira inteira
+
+Com 63 candles quase nenhum padrao alcanca o minimo de 5 ocorrencias, e o painel fica
+mudo. O seletor de escopo soma todos os ativos monitorados (~450 candles com 7 ativos) e
+ai ha estatistica de verdade.
+
+A soma acontece nos **contadores**, nunca nos precos: concatenar as series criaria um
+salto artificial na emenda entre um ativo e outro, e o detector leria esse salto como
+padrao. A taxa-base de cada ativo entra ponderada pelo tamanho da sua serie.
+
+### Janelas disjuntas
+
+Tanto a taxa-base quanto as ocorrencias do padrao usam janelas que nao se sobrepoem. Se
+duas ocorrencias estao a menos de H pregoes uma da outra, elas compartilham o mesmo
+futuro — conta-las duas vezes e contar o mesmo resultado duas vezes. A taxa-base, pelo
+mesmo motivo, caminha de H em H em vez de de 1 em 1. Custa amostra e entrega um numero
+honesto.
+
 ### Calibragem no ruido
 
 Cada cartao mostra quantas vezes aquele padrao aparece numa serie **aleatoria** do mesmo
@@ -207,6 +240,15 @@ E o numero mais desconfortavel: em ruido puro, a estrela da manha exibiu **+12,1
 de vantagem** sobre a taxa-base, e a estrela da noite, −10,8. Ou seja, vantagem medida em
 amostra pequena e ruido com aparencia de estatistica. Por isso o limite para o painel
 chamar algo de "acima da base" e exigente (15 pontos).
+
+### Layout
+
+O bloco do grafico (titulo, range, switch de base e o candlestick) fica fixo no topo
+enquanto os cartoes de padrao rolam por baixo — assim da para ligar um padrao la embaixo
+e ver o efeito no grafico sem rolar de volta.
+
+Usa `sticky-md-top` do Bootstrap, sem CSS proprio. O `-md-` e deliberado: no celular um
+grafico fixo comeria metade da tela util, entao ali o bloco rola normalmente.
 
 ### Alertas
 
