@@ -9,6 +9,7 @@ const rotas = {
   '#/monitorados': 'ativos-monitorados-page',
   '#/candles': 'candles-page',
   '#/comunicados': 'comunicados-page',
+  '#/noticias': 'noticias-page',
   '#/formulas': 'formulas-page',
   '#/arquitetura': 'arquitetura-page',
   '#/avaliacao': 'avaliacao-page',
