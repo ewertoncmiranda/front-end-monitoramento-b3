@@ -1,5 +1,7 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import '../components/DiarioDeSinais.js';
+import '../components/SaudeDosDados.js';
+import '../components/BacktestPlacar.js';
 
 // Unica responsabilidade: mostrar a avaliacao do ecossistema - o quanto ele
 // serve hoje, o que falta para ser confiavel e o que da para melhorar sem
@@ -9,14 +11,14 @@ import '../components/DiarioDeSinais.js';
 //   - a avaliacao, estatica e DATADA (AVALIADO_EM / ATUALIZADO_EM). Quando um
 //     item for resolvido, atualize o array e a data; nao deixe a pagina
 //     afirmar um problema que ja nao existe;
-//   - o diario de sinais, AO VIVO (<diario-de-sinais>): a evidencia que faz a
-//     nota de "qualidade do sinal" subir ou nao. As notas so devem mudar
-//     quando essa evidencia existir.
+//   - tres blocos AO VIVO, a evidencia que faz as notas subirem ou nao:
+//     <saude-dos-dados> (confiabilidade dos dados), <backtest-placar> e
+//     <diario-de-sinais> (qualidade do sinal). Nota so muda com evidencia.
 //
 // Estrutura declarativa, mesmo padrao de ArquiteturaPage e FormulasPage.
 
 const AVALIADO_EM = '26/09/2026';
-const ATUALIZADO_EM = '26/09/2026, com o diário de sinais';
+const ATUALIZADO_EM = '26/09/2026, com identidade dos ativos, backtest, saúde dos dados e rotinas';
 
 const NOTAS = [
   {
@@ -43,38 +45,38 @@ const NOTAS = [
   },
   {
     dimensao: 'Confiabilidade dos dados',
-    nota: 5,
+    nota: 6,
     meta: 7,
     porque:
-      'CVM e B3 são fontes oficiais, mas há atraso, lacunas de cobertura e nenhuma checagem cruzada de preço. Achado de 26/09: quatro empresas monitoradas estão partidas em dois tickers.',
+      'Subiu de 5: cada empresa tem um código só (AXIA3, EMBJ3, JBSS32 e MBRF3 voltaram a juntar preço e balanço), todo balanço tem a data em que ficou público, o preço oficial da B3 (COTAHIST) está carregado desde 2016 e é comparado com a BRAPI, e a quantidade de ações passa por checagem (pegou VALE3 em milhar e BBAS3 2022 com pico isolado). Tudo isso é medido ao vivo abaixo.',
     paraSubir: [
-      'Mapa de tickers renomeados: a BRAPI já devolve AXIA3, EMBJ3, JBSS32 e MBRF3, enquanto os fundamentos estão em ELET3, EMBR3, JBSS3 e MRFG3 (0 candles). Preço e balanço dessas empresas nunca se encontram.',
-      'Data de entrega (DT_RECEB) dos balanços e COTAHIST oficial desde 2016, com checagem contra a BRAPI.',
-      'Resolver os tickers sem CNPJ (CSNA3, RAIZ4) e mostrar a idade do dado em toda tela.',
+      'Proventos no retorno (hoje o preço é bruto: pagadora de dividendo parece pior).',
+      '30 dias seguidos com o painel de saúde verde, sem intervenção manual.',
+      'Idade do dado também nas telas de ativo, não só aqui.',
     ],
   },
   {
     dimensao: 'Qualidade do sinal',
-    nota: 3,
+    nota: 4,
     meta: 6,
     porque:
-      'As regras ainda não foram medidas contra o passado; o Graham não considera os juros brasileiros; a confiança não é calibrada. O diário de sinais começou a gravar a evidência, mas ela leva semanas para existir.',
+      'Subiu de 3 porque agora é medida: backtest de 2017 a 2026 com o período de teste congelado. O resultado é modesto: as compras da v1 acertam poucos pontos acima da taxa-base no teste e não na calibração, ou seja, a vantagem ainda não é estável. A v2 (juros, lucro dos últimos 12 meses, faixa neutra) roda em sombra no diário e no backtest.',
     paraSubir: [
-      'Backtest publicado, com o período de teste congelado.',
-      'Graham com juros reais, faixa neutra de venda e lucro dos últimos 12 meses.',
-      'Só depois: placar do diário com amostra mínima mostrando acerto acima da taxa-base.',
+      'Uma regra que vença a taxa-base nos DOIS períodos, não só em um.',
+      'Placar do diário com amostra mínima confirmando o backtest.',
+      'Confiança calibrada: "80%" precisa acertar ~80% das vezes.',
     ],
   },
   {
     dimensao: 'Operação',
-    nota: 4,
+    nota: 5,
     meta: 7,
     porque:
-      'Roda numa máquina só, com AWS simulada; cargas do ETL disparadas à mão; sem alerta; banco sem backup. Já automáticos: o diário de sinais (dias úteis, 19h) e o histórico do CDI.',
+      'Subiu de 4: diário, cargas do ETL (com backtest às sextas) e backup com restauração testada rodam sozinhos no Agendador do Windows, e cada rotina deixa rastro que o painel de saúde lê. Segue numa máquina só, com AWS simulada.',
     paraSubir: [
-      'Agendar as cargas de fundamentos e comunicados, como já está o diário de sinais.',
-      'Backup diário do MySQL com restauração testada.',
-      'Painel de saúde no Grafana com alerta por e-mail ou Telegram.',
+      'Alerta ativo: configurar o bot do Telegram (TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID).',
+      'Cópia do backup fora desta máquina (nuvem ou disco externo).',
+      'Painel de saúde também no Grafana.',
     ],
   },
   {
@@ -82,7 +84,7 @@ const NOTAS = [
     nota: 2,
     meta: 5,
     porque:
-      'Não considera impostos, tamanho de posição nem regra de saída. O motor de avaliação já usa a abertura do pregão seguinte e desconta custo.',
+      'Não considera impostos, tamanho de posição nem regra de saída. O motor de avaliação já usa a abertura do pregão seguinte e desconta custo; todo insight sai com aviso legal.',
     paraSubir: [
       'IR, filtro de liquidez, tamanho de posição e regra de saída.',
       '3 a 6 meses de diário vencendo o CDI depois dos custos, antes de qualquer capital.',
@@ -91,6 +93,14 @@ const NOTAS = [
 ];
 
 const PROGRESSO = [
+  { data: '26/09', item: 'Identidade do ativo: um código canônico por empresa (ELET3→AXIA3, EMBR3→EMBJ3, JBSS3→JBSS32, MRFG3→MBRF3), CSNA3 e RAIZ4 com CNPJ. O cadastro converte código antigo sozinho.' },
+  { data: '26/09', item: 'Point-in-time: todo balanço (2016–2025) com a data de entrega na CVM; lucro dos últimos 12 meses (TTM) carregado pela primeira vez.' },
+  { data: '26/09', item: 'COTAHIST oficial 2016–2026 (~79 mil pregões, com os códigos antigos emendados) e checagem cruzada com a BRAPI.' },
+  { data: '26/09', item: 'Checagem da quantidade de ações entre anos: corrige unidade (milhar) e anula pico isolado, em vez de gravar LPA 1000× errado.' },
+  { data: '26/09', item: 'Backtest walk-forward 2017–2026 publicado, v1 contra v2, calibração até 2022 e teste depois.' },
+  { data: '26/09', item: 'Regra v2 em sombra: Graham com juros (CDI) e IPCA, TTM e faixa neutra de venda. Gravada no diário ao lado da v1.' },
+  { data: '26/09', item: 'Consolidação das análises só com os últimos 30 dias; aviso legal em todo insight.' },
+  { data: '26/09', item: 'Rotinas agendadas: cargas do ETL (dias úteis 20h), backup com restauração testada (todo dia) e alerta por Telegram quando configurado.' },
   { data: '26/09', item: 'Motor de avaliação único (backtest e diário): entrada na abertura seguinte, custo, excesso sobre o CDI e sobre a média da carteira, janela de desdobramento marcada.' },
   { data: '26/09', item: 'Versão da regra gravada em todo insight: regras diferentes nunca caem no mesmo placar.' },
   { data: '26/09', item: 'Diário de sinais: um sinal por ativo por pregão, só inclusão, com resultado por horizonte quando ele vence. Rotina diária ativa no Agendador do Windows.' },
@@ -122,27 +132,22 @@ const DIFERENCIAIS = [
 
 const BLOQUEADORES = [
   {
-    titulo: 'As regras ainda não foram medidas',
+    titulo: 'Vantagem medida, mas não estável',
     texto:
-      'O backtest ainda não rodou e o diário acabou de começar. Limiares como "margem acima de 20% = compra forte" continuam opinião até existir o placar.',
+      'O backtest existe e o resultado é modesto: as compras batem a taxa-base por poucos pontos no teste e não na calibração. Vantagem que aparece num período e some no outro ainda não é vantagem.',
   },
   {
-    titulo: 'Graham com viés de compra',
+    titulo: 'A regra oficial ainda é a v1',
     texto:
-      'O preço justo usa LPA × (8,5 + 2g) sem o fator 4,4 / Y da fórmula revisada. Com os juros brasileiros, isso infla o valor justo várias vezes.',
+      'Graham sem juros, lucro de exercício fechado e "qualquer margem negativa é venda" continuam nos insights da tela. A v2 corrige os três, mas só vira oficial se o placar mostrar que é melhor.',
   },
   {
-    titulo: 'Qualquer margem negativa vira venda',
-    texto: 'Quase toda empresa de qualidade ou de crescimento sai como "venda por valuation".',
+    titulo: 'Preço sem proventos',
+    texto: 'Backtest e diário usam preço bruto: empresas que pagam muito dividendo parecem piores do que são.',
   },
   {
-    titulo: 'Lucro de exercício fechado',
-    texto:
-      'Empresas cíclicas no pico do lucro parecem baratas. O ETL já calcula os últimos 12 meses (TTM), mas o valuation ainda não os usa.',
-  },
-  {
-    titulo: 'Recomendação antiga pesa igual à de hoje',
-    texto: 'A consolidação usa todo o histórico de análises do ativo, sem janela de tempo.',
+    titulo: 'Universo de hoje olhando para trás',
+    texto: 'O backtest usa as empresas monitoradas hoje, que sobreviveram até aqui. Isso favorece o passado (viés de sobrevivência).',
   },
   {
     titulo: 'Sem imposto nem tamanho de posição',
@@ -157,18 +162,18 @@ const STATUS = {
 };
 
 const MELHORIAS = [
-  { item: 'Diário de sinais (paper trading)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Rotina ativa (dias úteis, 19h). Primeiro sinal no pregão de 28/09; primeiros resultados ~21 pregões depois.' },
-  { item: 'Backtest walk-forward sem viés de futuro', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Motor de avaliação e CDI prontos; faltam a data de entrega dos balanços (DT_RECEB) e o COTAHIST desde 2016 (a régua de mercado é a média da carteira, com os mesmos preços).' },
-  { item: 'Mapa de tickers renomeados', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Liga AXIA3/ELET3, EMBJ3/EMBR3, JBSS32/JBSS3 e MBRF3/MRFG3: hoje preço e balanço dessas empresas não se encontram.' },
-  { item: 'Graham com juros reais', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Usar a Selic ou a NTN-B como Y, pela série do Banco Central que o sistema já consulta.' },
-  { item: 'TTM no valuation e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Aproveita o que o ETL já produz e evita "venda" para toda empresa sem margem de segurança.' },
-  { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Sem dividendos no cálculo, pagadoras de proventos parecem piores do que são.' },
-  { item: 'Janela temporal na consolidação', impacto: 'Médio', classe: 'text-bg-info', status: 'pendente', porque: 'Considerar só as análises dos últimos N dias.' },
-  { item: 'Checagem cruzada de preço', impacto: 'Médio', classe: 'text-bg-info', status: 'pendente', porque: 'BRAPI contra o fechamento oficial do COTAHIST; divergência acima de 1% vira alerta.' },
-  { item: 'Idade do dado em toda tela', impacto: 'Médio', classe: 'text-bg-info', status: 'pendente', porque: 'A aba Comunicados já informa até quando há dado; estender a fundamentos e preço.' },
-  { item: 'Agendamento e alertas', impacto: 'Médio', classe: 'text-bg-info', status: 'pendente', porque: 'Rotina do diário pronta para o Agendador do Windows; faltam as cargas e os alertas do Grafana.' },
-  { item: 'Backup diário do banco', impacto: 'Médio', classe: 'text-bg-info', status: 'pendente', porque: 'Todo o histórico, inclusive o diário, vive num volume Docker de uma máquina só.' },
-  { item: 'Aviso legal na resposta', impacto: 'Baixo esforço', classe: 'text-bg-secondary', status: 'pendente', porque: 'Obrigatório antes de mostrar o sistema a qualquer outra pessoa.' },
+  { item: 'Diário de sinais (paper trading)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Rotina ativa (dias úteis, 19h), agora com v1 e v2 lado a lado. Primeiros resultados ~21 pregões depois de 28/09.' },
+  { item: 'Backtest walk-forward sem viés de futuro', impacto: 'Crítico', classe: 'text-bg-danger', status: 'feito', porque: 'COTAHIST + CVM pela data de entrega, 2017–2026, calibração até 2022. Roda toda sexta.' },
+  { item: 'Mapa de tickers renomeados', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Tabela ativo_identidade; o cadastro e o ETL usam o código canônico.' },
+  { item: 'Graham com juros reais', impacto: 'Alto', classe: 'text-bg-warning', status: 'andamento', porque: 'Na v2, em sombra: 4,4 / CDI anualizado, crescimento nominal com IPCA.' },
+  { item: 'TTM no valuation e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'andamento', porque: 'Na v2, em sombra. Venda só abaixo de −30% de margem.' },
+  { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Próximo passo: proventos da base IPE ou dos eventos da B3.' },
+  { item: 'Janela temporal na consolidação', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'Só as análises dos últimos 30 dias; sem nenhuma, a mais recente.' },
+  { item: 'Checagem cruzada de preço', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'BRAPI contra o fechamento oficial do COTAHIST; acima de 1% aparece na saúde dos dados.' },
+  { item: 'Idade do dado em toda tela', impacto: 'Médio', classe: 'text-bg-info', status: 'andamento', porque: 'Painel de saúde com a idade de cada fonte; falta levar às telas de ativo.' },
+  { item: 'Agendamento e alertas', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'Três rotinas no Agendador do Windows; alerta por Telegram quando o bot estiver configurado.' },
+  { item: 'Backup diário do banco', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'Dump diário restaurado num banco descartável e conferido; guarda 14. Falta cópia fora da máquina.' },
+  { item: 'Aviso legal na resposta', impacto: 'Baixo esforço', classe: 'text-bg-secondary', status: 'feito', porque: 'Campo aviso_legal em todo insight e aviso nas telas de validação.' },
 ];
 
 const CAMADAS = [
@@ -206,7 +211,7 @@ const EXECUCAO = [
   { tema: 'Liquidez', hoje: 'Existe o alerta de liquidez baixa', fazer: 'Tirar do universo tickers com volume médio abaixo de um piso.' },
   { tema: 'Tamanho de posição', hoje: 'Inexistente', fazer: 'Regra simples: risco máximo de 1–2% da carteira por posição e limite por setor.' },
   { tema: 'Saída', hoje: 'Horizontes fixos só para medir', fazer: 'Definir quando sair (prazo, stop ou reversão do sinal).' },
-  { tema: 'Validação antes do dinheiro', hoje: 'Diário começando', fazer: 'Backtest, depois 3 a 6 meses de diário, e só então capital pequeno.' },
+  { tema: 'Validação antes do dinheiro', hoje: 'Backtest publicado; diário começando', fazer: 'Backtest, depois 3 a 6 meses de diário, e só então capital pequeno.' },
 ];
 
 const NEGOCIO = [
@@ -217,9 +222,9 @@ const NEGOCIO = [
 ];
 
 const ROTEIRO = [
-  { periodo: 'Dias 1–30', foco: 'Base confiável', itens: 'Backup diário, agendamento das cargas, mapa de tickers renomeados, aviso legal, Graham com juros reais, faixa neutra e janela na consolidação.' },
-  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Backtest walk-forward com COTAHIST, CVM pela data de entrega, proventos e custos, contra a média da carteira e o CDI; recalibrar limiares só com dados até 2022.' },
-  { periodo: 'Dias 61–90', foco: 'Prova em tempo real', itens: 'Primeiros placares do diário com amostra mínima, painel de saúde e revisão: manter, ajustar ou descartar cada regra pelos números.' },
+  { periodo: 'Dias 1–30', foco: 'Base confiável', itens: 'Feito: identidade dos ativos, data de entrega, COTAHIST, checagem de preço e de ações, backup, rotinas e aviso legal. Falta: Telegram e cópia do backup fora da máquina.' },
+  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Proventos no retorno; recalibrar limiares só com dados até 2022 e conferir no teste; confiança calibrada.' },
+  { periodo: 'Dias 61–90', foco: 'Prova em tempo real', itens: 'Placares do diário com amostra mínima (v1 x v2) e decisão pelos números: manter, promover a v2 ou descartar cada regra.' },
 ];
 
 export class AvaliacaoPage extends BaseComponent {
@@ -236,26 +241,42 @@ export class AvaliacaoPage extends BaseComponent {
       <div class="alert alert-primary">
         <strong>Veredito.</strong> Hoje o sistema é uma <strong>boa ferramenta de pesquisa e
         aprendizado</strong>, com uma honestidade estatística rara, mas <strong>ainda não é um
-        instrumento para decidir dinheiro real</strong>. O caminho começou: o diário de sinais
-        grava cada previsão antes do resultado existir. As notas só sobem quando a evidência chegar.
+        instrumento para decidir dinheiro real</strong>. Agora a evidência existe: dados checados ao vivo,
+        backtest de 2017 a 2026 e o diário gravando cada previsão antes do resultado. Ela mostra
+        uma vantagem pequena e ainda instável, e é por isso que as notas sobem pouco.
       </div>
 
       <div class="alert alert-secondary small">
         Esta avaliação é sobre o software e o método, não uma recomendação de investimento.
       </div>
 
-      ${secao('Evidência em tempo real: diário de sinais', `
+      ${secao('Nota por dimensão — e o que falta para subir', renderNotas())}
+      ${secao('Ao vivo: saúde dos dados', `
+        <div class="card shadow-sm"><div class="card-body"><saude-dos-dados></saude-dos-dados></div></div>`, `
+        <p class="small text-muted">
+          A régua da nota de confiabilidade: idade de cada fonte contra o prazo da rotina dela, preço e
+          balanço juntos por ativo, e o fechamento da BRAPI contra o oficial da B3.
+        </p>`)}
+      ${secao('Ao vivo: backtest walk-forward', `
+        <div class="card shadow-sm"><div class="card-body"><backtest-placar></backtest-placar></div></div>`, `
+        <p class="small text-muted">
+          Um sinal por ativo no primeiro pregão de cada mês, só com o que se sabia no dia (balanço pela data
+          de entrega na CVM), medido pelo mesmo motor do diário. A v1 é a regra da tela; a v2 roda em sombra.
+        </p>`)}
+      ${secao('Ao vivo: diário de sinais', `
         <div class="card shadow-sm"><div class="card-body"><diario-de-sinais></diario-de-sinais></div></div>`, `
         <p class="small text-muted">
           Depois de cada pregão, o sinal de cada ativo é gravado com a versão da regra, e o resultado
           é medido 21, 63 e 126 pregões depois — entrando na abertura do pregão seguinte, com custo, contra o
-          CDI e a média da carteira monitorada. É o placar que decide se a nota de "qualidade do sinal" sobe.
+          CDI e a média da carteira monitorada. É a prova que o backtest não consegue dar.
         </p>`)}
-      ${secao('Nota por dimensão — e o que falta para subir', renderNotas())}
       ${secao('Progresso desde a avaliação', renderProgresso())}
+      ${secao('Melhorias gratuitas, por impacto', renderMelhorias())}
+      <details class="mb-4">
+        <summary class="h5">Referência: diferenciais, bloqueios, método, execução e negócio</summary>
+        <div class="mt-3">
       ${secao('O que já é diferencial', renderCartoes(DIFERENCIAIS, 'border-success'))}
       ${secao('Por que ainda não serve para decidir dinheiro', renderCartoes(BLOQUEADORES, 'border-danger'))}
-      ${secao('Melhorias gratuitas, por impacto', renderMelhorias())}
       ${secao('Como aumentar a confiabilidade', renderCamadas())}
       ${secao('Execução no mercado real', renderExecucao(), `
         <p class="small text-muted">
@@ -265,6 +286,8 @@ export class AvaliacaoPage extends BaseComponent {
           decisão fica com quem usa.
         </p>`)}
       ${secao('Visão de negócio', renderCartoes(NEGOCIO, 'border-secondary'))}
+        </div>
+      </details>
       ${secao('Sequência sugerida (90 dias, custo zero)', renderRoteiro())}
     `;
   }

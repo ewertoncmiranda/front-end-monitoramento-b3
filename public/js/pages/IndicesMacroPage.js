@@ -32,7 +32,7 @@ export class IndicesMacroPage extends BaseComponent {
       <h4 class="mb-1">Indices macroeconomicos</h4>
       <p class="text-muted small">
         Direto das APIs publicas do Banco Central e do IBGE - sem chave, sem custo. Serve de referencia de custo
-        de oportunidade: o earnings yield calculado em <a href="#/formulas">Formulas</a> so diz
+        de oportunidade: o earnings yield calculado em <a href="#/formulas">Fórmulas</a> só diz
         algo quando comparado contra a Selic do momento. Cada cartao linka pra uma segunda fonte,
         independente do BCB, pra conferir o numero antes de confiar nele.
       </p>
