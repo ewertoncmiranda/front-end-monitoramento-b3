@@ -10,6 +10,7 @@ const rotas = {
   '#/candles': 'candles-page',
   '#/formulas': 'formulas-page',
   '#/arquitetura': 'arquitetura-page',
+  '#/padroes': 'padroes-page',
   '#/glossario': 'glossario-page',
 };
 

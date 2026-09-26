@@ -7,6 +7,7 @@ import './pages/AtivosMonitoradosPage.js';
 import './pages/CandlesPage.js';
 import './pages/FormulasPage.js';
 import './pages/ArquiteturaPage.js';
+import './pages/PadroesPage.js';
 import './pages/GlossarioPage.js';
 import { iniciarRouter } from './router.js';
 

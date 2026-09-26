@@ -431,6 +431,147 @@ const GLOSSARIO = [
     ],
   },
   {
+    id: 'padroes',
+    titulo: 'Padroes de grafico',
+    resumo:
+      'Os desenhos que traders procuram no grafico. O raciocinio por tras de cada um, e quando confiar, esta na aba Padroes e armadilhas.',
+    termos: [
+      {
+        termo: 'Corpo e sombra',
+        definicao:
+          'O corpo da vela vai da abertura ao fechamento e mede conviccao; a sombra e o que passou disso e mede rejeicao. Sombra longa significa que o preco chegou la e nao ficou.',
+        onde: 'Cada barra do grafico da aba Candles.',
+      },
+      {
+        termo: 'Martelo',
+        definicao:
+          'Vela de corpo pequeno com sombra inferior de pelo menos o dobro do corpo: derrubaram o preco e os compradores absorveram.',
+        onde: 'So sugere reversao se aparecer depois de uma queda.',
+      },
+      {
+        termo: 'Enforcado',
+        definicao:
+          'O mesmo desenho do martelo, mas aparecendo depois de uma alta. A forma nao muda; o que muda e o contexto.',
+      },
+      {
+        termo: 'Engolfo',
+        definicao:
+          'O corpo de uma vela engole inteiro o da anterior, indicando que o lado oposto tomou conta da sessao.',
+        onde: 'Vale mais quando vem com volume acima da media.',
+      },
+      {
+        termo: 'Doji',
+        definicao:
+          'Abertura praticamente igual ao fechamento: a sessao terminou empatada. Sinal de indecisao.',
+        onde: 'So informa alguma coisa quando interrompe uma tendencia definida.',
+      },
+      {
+        termo: 'Estrela da manha / da noite',
+        definicao:
+          'Sequencia de tres velas — tendencia, indecisao, reversao. A terceira e a que confirma.',
+      },
+      {
+        termo: 'Topo duplo e fundo duplo',
+        definicao:
+          'Dois testes do mesmo nivel de preco sem conseguir rompe-lo. O gatilho nao e o segundo topo, e o rompimento da linha tracada no fundo entre os dois.',
+      },
+      {
+        termo: 'Ombro-Cabeca-Ombro',
+        sigla: 'OCO',
+        definicao:
+          'Tres picos, com o do meio mais alto, sugerindo reversao de tendencia.',
+        onde: 'Leva de 3 a 6 meses para se formar — nao cabe no range maximo de 3 meses deste painel.',
+      },
+      {
+        termo: 'Triangulo',
+        definicao:
+          'Ascendente: topos no mesmo nivel e fundos subindo. Descendente: o inverso. Simetrico: os dois convergem, e rompe para qualquer lado.',
+      },
+      {
+        termo: 'Bandeira e flamula',
+        definicao:
+          'Pausa curta logo depois de um movimento forte. Padrao de continuacao, nao de reversao — confundir os dois e erro comum.',
+      },
+      {
+        termo: 'Linha de pescoco',
+        definicao:
+          'A linha que liga os fundos de uma formacao (topo duplo, OCO). O rompimento dela e o que confirma a figura.',
+      },
+      {
+        termo: 'Golden cross e death cross',
+        definicao:
+          'Cruzamento da media de 50 periodos com a de 200. Golden cross e a de 50 subindo acima da de 200; death cross o contrario.',
+        onde: 'Precisa de 200 pregoes, entao nao existe no range de 3 meses deste painel.',
+      },
+      {
+        termo: 'Gap',
+        definicao:
+          'Salto entre o fechamento de um dia e a abertura do seguinte, sem negocio no meio. Atencao: dividendo e desdobramento produzem gap falso no preco nao ajustado.',
+      },
+      {
+        termo: 'Rompimento',
+        definicao:
+          'Quando o preco atravessa um nivel que vinha segurando. Rompimento com volume fraco e suspeito: poucos participantes validaram o preco novo.',
+      },
+    ],
+  },
+  {
+    id: 'vieses',
+    titulo: 'Vieses e armadilhas de analise',
+    resumo:
+      'Os erros de leitura que mais custam dinheiro. Cada um esta explicado em detalhe na aba Padroes e armadilhas.',
+    termos: [
+      {
+        termo: 'Apofenia',
+        definicao:
+          'A tendencia do cerebro de enxergar padrao onde so ha ruido. Uma serie de precos aleatoria produz figuras graficas impecaveis.',
+        onde: 'O maior risco de qualquer analise visual de grafico.',
+      },
+      {
+        termo: 'Look-ahead bias',
+        definicao:
+          'Avaliar uma decisao do passado ja sabendo o que aconteceu depois. No grafico historico o padrao e obvio porque ja terminou.',
+      },
+      {
+        termo: 'Timeframe shopping',
+        definicao:
+          'Trocar o periodo do grafico ate encontrar um que confirme a tese que voce ja tinha. Nao e analise, e busca por concordancia.',
+      },
+      {
+        termo: 'Ancoragem',
+        definicao:
+          'Decidir com base no proprio preco de compra ("vendo quando voltar ao que paguei"). O mercado nao sabe quanto voce pagou.',
+      },
+      {
+        termo: 'Caudas gordas',
+        definicao:
+          'Retornos de acoes produzem eventos extremos com muito mais frequencia do que a distribuicao normal preve.',
+        onde: 'Por isso um z-score de 3 aqui nao e tao raro quanto a estatistica classica sugeriria.',
+      },
+      {
+        termo: 'Preco ajustado',
+        definicao:
+          'Serie corrigida por dividendos e desdobramentos. Sem o ajuste, o preco cai no dia ex sem ninguem ter vendido e parece queda de mercado.',
+        onde: 'Coluna fechamento_ajustado; passou a alimentar o calculo tecnico em 26/09/2026.',
+      },
+      {
+        termo: 'Spread',
+        definicao:
+          'Diferenca entre a melhor oferta de compra e a de venda. Em ativo pouco liquido, o spread pode consumir o movimento inteiro que o grafico mostra.',
+      },
+      {
+        termo: 'Escala logaritmica',
+        definicao:
+          'Escala em que a mesma variacao percentual ocupa a mesma altura. E a leitura correta para series longas; a linear exagera os valores altos.',
+      },
+      {
+        termo: 'p-hacking',
+        definicao:
+          'Testar muitos indicadores ate um parecer funcionar. Com 20 tentativas, achar algo "significativo" a 5% e o esperado, nao uma descoberta.',
+      },
+    ],
+  },
+  {
     id: 'tecnico',
     titulo: 'Termos tecnicos deste sistema',
     resumo: 'Vocabulario de engenharia que aparece nas telas e na documentacao.',
@@ -482,6 +623,8 @@ export class GlossarioPage extends BaseComponent {
       <p class="text-muted small">
         O vocabulario do mercado explicado do zero, sem pressupor conhecimento previo.
         Cada verbete diz o que o termo significa e onde ele aparece neste sistema.
+        Para como se le um grafico e onde a leitura da errado, veja
+        <a href="#/padroes">Padroes e armadilhas</a>.
       </p>
 
       ${avisoEducativo()}

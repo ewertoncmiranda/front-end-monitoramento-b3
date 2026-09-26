@@ -51,6 +51,7 @@ public/                      Tudo que o servidor expõe como estático
       CandlesPage.js                  Orquestra a aba de candles
       FormulasPage.js                 Explica as formulas/regras e as fontes de dados (estatico)
       ArquiteturaPage.js              Descreve as 5 pecas, com links de GitHub e Docker Hub (estatico)
+      PadroesPage.js                  Leitura de grafico e armadilhas de analise (estatico)
       GlossarioPage.js                Glossario de mercado e de engenharia, com busca (estatico)
     router.js                          Rota (hash) -> pagina
     main.js                            Ponto de entrada
@@ -153,13 +154,14 @@ Não há, de propósito, UI para desativar/pausar um ativo monitorado nem para c
 
 Clicar em qualquer linha da tabela expande, abaixo dela, a mesma visão estruturada da tela de Consulta (cotação, decisão, histórico) — clicar de novo recolhe. Os dados de cotação/histórico são buscados só na primeira expansão de cada ativo (com cache); a decisão é reaproveitada da própria listagem.
 
-## Abas de referência: "Como funciona", "Formulas", "Arquitetura" e "Glossario"
+## Abas de referência: "Como funciona", "Formulas", "Arquitetura", "Padroes" e "Glossario"
 
 Três abas com responsabilidade única, cada uma:
 
 - **`#/metodologia` (Como funciona)**: busca um símbolo e mostra `GET /analises/{simbolo}/fundamentos` — o retrato **de um único ciclo** (sem média), incluindo o perfil de operação (day trade / swing-reversão / longo prazo, não exclusivos), os riscos de comprar/vender agora e a confluência entre sinais (recomendação fundamentalista + momentum + reversão — uma contagem de concordância, não uma probabilidade de sucesso).
 - **`#/formulas` (Formulas)**: conteúdo estático explicando cada fórmula/regra usada (Graham, earnings yield, contexto técnico, sinal técnico de série, perfil de operação/riscos) — sem chamar API.
 - **`#/arquitetura` (Arquitetura)**: o que o ecossistema faz hoje. Diagrama do fluxo, o caminho do dado do cadastro ate a tela, um cartao por peca (papel, stack, o que faz, o que **nao** faz) com link para o repositorio no GitHub e para a imagem no Docker Hub, e a tabela das duas fontes externas (BRAPI e CVM) com o que cada uma entrega e seu limite. Conteudo estatico, estrutura declarativa no array `PECAS`.
+- **`#/padroes` (Padroes e armadilhas)**: como se le um grafico de candles e onde a leitura costuma dar errado. Padroes de 1 a 3 velas, formacoes graficas (com selo de "cabe ou nao cabe no range de 3 meses"), a diferenca de leitura entre trader e longo prazo, e 11 armadilhas de analise. Separado do Glossario de proposito: la sao verbetes com busca, aqui e texto com raciocinio.
 - **`#/glossario` (Glossario)**: vocabulario de mercado e de engenharia explicado do zero, com busca. Fonte canonica em [`infra-b3-ecossytem/GLOSSARIO.md`](../infra-b3-ecossytem/GLOSSARIO.md) — os dois devem ser atualizados juntos.
 
 Detalhes de arquitetura, contratos consumidos e backlog completo estão em [`SPEC.md`](./SPEC.md).
