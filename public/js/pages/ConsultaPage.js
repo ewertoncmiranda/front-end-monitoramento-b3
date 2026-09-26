@@ -43,7 +43,7 @@ export class ConsultaPage extends BaseComponent {
 
         if (!ativo && !analise && !historico) {
           resultado.innerHTML =
-            '<status-alert mensagem="Nao foi possivel obter nenhum dado para esse ativo." variante="danger"></status-alert>';
+            '<status-alert mensagem="Não foi possível obter dados para este ativo." variante="danger"></status-alert>';
           return;
         }
 

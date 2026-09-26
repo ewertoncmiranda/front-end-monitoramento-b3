@@ -22,7 +22,7 @@ const GLOSSARIO = [
         termo: 'Acao',
         definicao:
           'Um pedaco da empresa. Quem tem 1 acao de 1.000 existentes e dono de 0,1% dela - dos lucros e tambem dos prejuizos.',
-        onde: 'E o que voce consulta na aba Gestao.',
+        onde: 'É o que você consulta na aba Gestão.',
       },
       {
         termo: 'B3',
@@ -619,7 +619,7 @@ const GLOSSARIO = [
 export class GlossarioPage extends BaseComponent {
   template() {
     return `
-      <h4 class="mb-1">Glossario</h4>
+      <h4 class="mb-1">Glossário</h4>
       <p class="text-muted small">
         O vocabulario do mercado explicado do zero, sem pressupor conhecimento previo.
         Cada verbete diz o que o termo significa e onde ele aparece neste sistema.

@@ -15,7 +15,7 @@ export class MetodologiaPage extends BaseComponent {
   template() {
     return `
       <h4 class="mb-3">Como funciona</h4>
-      <p class="text-muted small">Mostra o retrato exato da ultima analise persistida de um ativo - os mesmos numeros calculados pelo gerar-insights naquele ciclo, sem media com o historico. Veja as formulas em <a href="#/formulas">Formulas</a> e a arquitetura em <a href="#/arquitetura">Arquitetura</a>.</p>
+      <p class="text-muted small">Mostra o retrato exato da última análise persistida de um ativo: os mesmos números calculados pelo gerar-insights naquele ciclo, sem média com o histórico. Consulte as <a href="#/formulas">fórmulas</a> e a <a href="#/arquitetura">arquitetura</a>.</p>
       <seletor-de-ativos rotulo-botao="Buscar" placeholder="Ex.: PETR4"></seletor-de-ativos>
       <div id="fundamentos-resultado" class="mt-3"></div>
     `;
@@ -39,7 +39,7 @@ export class MetodologiaPage extends BaseComponent {
 
         if (!fundamentos && !fundamentosCvm) {
           resultado.innerHTML =
-            '<status-alert mensagem="Nao foi possivel obter dados para esse ativo." variante="danger"></status-alert>';
+            '<status-alert mensagem="Não foi possível obter dados para este ativo." variante="danger"></status-alert>';
           return;
         }
 

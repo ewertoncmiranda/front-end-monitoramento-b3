@@ -24,7 +24,7 @@ export class CarteiraResumo extends BaseComponent {
     try {
       ativos = await listarAtivosMonitorados();
     } catch {
-      area.innerHTML = 'Nao foi possivel carregar a carteira.';
+      area.innerHTML = 'Não foi possível carregar a carteira.';
       return;
     }
 

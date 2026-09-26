@@ -127,9 +127,9 @@ export class PainelPadroes extends BaseComponent {
 
       <h6 class="mt-4">Alertas: armadilhas visiveis no proprio candle</h6>
       <p class="small text-muted">
-        Nao sao sinais de operacao. Sao avisos de que aquela vela pode nao significar
+        Não são sinais de operação. São avisos de que aquela vela pode não significar
         o que parece. Cada um corresponde a uma armadilha da aba
-        <a href="#/padroes">Padroes</a>.
+        <a href="#/padroes">Padrões</a>.
       </p>
       <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
         ${ALERTAS.map((a) => this.cartao(a, true)).join('')}
@@ -143,41 +143,43 @@ export class PainelPadroes extends BaseComponent {
     const opcoes = [1, 3, 5, 10]
       .map(
         (h) =>
-          `<option value="${h}" ${h === this._horizonte ? 'selected' : ''}>${h} pregao(oes)</option>`,
+          `<option value="${h}" ${h === this._horizonte ? 'selected' : ''}>${h} pregão(ões)</option>`,
       )
       .join('');
 
     return `
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-        <h6 class="mb-0">Padroes sobre o grafico</h6>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-          <label class="small text-muted" for="escopo-select">Estatistica sobre</label>
+      <div class="sticky-md-top bg-body py-2 border-bottom mb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+          <h6 class="mb-0">Padrões sobre o gráfico</h6>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+          <label class="small text-muted" for="escopo-select">Estatística sobre</label>
           <select id="escopo-select" class="form-select form-select-sm" style="width:auto">
             <option value="ativo" ${this._escopo === 'ativo' ? 'selected' : ''}>
               este ativo (${this._candles.length} candles)
             </option>
             <option value="carteira" ${this._escopo === 'carteira' ? 'selected' : ''}>
-              carteira inteira (${this.totalCandlesCarteira()} candles)
+              carteira inteira (${this.totalCandlesCarteira()} velas)
             </option>
           </select>
           <label class="small text-muted" for="horizonte-select">Julgar acerto em</label>
           <select id="horizonte-select" class="form-select form-select-sm" style="width:auto">
             ${opcoes}
           </select>
+          </div>
         </div>
-      </div>
-      <p class="small text-muted">
-        Clique para desenhar no grafico. A taxa de acerto vem <strong>sempre</strong> ao lado da
-        taxa-base da janela: se o ativo subiu em 55% dos pregoes, um padrao de alta com 58%
-        nao esta dizendo nada.
-      </p>
-      <div class="alert alert-warning small py-2">
-        <strong>Calibragem.</strong> Cada cartao mostra quantas vezes o padrao aparece numa
-        serie <em>aleatoria</em> do mesmo tamanho. Rodamos o detector em 20 passeios
-        aleatorios de 63 candles: o harami apareceu 16 vezes por serie (1 a cada 4 velas) e a
-        estrela da manha chegou a exibir <strong>+12 pontos de vantagem sobre a base — em
-        ruido puro</strong>. Se a contagem real nao for muito diferente da do ruido, encontrar
-        o padrao nao e informacao.
+        <p class="small text-muted">
+          Clique para desenhar no gráfico. A taxa de acerto aparece <strong>sempre</strong> ao lado
+          da taxa-base do período: se o ativo subiu em 55% dos pregões, um padrão de alta com
+          58% não acrescenta informação.
+        </p>
+        <div class="alert alert-warning small py-2 mb-0">
+          <strong>Calibragem.</strong> Cada cartão mostra quantas vezes o padrão aparece em uma
+          série <em>aleatória</em> do mesmo tamanho. Executamos o detector em 20 passeios
+          aleatórios de 63 velas: o harami apareceu 16 vezes por série (uma a cada quatro velas),
+          e a estrela da manhã chegou a exibir <strong>12 pontos de vantagem sobre a base em
+          ruído puro</strong>. Se a contagem real não for muito diferente da observada no ruído,
+          encontrar o padrão não acrescenta informação.
+        </div>
       </div>
     `;
   }
@@ -220,7 +222,7 @@ export class PainelPadroes extends BaseComponent {
                 }
                 ${
                   definicao.ruidoPorJanela !== undefined
-                    ? `<div class="small text-muted mt-1" title="Media em 20 series aleatorias de 63 candles">~${definicao.ruidoPorJanela}x no ruido</div>`
+                    ? `<div class="small text-muted mt-1" title="Média em 20 séries aleatórias de 63 velas">~${definicao.ruidoPorJanela}x no ruído</div>`
                     : ''
                 }
               </span>
@@ -266,17 +268,17 @@ export class PainelPadroes extends BaseComponent {
       <p class="small text-muted mb-0 mt-1">${leitura.texto}</p>
       ${
         naCarteira
-          ? `<p class="small text-muted mb-0"><em>Somando ${resultado.ativos} ativo(s) monitorado(s). Os contadores sao somados; as series nunca sao concatenadas, para nao criar salto artificial na emenda.</em></p>`
+          ? `<p class="small text-muted mb-0"><em>Somando ${resultado.ativos} ativo(s) monitorado(s). Os contadores são somados; as séries nunca são concatenadas, para não criar um salto artificial na junção.</em></p>`
           : ''
       }
       ${
         resultado.descartadas
-          ? `<p class="small text-muted mb-0"><em>${resultado.descartadas} ocorrencia(s) sem ${this._horizonte} pregao(oes) adiante para julgar.</em></p>`
+          ? `<p class="small text-muted mb-0"><em>${resultado.descartadas} ocorrência(s) sem ${this._horizonte} pregão(ões) posterior(es) para avaliar.</em></p>`
           : ''
       }
       ${
         resultado.sobrepostas
-          ? `<p class="small text-muted mb-0"><em>${resultado.sobrepostas} ocorrencia(s) descartada(s) por sobreposicao: estavam a menos de ${this._horizonte} pregao(oes) de outra e dividiriam o mesmo futuro.</em></p>`
+          ? `<p class="small text-muted mb-0"><em>${resultado.sobrepostas} ocorrência(s) descartada(s) por sobreposição: estavam a menos de ${this._horizonte} pregão(ões) de outra e compartilhariam o mesmo período futuro.</em></p>`
           : ''
       }
     `;
@@ -307,12 +309,12 @@ export class PainelPadroes extends BaseComponent {
 
     return `
       <div class="card border-secondary">
-        <div class="card-header"><strong>Por que estes padroes nao sao detectados aqui</strong></div>
+        <div class="card-header"><strong>Por que estes padrões não são detectados aqui</strong></div>
         <div class="card-body">
           <p class="small text-muted mb-2">
-            Nao e limitacao de esforco. Sao padroes cuja definicao depende de julgamento
-            humano; automatiza-los produziria um detector que dispara em ruido — a apofenia
-            descrita na aba <a href="#/padroes">Padroes</a>.
+            Não é uma limitação de esforço. São padrões cuja definição depende de julgamento
+            humano; automatizá-los produziria um detector que dispara em ruído — a apofenia
+            descrita na aba <a href="#/padroes">Padrões</a>.
           </p>
           <div class="table-responsive">
             <table class="table table-sm mb-0"><tbody>${itens}</tbody></table>

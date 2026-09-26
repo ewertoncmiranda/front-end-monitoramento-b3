@@ -12,7 +12,7 @@ import '../pages/MetodologiaPage.js';
 export class GestaoPage extends BaseComponent {
   template() {
     return `
-      <h4 class="mb-3">Gestao de ativos</h4>
+      <h4 class="mb-3">Gestão de ativos</h4>
       <ul class="nav nav-tabs mb-3" role="tablist">
         <li class="nav-item" role="presentation">
           <button class="nav-link active" id="gestao-tab-consulta" data-bs-toggle="tab" data-bs-target="#gestao-painel-consulta" type="button" role="tab">Consulta</button>

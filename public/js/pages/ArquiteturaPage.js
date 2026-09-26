@@ -87,7 +87,7 @@ const PECAS = [
       financeiras dos dados abertos da CVM e deriva os indicadores contabeis. E a peca que
       fornece ROE, ROIC, margens, divida liquida e fluxo de caixa livre - justamente o que o
       plano gratuito da BRAPI nao entrega. Carrega so os ativos de
-      <code>ativo_monitorado</code>, o mesmo lugar onde voce cadastra na aba Gestao.`,
+      <code>ativo_monitorado</code>, o mesmo lugar onde você cadastra na aba Gestão.`,
     faz: [
       'Le DFP (demonstracoes), FCA (ticker para CNPJ) e FRE (quantidade de acoes)',
       'Grava <code>fato_contabil</code> (landing crua) e <code>indicador_fundamentalista</code> (mart)',
@@ -143,7 +143,7 @@ export class ArquiteturaPage extends BaseComponent {
       <p class="text-muted small">
         O que o ecossistema faz hoje. Cinco pecas independentes, cada uma com uma
         responsabilidade unica, com link para o codigo e para a imagem publicada.
-        Termos desconhecidos estao no <a href="#/glossario">Glossario</a>.
+        Termos desconhecidos estão no <a href="#/glossario">Glossário</a>.
       </p>
 
       ${diagrama()}
@@ -177,7 +177,7 @@ CVM (dados abertos) --HTTP--> Python (etl-fundamentos-cvm) ---+  |
 
 function caminhoDoDado() {
   const passos = [
-    'Voce cadastra um ticker na aba Gestao; o gestor grava em <code>ativo_monitorado</code>.',
+    'Você cadastra um ticker na aba Gestão; o gestor grava em <code>ativo_monitorado</code>.',
     'A cada 30s o agendador consulta a BRAPI e publica cotacao e historico em duas filas SQS.',
     'O gerar-insights consome as filas, grava o snapshot e calcula Graham e o sinal tecnico.',
     'Semanalmente o etl-fundamentos-cvm baixa as demonstracoes da CVM e grava os indicadores contabeis.',
@@ -252,7 +252,7 @@ function renderFontes() {
         <p class="small text-muted mb-2">
           Duas fontes externas com papeis complementares: a BRAPI da o preco de agora, a CVM da
           o balanco auditado. O detalhamento do que e gratis em cada uma esta na aba
-          <a href="#/formulas">Formulas</a>.
+          <a href="#/formulas">Fórmulas</a>.
         </p>
         <div class="table-responsive">
           <table class="table table-sm mb-0">

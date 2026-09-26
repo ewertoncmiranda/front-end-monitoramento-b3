@@ -87,9 +87,9 @@ function secaoAviso(f) {
   const variante = f.defasagem_dias > 400 ? 'warning' : 'secondary';
   return `
     <p class="small mb-3">
-      <span class="badge bg-${variante}">Balanco de ${formatarData(f.periodo)}</span>
+      <span class="badge bg-${variante}">Balanço de ${formatarData(f.periodo)}</span>
       <span class="text-muted ms-2">
-        ${f.defasagem_dias} dias atras. Multiplos usam a cotacao de
+        ${f.defasagem_dias} dias atrás. Os múltiplos usam a cotação de
         ${formatarDataHora(f.preco_em)}.
       </span>
     </p>
@@ -103,7 +103,7 @@ function secaoRentabilidade(f) {
     <div class="row row-cols-2 row-cols-md-3 g-2 small mb-3">
       ${campo('ROE', formatarPercentual(f.roe))}
       ${campo('ROIC', formatarPercentual(f.roic))}
-      ${campo('Margem liquida', formatarPercentual(f.margem_liquida))}
+      ${campo('Margem líquida', formatarPercentual(f.margem_liquida))}
     </div>
   `;
 }
@@ -126,9 +126,9 @@ function secaoCapital(f) {
   return `
     <h6 class="mt-2">Estrutura de capital</h6>
     <div class="row row-cols-2 row-cols-md-4 g-2 small mb-3">
-      ${campo('Divida bruta', formatarBilhoes(f.divida_bruta))}
+      ${campo('Dívida bruta', formatarBilhoes(f.divida_bruta))}
       ${campo(
-        'Divida liquida',
+        'Dívida líquida',
         `<span class="${classeDivida}">${formatarBilhoes(f.divida_liquida)}</span>`,
       )}
       ${campo('Caixa', formatarBilhoes(f.caixa_equivalentes))}
@@ -136,7 +136,7 @@ function secaoCapital(f) {
     </div>
     ${
       f.divida_liquida < 0
-        ? '<p class="text-success small mb-3">Divida liquida negativa: a empresa tem mais caixa que divida.</p>'
+        ? '<p class="text-success small mb-3">Dívida líquida negativa: a empresa tem mais caixa do que dívida.</p>'
         : ''
     }
   `;
@@ -147,10 +147,10 @@ function secaoResultado(f) {
   return `
     <h6 class="mt-2">Resultado do exercicio</h6>
     <div class="row row-cols-2 row-cols-md-4 g-2 small mb-3">
-      ${campo('Receita liquida', formatarBilhoes(f.receita_liquida))}
+      ${campo('Receita líquida', formatarBilhoes(f.receita_liquida))}
       ${campo('EBIT', formatarBilhoes(f.ebit))}
       ${campo('Lucro liquido', formatarBilhoes(f.lucro_liquido))}
-      ${campo('Acoes (ex-tesouraria)', formatarInteiro(f.acoes_ex_tesouraria))}
+      ${campo('Ações fora da tesouraria', formatarInteiro(f.acoes_ex_tesouraria))}
     </div>
   `;
 }
@@ -161,7 +161,7 @@ function secaoProcedencia(f) {
     <div class="d-flex flex-wrap gap-3 small mb-3 text-muted">
       <span>Fonte: <strong>${f.fonte || '-'}</strong></span>
       <span>Documento: <strong>${f.tipo_doc || '-'}</strong></span>
-      <span>Periodo: <strong>${f.tipo_periodo || '-'}</strong></span>
+      <span>Período: <strong>${f.tipo_periodo || '-'}</strong></span>
       <span>Plano de contas: <strong>${f.plano_contas || '-'}</strong></span>
       <span>Versao CVM: <strong>${f.versao_cvm ?? '-'}</strong></span>
     </div>
@@ -193,10 +193,10 @@ function secaoCobertura(f) {
     .join('');
 
   return `
-    <h6 class="mt-2">Metricas nao disponiveis</h6>
+    <h6 class="mt-2">Métricas não disponíveis</h6>
     <p class="small text-muted mb-2">
-      Valor vazio aqui e deliberado: o plano de contas desta companhia nao
-      comporta a metrica. Preferimos ausencia explicita a numero errado.
+      O valor vazio é deliberado: o plano de contas desta companhia não
+      comporta a métrica. Preferimos uma ausência explícita a um número incorreto.
     </p>
     <div class="table-responsive">
       <table class="table table-sm mb-0">
@@ -254,7 +254,7 @@ function formatarData(valor) {
 }
 
 function formatarDataHora(valor) {
-  if (!valor) return 'cotacao indisponivel';
+  if (!valor) return 'cotação indisponível';
   return String(valor).replace('T', ' ').slice(0, 16);
 }
 

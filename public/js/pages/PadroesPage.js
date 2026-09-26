@@ -197,8 +197,8 @@ export class PadroesPage extends BaseComponent {
       <h4 class="mb-1">Padroes e armadilhas</h4>
       <p class="text-muted small">
         Como se le um grafico de candles e onde a leitura costuma dar errado. Os nomes dos
-        padroes tem verbete no <a href="#/glossario">Glossario</a>; o que o sistema calcula
-        esta em <a href="#/formulas">Formulas</a>.
+        padrões têm verbete no <a href="#/glossario">Glossário</a>; o que o sistema calcula
+        está em <a href="#/formulas">Fórmulas</a>.
       </p>
 
       ${aviso()}

@@ -146,7 +146,7 @@ export function interpretar(resultado) {
 
   const v = resultado.vantagem;
   if (v === null) {
-    return { rotulo: 'Indefinido', classe: 'bg-secondary', texto: 'Nao foi possivel comparar.' };
+    return { rotulo: 'Indefinido', classe: 'bg-secondary', texto: 'Não foi possível comparar.' };
   }
 
   // Limites deliberadamente exigentes: com ~60 candles, vantagem de 10 pontos

@@ -58,7 +58,7 @@ export class SeletorDeAtivos extends BaseComponent {
       area.innerHTML = `
         <div class="small text-muted">
           Nenhum ativo cadastrado ainda. Registre um na aba
-          <a href="#/gestao">Gestao &rsaquo; Cadastro</a> e ele aparece aqui.
+          <a href="#/gestao">Gestão &rsaquo; Cadastro</a> e ele aparece aqui.
         </div>
       `;
       return;

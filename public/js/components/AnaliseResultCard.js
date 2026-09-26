@@ -29,7 +29,7 @@ export class AnaliseResultCard extends BaseComponent {
             <div class="col"><strong>Sentimento:</strong> ${r.sentimento || '-'}</div>
             <div class="col"><strong>Risco:</strong> ${r.risco || '-'}</div>
             <div class="col"><strong>Forca do sinal:</strong> ${r.forca_sinal || '-'}</div>
-            <div class="col"><strong>Confianca:</strong> ${formatarConfianca(r.confianca_analise)}</div>
+            <div class="col"><strong>Confiança:</strong> ${formatarConfianca(r.confianca_analise)}</div>
           </div>
         </div>
       </div>

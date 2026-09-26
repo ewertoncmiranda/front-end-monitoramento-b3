@@ -23,7 +23,7 @@ async function executarFetch(fazerRequisicao) {
   try {
     return await fazerRequisicao();
   } catch {
-    throw new ApiError('Nao foi possivel conectar a API. Verifique se o backend esta rodando.', 0);
+    throw new ApiError('Não foi possível conectar à API. Verifique se o serviço está em execução.', 0);
   }
 }
 

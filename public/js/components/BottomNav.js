@@ -9,7 +9,7 @@ export class BottomNav extends BaseComponent {
         <div class="container d-flex flex-nowrap overflow-x-auto justify-content-start justify-content-sm-around">
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/gestao">
             <div>🗂️</div>
-            <small>Gestao</small>
+            <small>Gestão</small>
           </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/monitorados">
             <div>📋</div>
@@ -17,11 +17,11 @@ export class BottomNav extends BaseComponent {
           </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/candles">
             <div>🕯️</div>
-            <small>Candles</small>
+            <small>Velas</small>
           </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/formulas">
             <div>🧮</div>
-            <small>Formulas</small>
+            <small>Fórmulas</small>
           </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/arquitetura">
             <div>🧩</div>
@@ -29,11 +29,11 @@ export class BottomNav extends BaseComponent {
           </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/padroes">
             <div>📉</div>
-            <small>Padroes</small>
+            <small>Padrões</small>
           </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/glossario">
             <div>📖</div>
-            <small>Glossario</small>
+            <small>Glossário</small>
           </a>
         </div>
       </nav>

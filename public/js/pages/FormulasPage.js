@@ -244,7 +244,7 @@ export class FormulasPage extends BaseComponent {
   template() {
     return `
       <h4 class="mb-1">Fundamentos de mercado</h4>
-      <p class="text-muted small">Cada cartao abaixo e um tema. "Implementado" ja roda no ecossistema hoje; "Proposta futura" e uma especificacao pronta pra implementar, ainda sem codigo. Veja os numeros reais de um ativo na aba <a href="#/gestao">Gestao</a> (sub-aba "Como funciona").</p>
+      <p class="text-muted small">Cada cartão abaixo é um tema. “Implementado” já roda no ecossistema hoje; “Proposta futura” é uma especificação pronta para implementar, ainda sem código. Veja os números reais de um ativo na aba <a href="#/gestao">Gestão</a> (subaba “Como funciona”).</p>
 
       ${legenda()}
 
@@ -253,7 +253,7 @@ export class FormulasPage extends BaseComponent {
       </div>
 
       <h5 class="mt-2">Fontes de dados</h5>
-      <p class="text-muted small">O que a BRAPI cobra e o que conseguimos de graca em outro lugar. Termos desconhecidos estao explicados no <a href="#/glossario">Glossario</a>.</p>
+      <p class="text-muted small">O que a BRAPI cobra e o que conseguimos de graça em outro lugar. Termos desconhecidos estão explicados no <a href="#/glossario">Glossário</a>.</p>
       <div class="mb-3">
         ${renderFonteDados(FONTES_DADOS)}
       </div>

@@ -97,7 +97,7 @@ export class AtivosMonitoradosTable extends BaseComponent {
               <th>Intervalo</th>
               <th>Ultima atualizacao</th>
               <th>Decisao</th>
-              <th>Confianca</th>
+              <th>Confiança</th>
             </tr>
           </thead>
           <tbody>${linhas}</tbody>
@@ -155,7 +155,7 @@ export class AtivosMonitoradosTable extends BaseComponent {
     }
 
     if (!analise || !analise.recomendacao) {
-      return '<td colspan="2" class="text-muted small">Sem analise ainda</td>';
+      return '<td colspan="2" class="text-muted small">Sem análise até o momento</td>';
     }
 
     const badge = badgeClassParaRecomendacao(analise.recomendacao);

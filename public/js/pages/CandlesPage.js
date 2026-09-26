@@ -20,23 +20,22 @@ const BASE_PADRAO = 'ajustado';
 // "quantos candles bastam pra desenhar" (isso e do CandleChart) nem detecta
 // padrao (isso e do PainelPadroes).
 //
-// Layout: o bloco do grafico fica fixo no topo enquanto os cartoes de padrao
-// rolam por baixo. Sem CSS proprio - usa `sticky-md-top` do Bootstrap, que so
-// gruda a partir de telas medias; no celular um grafico fixo comeria metade
-// da tela util.
+// Layout: o grafico rola normalmente. O cabecalho do painel de padroes, com
+// calibragem e controles, fica fixo apenas a partir de telas medias. No
+// celular nada fica preso, para nao consumir a area util.
 export class CandlesPage extends BaseComponent {
   template() {
     return `
-      <h4 class="mb-1">Candles</h4>
+      <h4 class="mb-1">Velas (candles)</h4>
       <p class="text-muted small">
-        Grafico de candlestick com o historico OHLC diario ja coletado pelo ecossistema.
-        Ligue padroes sobre o grafico no painel abaixo; o que cada um significa esta em
-        <a href="#/padroes">Padroes e armadilhas</a>.
+        Gráfico de velas com o histórico diário de abertura, máxima, mínima e fechamento já
+        coletado pelo ecossistema. Ative os padrões no painel abaixo; o significado de cada
+        um está em <a href="#/padroes">Padrões e armadilhas</a>.
       </p>
 
       <seletor-de-ativos rotulo-botao="Ver candles" placeholder="Ex.: PETR4"></seletor-de-ativos>
 
-      <div id="candles-fixo" class="sticky-md-top bg-body pt-2 pb-2 mt-2"></div>
+      <div id="candles-grafico" class="pt-2 pb-2 mt-2"></div>
       <div id="candles-padroes" class="mt-3"></div>
       <div id="candles-erro"></div>
     `;
@@ -71,12 +70,12 @@ export class CandlesPage extends BaseComponent {
   async carregar() {
     if (!this._simbolo) return;
 
-    const fixo = this.querySelector('#candles-fixo');
+    const areaGrafico = this.querySelector('#candles-grafico');
     const areaPadroes = this.querySelector('#candles-padroes');
     const erro = this.querySelector('#candles-erro');
 
     erro.innerHTML = '';
-    fixo.innerHTML = '<loading-spinner></loading-spinner>';
+    areaGrafico.innerHTML = '<loading-spinner></loading-spinner>';
     areaPadroes.innerHTML = '';
 
     let candles;
@@ -84,15 +83,15 @@ export class CandlesPage extends BaseComponent {
       const historico = await buscarHistorico(this._simbolo, { range: this._range });
       candles = comBase(extrairCandles(historico), this._base);
     } catch (e) {
-      fixo.innerHTML = '';
+      areaGrafico.innerHTML = '';
       erro.innerHTML = `<status-alert mensagem="${e.message}" variante="danger"></status-alert>`;
       return;
     }
 
-    fixo.innerHTML = this.templateFixo(candles);
+    areaGrafico.innerHTML = this.templateGrafico(candles);
     areaPadroes.innerHTML = '<painel-padroes></painel-padroes>';
 
-    const grafico = fixo.querySelector('candle-chart');
+    const grafico = areaGrafico.querySelector('candle-chart');
     const painel = areaPadroes.querySelector('painel-padroes');
 
     grafico.setCandles(candles);
@@ -148,7 +147,7 @@ export class CandlesPage extends BaseComponent {
     painel.setCarteira(this._carteiraCache);
   }
 
-  templateFixo(candles) {
+  templateGrafico(candles) {
     const ajustados = candles.filter(
       (c) => c.fatorAjuste && Math.abs(c.fatorAjuste - 1) > 1e-6,
     ).length;
@@ -160,7 +159,7 @@ export class CandlesPage extends BaseComponent {
           <span class="text-muted fw-normal">(${candles.length} candle${candles.length === 1 ? '' : 's'})</span>
         </h6>
         <div class="d-flex align-items-center gap-3 flex-wrap">
-          <div class="btn-group" role="group" aria-label="Range do grafico">
+          <div class="btn-group" role="group" aria-label="Período do gráfico">
             ${RANGES_DISPONIVEIS.map(
               (r) =>
                 `<button type="button" class="btn btn-outline-primary btn-sm ${r.valor === this._range ? 'active' : ''}" data-range="${r.valor}">${r.rotulo}</button>`,
@@ -169,7 +168,7 @@ export class CandlesPage extends BaseComponent {
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" role="switch" id="base-preco"
                    ${this._base === 'ajustado' ? 'checked' : ''}>
-            <label class="form-check-label small" for="base-preco">Preco ajustado</label>
+            <label class="form-check-label small" for="base-preco">Preço ajustado</label>
           </div>
         </div>
       </div>
@@ -186,17 +185,17 @@ export class CandlesPage extends BaseComponent {
     if (this._base !== 'ajustado') {
       return `
         <p class="small text-danger mb-1 mt-1">
-          Preco <strong>bruto</strong>: dividendos e desdobramentos aparecem como gap de baixa,
-          sem que ninguem tenha vendido. Serve para ver a armadilha, nao para analisar.
+          Preço <strong>bruto</strong>: dividendos e desdobramentos aparecem como lacunas de baixa,
+          sem que ninguém tenha vendido. Serve para demonstrar a armadilha, não para analisar.
         </p>`;
     }
     if (!ajustados) {
-      return '<p class="small text-muted mb-1 mt-1">Nenhuma vela precisou de ajuste nesta janela.</p>';
+      return '<p class="small text-muted mb-1 mt-1">Nenhuma vela precisou de ajuste neste período.</p>';
     }
     return `
       <p class="small text-muted mb-1 mt-1">
-        Preco ajustado por proventos — ${ajustados} de ${total} velas tiveram valor corrigido.
-        Desligue o switch para ver os gaps que o preco bruto cria.
+        Preço ajustado por proventos — ${ajustados} de ${total} velas tiveram o valor corrigido.
+        Desative a opção para ver as lacunas que o preço bruto cria.
       </p>`;
   }
 }

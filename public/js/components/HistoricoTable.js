@@ -10,7 +10,7 @@ export class HistoricoTable extends BaseComponent {
 
   template() {
     if (!this._candles || this._candles.length === 0) {
-      return '<p class="text-muted">Sem historico para exibir.</p>';
+      return '<p class="text-muted">Sem histórico para exibir.</p>';
     }
 
     const linhas = this._candles

@@ -15,7 +15,7 @@ export class FundamentosCard extends BaseComponent {
   template() {
     const f = this._fundamentos;
     if (!f || !f.detalhes) {
-      return '<p class="text-muted">Nenhuma analise encontrada para esse ativo ainda.</p>';
+      return '<p class="text-muted">Nenhuma análise foi encontrada para este ativo.</p>';
     }
 
     const d = f.detalhes;
@@ -31,7 +31,7 @@ export class FundamentosCard extends BaseComponent {
           <div class="d-flex flex-wrap gap-2 mb-3">
             <span class="badge ${badge}">${f.recomendacao || 'SEM_DADOS'}</span>
             <span class="badge bg-secondary">Risco ${d.resumo?.nivel_risco || '-'}</span>
-            <span class="badge bg-secondary">Confianca ${d.resumo?.confianca_score ?? '-'}</span>
+            <span class="badge bg-secondary">Confiança ${d.resumo?.confianca_score ?? '-'}</span>
           </div>
 
           ${secaoPerfilEmpresa(f.perfilEmpresa)}
@@ -69,7 +69,7 @@ function secaoSnapshot(s) {
   return `
     <h6 class="mt-2">Snapshot de mercado</h6>
     <div class="row row-cols-2 row-cols-md-4 g-2 small mb-3">
-      ${campo('Preco', formatarMoeda(s.preco))}
+      ${campo('Preço', formatarMoeda(s.preco))}
       ${campo('Abertura', formatarMoeda(s.abertura))}
       ${campo('Fech. anterior', formatarMoeda(s.fechamento_anterior))}
       ${campo('Maxima dia', formatarMoeda(s.maxima_dia))}
@@ -112,7 +112,7 @@ function secaoValuation(v) {
     <div class="table-responsive mb-3">
       <table class="table table-sm">
         <thead>
-          <tr><th>Cenario</th><th>Crescimento</th><th>Multiplo</th><th>Preco justo</th><th>Margem de seguranca</th></tr>
+          <tr><th>Cenário</th><th>Crescimento</th><th>Múltiplo</th><th>Preço justo</th><th>Margem de segurança</th></tr>
         </thead>
         <tbody>${linhas}</tbody>
       </table>
@@ -123,7 +123,7 @@ function secaoValuation(v) {
 function secaoContextoTecnico(c) {
   if (!c) return '';
   return `
-    <h6 class="mt-2">Contexto tecnico (dia)</h6>
+    <h6 class="mt-2">Contexto técnico do dia</h6>
     <div class="row row-cols-2 row-cols-md-3 g-2 small mb-3">
       ${campo('Zona 52 semanas', c.zona_52w || '-')}
       ${campo('Posicao no range 52s', `${formatarNumero(c.posicao_range_52w_percent)}%`)}
@@ -138,10 +138,10 @@ function secaoContextoTecnico(c) {
 
 function secaoSinalTecnico(s) {
   if (!s) {
-    return '<p class="text-muted small">Sem sinal tecnico de serie (histórico insuficiente para este ciclo).</p>';
+    return '<p class="text-muted small">Sem sinal técnico da série: o histórico deste ciclo é insuficiente.</p>';
   }
   return `
-    <h6 class="mt-2">Sinal tecnico de serie</h6>
+    <h6 class="mt-2">Sinal técnico da série</h6>
     <div class="d-flex flex-wrap gap-2 mb-2">
       ${badgeSinalTecnico('Momentum', s.sinal_momentum)}
       ${badgeSinalTecnico('Reversao', s.sinal_reversao)}
@@ -164,7 +164,7 @@ function secaoPerfilOperacao(f) {
     : '<span class="text-muted">Sem sinal claro de perfil</span>';
 
   return `
-    <h6 class="mt-2">Perfil de operacao e riscos</h6>
+    <h6 class="mt-2">Perfil de operação e riscos</h6>
     <div class="mb-2">${perfis}</div>
     <div class="d-flex flex-wrap gap-3 small mb-2">
       ${campo('Risco de comprar agora', badgeRisco(f.riscoCompraAgora))}
@@ -214,7 +214,7 @@ function secaoFatores(fatores) {
       ? `<div class="mb-1"><strong>${rotulo}:</strong> ${itens.map((it) => `<span class="badge ${classe} me-1">${it}</span>`).join('')}</div>`
       : '';
   return `
-    <h6 class="mt-2">Fatores de decisao</h6>
+    <h6 class="mt-2">Fatores de decisão</h6>
     <div class="small mb-2">
       ${lista('Positivos', fatores.positivos, 'bg-success')}
       ${lista('Negativos', fatores.negativos, 'bg-danger')}

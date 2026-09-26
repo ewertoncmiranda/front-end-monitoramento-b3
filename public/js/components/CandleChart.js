@@ -24,17 +24,17 @@ export class CandleChart extends BaseComponent {
 
   template() {
     if (!this._candles || this._candles.length === 0) {
-      return '<p class="text-muted">Sem historico para exibir.</p>';
+      return '<p class="text-muted">Sem histórico para exibir.</p>';
     }
     if (this._candles.length < MIN_CANDLES) {
-      return `<p class="text-muted">So ${this._candles.length} candle(s) disponivel(is) nesse range - minimo de ${MIN_CANDLES} pra montar o grafico. Tente um range maior.</p>`;
+      return `<p class="text-muted">Há somente ${this._candles.length} vela(s) disponível(is) neste período. São necessárias pelo menos ${MIN_CANDLES} para montar o gráfico. Tente um período maior.</p>`;
     }
     return '<div class="candle-chart-container" style="height: 320px;"></div>';
   }
 
   desenharGrafico() {
     if (!window.LightweightCharts) {
-      this.innerHTML = '<p class="text-muted">Biblioteca de graficos nao carregou.</p>';
+      this.innerHTML = '<p class="text-muted">A biblioteca de gráficos não foi carregada.</p>';
       return;
     }
 
