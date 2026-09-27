@@ -18,7 +18,7 @@ import '../components/BacktestPlacar.js';
 // Estrutura declarativa, mesmo padrao de ArquiteturaPage e FormulasPage.
 
 const AVALIADO_EM = '26/09/2026';
-const ATUALIZADO_EM = '27/09/2026, com schema único versionado, testes de valuation/recomendação e a correção de Graham/LPA/faixa neutra (ISS-F1/F2/F3) já sendo medida no backtest e no diário';
+const ATUALIZADO_EM = '27/09/2026, com proventos somados ao retorno (sinal e régua da carteira), backtest rerodado com a regra corrigida, e a Fase 3 (TASK-50 a 58: intervalo de confiança, universo amplo, recalibração) registrada e em andamento em outra sessão';
 
 const NOTAS = [
   {
@@ -46,12 +46,12 @@ const NOTAS = [
   },
   {
     dimensao: 'Confiabilidade dos dados',
-    nota: 6,
+    nota: 7,
     meta: 7,
     porque:
-      'Subiu de 5: cada empresa tem um código só (AXIA3, EMBJ3, JBSS32 e MBRF3 voltaram a juntar preço e balanço), todo balanço tem a data em que ficou público, o preço oficial da B3 (COTAHIST) está carregado desde 2016 e é comparado com a BRAPI, e a quantidade de ações passa por checagem (pegou VALE3 em milhar e BBAS3 2022 com pico isolado). Tudo isso é medido ao vivo abaixo.',
+      'Subiu de 6: proventos (dividendo/JCP) agora entram no retorno do sinal E da régua da carteira — sem isso o excesso saía viesado a favor de quem paga dividendo. Cobertura só a partir de 27/09/2026 (a fonte da B3 só devolve ~12 meses por consulta; backfill de anos anteriores é TASK-46, aberto). Some a isso identidade única por empresa, point-in-time, COTAHIST cruzado com a BRAPI e checagem de quantidade de ações.',
     paraSubir: [
-      'Proventos no retorno (hoje o preço é bruto: pagadora de dividendo parece pior).',
+      'Backfill de proventos anteriores a 27/09/2026 (TASK-46) — hoje o ajuste só vale pra sinais recentes.',
       '30 dias seguidos com o painel de saúde verde, sem intervenção manual.',
       'Idade do dado também nas telas de ativo, não só aqui.',
     ],
@@ -61,12 +61,12 @@ const NOTAS = [
     nota: 4,
     meta: 6,
     porque:
-      'Continua em 4: o backtest e o diário medem corretamente a regra de produção atual (Selic, LPA normalizado, faixa neutra −15%, VERSAO_REGRA 2026.09.27-1) contra a taxa-base, e a v2 (CDI+IPCA, −30%) como candidata em sombra — mas os números de 26/09 (vantagem pequena e instável) ainda são da regra anterior a essa correção; precisam ser recalculados com a versão nova para dizer algo sobre ela.',
+      'Continua em 4, mas por um motivo mais preciso agora: o backtest já roda com a regra corrigida e com proventos (execução mais recente confirmada ao vivo), mas o placar ainda não tem intervalo de confiança — "58% de acerto" pode ser 46% ou 69%, e não dá pra saber qual sem o IC. Está EM ANDAMENTO em outra sessão (TASK-50, Wilson 95% pro acerto, média ± 1,96×erro-padrão pro excesso) — nota não sobe até isso ser medido e commitado.',
     paraSubir: [
-      'Rodar o backtest de novo com a regra corrigida (2026.09.27-1) e comparar contra a v1 antiga e a v2 sombra nos mesmos períodos.',
-      'Uma regra que vença a taxa-base nos DOIS períodos (calibração e teste), não só em um.',
-      'Placar do diário com amostra mínima confirmando o backtest.',
-      'Confiança calibrada: "80%" precisa acertar ~80% das vezes.',
+      'Intervalo de confiança no placar (TASK-50, em andamento) — sem ele, "vantagem" e "ruído" são indistinguíveis.',
+      'Universo amplo point-in-time, com deslistadas (TASK-51) — hoje o backtest usa quem sobreviveu até hoje.',
+      'Recalibrar pelo limite inferior do IC, não pelo ponto médio (TASK-57).',
+      'Decidir v1 × v2 com número, não com preferência (TASK-58).',
     ],
   },
   {
@@ -95,6 +95,9 @@ const NOTAS = [
 ];
 
 const PROGRESSO = [
+  { data: '27/09', item: 'Proventos somados ao retorno (ISS-F7): sinal e régua da carteira, não só o sinal — sem a régua receber também, o excesso saía viesado a favor de quem paga dividendo. Testado contra o backtest real duas vezes (execuções id=8 e id=9).' },
+  { data: '27/09', item: 'Backtest rerodado com a regra corrigida (Selic, LPA normalizado, faixa neutra) — o resultado de 26/09 era da regra anterior.' },
+  { data: '27/09', item: 'Fase 3 registrada no SPEC (TASK-50 a 58, infra#TASK-30 a 38): intervalo de confiança, universo amplo, calibração do score, crescimento nominal, placar com/sem provento, recalibração pelo IC e decisão v1×v2 — em andamento em paralelo.' },
   { data: '27/09', item: 'Schema único versionado: as 4 tabelas do gestor que só existiam via Hibernate ddl-auto=update (candle_diario, indice_macro, perfil_empresa_cache, cotacao_atual) ganharam migração; ddl-auto passou para "validate" (testado: app sobe limpo, agendador gravando normalmente).' },
   { data: '27/09', item: 'Graham com Y = Selic meta (ISS-F1), LPA normalizado por 3–5 anos + Graham Number como segunda trava de COMPRA_FORTE (ISS-F2), faixa neutra de venda em −15% (ISS-F3) — corrigidos e chamados por FinancialAnalyzerService, o caminho que gera o insight real.' },
   { data: '27/09', item: 'Testes novos para valuation.py e recommendation.py (nenhum existia antes) — inclui os dois casos de aceite do TASK-20. Suíte completa: 74 testes verdes.' },
@@ -143,17 +146,17 @@ const BLOQUEADORES = [
       'O backtest existe e o resultado é modesto: as compras batem a taxa-base por poucos pontos no teste e não na calibração. Vantagem que aparece num período e some no outro ainda não é vantagem.',
   },
   {
-    titulo: 'Backtest ainda não rodou com a regra corrigida',
+    titulo: 'Acerto sem intervalo de confiança',
     texto:
-      'Os três defeitos de valuation (ISS-F1/F2/F3) foram corrigidos em 27/09 e o backtest/diário já sabem medir a versão nova (VERSAO_REGRA muda a cada correção) — mas o último resultado publicado (26/09) é de antes da correção. Falta rodar de novo para saber se a regra corrigida de fato vence a taxa-base.',
+      '"58% de acerto" sem saber a margem pode ser 46% ou 69% — indistinguível de ruído com poucas janelas. Em andamento (TASK-50): Wilson 95% pro acerto, média ± 1,96×erro-padrão pro excesso, direto em backtest_placar.',
   },
   {
-    titulo: 'Preço sem proventos',
-    texto: 'Backtest e diário usam preço bruto: empresas que pagam muito dividendo parecem piores do que são.',
+    titulo: 'Proventos só a partir de 27/09/2026',
+    texto: 'O ajuste existe (sinal e régua da carteira), mas a fonte da B3 só cobre os últimos ~12 meses por consulta — sinais mais antigos no backtest (2017+) continuam sem provento. Backfill é TASK-46, aberto.',
   },
   {
     titulo: 'Universo de hoje olhando para trás',
-    texto: 'O backtest usa as empresas monitoradas hoje, que sobreviveram até aqui. Isso favorece o passado (viés de sobrevivência).',
+    texto: 'O backtest usa as empresas monitoradas hoje, que sobreviveram até aqui. Isso favorece o passado (viés de sobrevivência). Em andamento (TASK-51): universo amplo point-in-time, com deslistadas.',
   },
   {
     titulo: 'Sem imposto nem tamanho de posição',
@@ -175,8 +178,11 @@ const MELHORIAS = [
   { item: 'LPA normalizado e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção: LPA = mínimo entre atual e média de 3–5 anos da CVM; Graham Number como segunda trava; venda só abaixo de −15%.' },
   { item: 'Schema único versionado (gestor)', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'ddl-auto de "update" para "validate"; as 4 tabelas que só existiam via Hibernate foram migradas. Testado ao vivo.' },
   { item: 'Teste para valuation e recomendação', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Não existia nenhum antes de 27/09. tests/test_valuation.py e tests/test_recommendation.py, 74 testes verdes na suíte completa.' },
-  { item: 'Rerodar backtest com a regra corrigida', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'O último resultado publicado (26/09) mediu a regra anterior à correção de ISS-F1/F2/F3. A infraestrutura já sabe medir a nova (VERSAO_REGRA); falta só rodar.' },
-  { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Próximo passo: proventos da base IPE ou dos eventos da B3.' },
+  { item: 'Rerodar backtest com a regra corrigida', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Rodado duas vezes (id=8 e id=9) com a regra 2026.09.27-2 e proventos.' },
+  { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'ClienteB3Proventos (gestor) + avaliador.py somam data-com ao retorno do sinal e da régua da carteira. Cobertura só a partir de 27/09/2026 (TASK-46 pro backfill).' },
+  { item: 'Intervalo de confiança no placar (Wilson 95%)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'TASK-50, outra sessão: acerto com Wilson 95%, excesso com média ± 1,96×erro-padrão em backtest_placar.' },
+  { item: 'Universo amplo point-in-time (viés de sobrevivência)', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'TASK-51: backtest passa a incluir empresas deslistadas, não só as monitoradas hoje.' },
+  { item: 'Placar separando janelas com/sem provento', impacto: 'Médio', classe: 'text-bg-info', status: 'pendente', porque: 'TASK-56: hoje o placar mistura janela ajustada e não-ajustada por proventos sem distinguir.' },
   { item: 'Janela temporal na consolidação', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'Só as análises dos últimos 30 dias; sem nenhuma, a mais recente.' },
   { item: 'Checagem cruzada de preço', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'BRAPI contra o fechamento oficial do COTAHIST; acima de 1% aparece na saúde dos dados.' },
   { item: 'Idade do dado em toda tela', impacto: 'Médio', classe: 'text-bg-info', status: 'andamento', porque: 'Painel de saúde com a idade de cada fonte; falta levar às telas de ativo.' },
@@ -200,7 +206,7 @@ const CAMADAS = [
     itens: [
       'Backtest com período fora da amostra: calibrar até 2022 e avaliar de 2023 em diante.',
       'Comparar sempre com a média da carteira (pegar todos por igual) e com o CDI; sem vencer o CDI após custos, a regra não serve.',
-      'Confiança calibrada: "80%" precisa significar acertar ~80% das vezes no histórico.',
+      'Intervalo de confiança no acerto e no excesso (TASK-50, em andamento) — sem ele, "vantagem" e "ruído" são indistinguíveis.',
       'Versão em cada regra, para comparar uma com a outra (já em uso).',
     ],
   },
@@ -232,7 +238,7 @@ const NEGOCIO = [
 
 const ROTEIRO = [
   { periodo: 'Dias 1–30', foco: 'Base confiável', itens: 'Feito: identidade dos ativos, data de entrega, COTAHIST, checagem de preço e de ações, backup, rotinas e aviso legal. Falta: Telegram e cópia do backup fora da máquina.' },
-  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Proventos no retorno; recalibrar limiares só com dados até 2022 e conferir no teste; confiança calibrada.' },
+  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Proventos no retorno (feito, 27/09); intervalo de confiança no placar (TASK-50, em andamento); universo amplo point-in-time (TASK-51); recalibrar pelo limite inferior do IC (TASK-57).' },
   { periodo: 'Dias 61–90', foco: 'Prova em tempo real', itens: 'Placares do diário com amostra mínima (v1 x v2) e decisão pelos números: manter, promover a v2 ou descartar cada regra.' },
 ];
 
@@ -259,13 +265,12 @@ export class AvaliacaoPage extends BaseComponent {
         Esta avaliação é sobre o software e o método, não uma recomendação de investimento.
       </div>
 
-      <div class="alert alert-success small">
-        <strong>Correção de 27/09.</strong> Uma avaliação anterior desta página chegou a apontar que o
-        backtest/diário mediam uma regra diferente da que gera o insight de produção. Não é verdade: conferido
-        <code>backtest.py</code> e <code>diario.py</code> por completo, os dois já medem a regra de produção
-        (<code>VERSAO_REGRA</code>, via <code>ValuationAnalyzer</code>/<code>RecommendationPolicy</code> — o
-        mesmo caminho do <code>FinancialAnalyzerService</code>) como linha principal, e a <code>regra_v2.py</code>
-        (CDI+IPCA, −30%) só como candidata alternativa em sombra, de propósito. Nada a reconciliar aqui.
+      <div class="alert alert-info small">
+        <strong>Em andamento agora (outra sessão, "Projeto para hoje").</strong> Fase 3 completa registrada no
+        SPEC (<code>TASK-50</code> a <code>TASK-58</code>): intervalo de confiança de Wilson no placar,
+        universo amplo point-in-time (corrige o viés de sobrevivência), curva de calibração do score de
+        confiança, placar separando janelas com/sem provento, e a decisão final v1×v2 pelo limite inferior do
+        IC. Nada disso está commitado ainda — as notas abaixo não antecipam esse resultado.
       </div>
 
       ${secao('Nota por dimensão — e o que falta para subir', renderNotas())}
