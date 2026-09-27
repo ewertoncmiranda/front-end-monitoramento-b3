@@ -7,6 +7,7 @@ import { renderTrilhas, renderConhecimento, renderOrientacoes, renderMateriais, 
 import { renderCatalogoCursos, renderCurso, abrirPdf } from '../estudos/apresentacaoCursos.js';
 import '../pages/FormulasPage.js';
 import '../pages/ArquiteturaPage.js';
+import '../pages/DesignDeCodigoPage.js';
 import '../pages/PadroesPage.js';
 import '../pages/GlossarioPage.js';
 

@@ -9,6 +9,7 @@ import './pages/ComunicadosPage.js';
 import './pages/NoticiasPage.js';
 import './pages/FormulasPage.js';
 import './pages/ArquiteturaPage.js';
+import './pages/DesignDeCodigoPage.js';
 import './pages/AvaliacaoPage.js';
 import './pages/PadroesPage.js';
 import './pages/GlossarioPage.js';

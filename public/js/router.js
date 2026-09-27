@@ -12,6 +12,7 @@ const rotas = {
   '#/noticias': 'noticias-page',
   '#/formulas': 'formulas-page',
   '#/arquitetura': 'arquitetura-page',
+  '#/design-codigo': 'design-codigo-page',
   '#/avaliacao': 'avaliacao-page',
   '#/padroes': 'padroes-page',
   '#/glossario': 'glossario-page',

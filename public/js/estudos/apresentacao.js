@@ -52,8 +52,8 @@ export function renderOrientacoes() {
   return `<h2 class="h4">Orientações para estudar e decidir melhor</h2><p class="text-secondary">Hábitos, critérios e limites que acompanham todos os níveis.</p><div class="row g-3">${orientacoes.map(o => `<article class="col-12 col-lg-6" ${pesquisavel(o)}><div class="card h-100 border-0 shadow-sm"><div class="card-body p-4"><h3 class="h5">${o.titulo}</h3><p class="mb-0">${o.texto}</p>${o.fonte ? linksFontes([o.fonte]) : ''}</div></div></article>`).join('')}</div>`;
 }
 
-const SUBSECOES_REFERENCIA = { formulas: 'Fórmulas', arquitetura: 'Arquitetura', padroes: 'Padrões', glossario: 'Glossário' };
-const TAG_POR_SUBSECAO = { formulas: 'formulas-page', arquitetura: 'arquitetura-page', padroes: 'padroes-page', glossario: 'glossario-page' };
+const SUBSECOES_REFERENCIA = { formulas: 'Fórmulas', arquitetura: 'Arquitetura', designCodigo: 'Design de código', padroes: 'Padrões', glossario: 'Glossário' };
+const TAG_POR_SUBSECAO = { formulas: 'formulas-page', arquitetura: 'arquitetura-page', designCodigo: 'design-codigo-page', padroes: 'padroes-page', glossario: 'glossario-page' };
 
 export function renderReferencia(subSecao) {
   const atual = SUBSECOES_REFERENCIA[subSecao] ? subSecao : 'formulas';

@@ -25,13 +25,15 @@ const PECAS = [
     descricao: `Este app. Sem framework e sem bundler: os arquivos em <code>public/</code> sao
       servidos exatamente como estao. Um servidor Node/Express minimo serve o estatico e atua
       como proxy reverso para o backend Java, o que elimina CORS - o browser so chama caminho
-      relativo.`,
+      relativo. O mesmo servidor tambem fala direto com uma fonte externa (Google News) para
+      manchetes por ticker, sem chave.`,
     faz: [
       'Consulta de ativo: cotacao, decisao, fundamentos da CVM e historico',
-      'Cadastro de ativo no monitoramento recorrente',
-      'Lista de monitorados com a decisao de cada um, expansivel',
+      'Cadastro de ativo no monitoramento recorrente, com linha expansivel (cotacao + decisao + fundamentos + noticias) em Monitorados e Setores',
+      'Setores (comparacao setorial) e Indices macro (Selic, CDI, IPCA, IGP-M, dolar, IBC-Br, desemprego)',
+      'Aba dedicada de Noticias por ativo, com busca livre para qualquer ticker',
       'Grafico de candles com range selecionavel',
-      'Referencia: formulas, arquitetura e glossario',
+      'Referencia: formulas, arquitetura, design de codigo e glossario; avaliacao publica do proprio ecossistema',
     ],
     naoFaz: 'Nenhuma regra de negocio. So exibe o que os outros servicos calculam.',
   },
@@ -43,15 +45,18 @@ const PECAS = [
     repo: 'gestor-ativos-brutos',
     imagem: 'gestor-ativos-brutos',
     porta: '8091',
-    descricao: `A porta de entrada HTTP do ecossistema e o unico servico que fala com a BRAPI.
-      Consulta cotacao e historico, publica o dado bruto em duas filas SQS e le o MySQL para
-      devolver analises prontas. Um agendador reprocessa a carteira monitorada a cada 30s.`,
+    descricao: `A porta de entrada HTTP do ecossistema. Fala com a BRAPI (cotacao/historico) e,
+      desde 27/09/2026, direto com endpoints publicos da B3 (proventos) e com o Banco Central e o
+      IBGE (indices macro). Publica o dado bruto em filas SQS e le o MySQL pra devolver analises
+      prontas. Schema agora e fonte unica versionada (Flyway, migrations V1-V8 em
+      <code>infra-b3-ecossytem</code>) - o Hibernate roda em <code>ddl-auto=validate</code>, so
+      confere, nunca altera tabela em runtime.`,
     faz: [
       '<code>GET /ativos/{ticker}</code> e <code>/ativos/robusto/{ticker}</code> — consulta na BRAPI e publica em SQS',
       '<code>POST /ativos/registrar/{ticker}</code> — entra no monitoramento recorrente',
-      '<code>GET /analises/{ticker}/analise</code> — decisao consolidada por regras deterministicas',
-      '<code>GET /analises/{ticker}/fundamentos</code> — o retrato bruto de um unico ciclo',
-      '<code>GET /analises/{ticker}/fundamentos-cvm</code> — fundamentos contabeis, com P/L e P/VP',
+      '<code>GET /analises/{ticker}/analise</code>, <code>/fundamentos</code> e <code>/fundamentos-cvm</code> — decisao, retrato bruto e fundamentos contabeis',
+      '<code>GET /setores</code>, <code>/indices-macro/{codigo}</code> e <code>/proventos/{ticker}</code> — comparacao setorial, series do BCB/IBGE e dividendos/JCP da B3',
+      'Cache de preco anterior/atual por ativo (so anda quando o preco de fato muda, nao a cada ciclo)',
     ],
     naoFaz: 'Nao calcula valuation nem sinal tecnico; isso e do gerar-insights.',
   },
@@ -63,17 +68,20 @@ const PECAS = [
     repo: 'gerar-insights',
     imagem: 'gerar-insights',
     porta: '—',
-    descricao: `Worker sem API propria: fica consumindo as duas filas SQS. Para cada cotacao que
-      chega, grava o snapshot, calcula o valuation de Graham em tres cenarios de crescimento e,
-      quando ha serie historica suficiente, deriva o sinal tecnico (media movel, z-score e score
-      de volume). O resultado vai para <code>insight_acao</code>.`,
+    descricao: `Worker sem API propria: fica consumindo filas SQS. Para cada cotacao que chega,
+      grava o snapshot, calcula o valuation de Graham (desde 27/09/2026, com ajuste de juros -
+      Selic - e LPA normalizado por 3-5 anos, ver Design de codigo) e, quando ha serie historica
+      suficiente, deriva o sinal tecnico. Roda tambem um backtest walk-forward e um diario de
+      sinais (paper trading) que gravam evidencia de acerto contra a taxa-base, nao so a
+      recomendacao.`,
     faz: [
       'Consome <code>tratar-ativos</code> e <code>sqs-registrar-series-historicas</code>',
       'Grava <code>historico_acoes</code> e <code>serie_historica</code> (esta com upsert por dia)',
-      'Calcula preco justo de Graham e margem de seguranca',
+      'Calcula preco justo de Graham (ajustado por juros), Graham Number e margem de seguranca',
       'Deriva sinal de momentum e de reversao a media',
+      '<code>python -m app.validacao.backtest</code> e <code>diario</code> — mede a regra de producao contra a taxa-base, o CDI e a media da carteira, agora com proventos somados ao retorno',
     ],
-    naoFaz: 'Nao chama API externa nenhuma; so recebe o que o gestor publica.',
+    naoFaz: 'So chama API externa pra ler tabelas de outros donos (candle_diario, indice_macro, provento_distribuido) no mesmo MySQL - nao fala HTTP com nada de fora.',
   },
   {
     numero: 4,
@@ -104,14 +112,15 @@ const PECAS = [
     repo: 'infra-b3-ecossystem',
     imagem: 'infra-b3-ecossystem',
     porta: '—',
-    descricao: `Orquestra tudo: MySQL, LocalStack (simula SQS e S3 localmente), os quatro
-      servicos acima e a pilha de observabilidade. O schema do banco e definido uma unica vez em
-      <code>mysql-init</code> e compartilhado por todos. O Terraform provisiona as filas num
-      container que roda uma vez e encerra.`,
+    descricao: `Orquestra tudo: MySQL, LocalStack (simula SQS localmente), os quatro servicos
+      acima e a pilha de observabilidade. Schema com duas camadas: <code>mysql-init</code> pra
+      volume novo e <code>mysql-migrations</code> (Flyway, V2 a V8) pra volume existente -
+      qualquer tabela nova (proventos, backtest, identidade de ativo) entra nas duas. O Terraform
+      provisiona as filas num container que roda uma vez e encerra.`,
     faz: [
       '<code>docker-compose.yml</code> com as imagens publicadas; o <code>-local.yml</code> faz build do codigo local',
-      'Terraform: filas SQS e bucket S3 no LocalStack',
-      '<code>mysql-init</code>: fonte unica do schema, incluindo as tabelas da CVM',
+      'Terraform: filas SQS no LocalStack',
+      '<code>mysql-init</code> + <code>mysql-migrations</code> (Flyway): fonte unica de schema, sem o Hibernate criar tabela em runtime',
       'Observabilidade: Prometheus, Grafana e a pilha ELK',
       '<code>GLOSSARIO.md</code>: fonte canonica do vocabulario que a aba Glossario espelha',
     ],
@@ -134,6 +143,20 @@ const FONTES_EXTERNAS = [
     entrega: 'DFP, ITR, FCA e FRE — demonstracoes financeiras completas e auditadas',
     limite: 'Gratuito e sem limite de requisicao. Sai em lote, nao em tempo real',
   },
+  {
+    nome: 'Banco Central (SGS) e IBGE (SIDRA)',
+    url: 'https://api.bcb.gov.br',
+    usa: 'gestor-ativos-brutos',
+    entrega: 'Selic, CDI, IPCA, IGP-M, dolar PTAX, IBC-Br e desemprego — sem chave, sem custo',
+    limite: 'Nenhum limite documentado. Series mensais/diarias, nao intraday',
+  },
+  {
+    nome: 'B3 (endpoint publico nao-oficial)',
+    url: 'https://sistemaswebb3-listados.b3.com.br',
+    usa: 'gestor-ativos-brutos',
+    entrega: 'Proventos (dividendo/JCP) por emissora, confirmado navegando o proprio site da B3',
+    limite: 'So devolve os ultimos ~12 meses por consulta; nao documentado oficialmente pela B3',
+  },
 ];
 
 export class ArquiteturaPage extends BaseComponent {
@@ -141,9 +164,10 @@ export class ArquiteturaPage extends BaseComponent {
     return `
       <h4 class="mb-1">Arquitetura</h4>
       <p class="text-muted small">
-        O que o ecossistema faz hoje. Cinco pecas independentes, cada uma com uma
-        responsabilidade unica, com link para o codigo e para a imagem publicada.
-        Termos desconhecidos estão no <a href="#/glossario">Glossário</a>.
+        O que o ecossistema faz hoje, em nivel de negocio. Cinco pecas independentes, cada uma com
+        uma responsabilidade unica, com link para o codigo e para a imagem publicada. Termos
+        desconhecidos estão no <a href="#/glossario">Glossário</a>; o detalhamento tecnico (stack,
+        camadas, contratos entre servicos) esta em <a href="#/design-codigo">Design de código</a>.
       </p>
 
       ${diagrama()}
@@ -160,28 +184,34 @@ export class ArquiteturaPage extends BaseComponent {
 
 function diagrama() {
   return `
-    <pre class="small bg-body-tertiary p-3 rounded mb-3" style="white-space: pre-wrap;">Front (este app) --HTTP--> Java (gestor-ativos-brutos) --HTTP--> BRAPI
-                                      |                         (cotacao, historico)
+    <pre class="small bg-body-tertiary p-3 rounded mb-3" style="white-space: pre-wrap;">Front (este app) --HTTP--> Java (gestor-ativos-brutos) --HTTP--> BRAPI (cotacao, historico)
+                                      |                    +--HTTP--> B3 (proventos, sem chave)
+                                      |                    +--HTTP--> Banco Central + IBGE (indices macro)
                                       v
                                 SQS (LocalStack)
                                       |
                                       v
-                          Python (gerar-insights) --grava--> MySQL
-                                                              ^  ^
+                          Python (gerar-insights) --grava--> MySQL <--- Flyway (mysql-migrations)
+                                                              ^  ^        aplica schema versionado
 CVM (dados abertos) --HTTP--> Python (etl-fundamentos-cvm) ---+  |
                               (lote semanal)                     |
                                                                  |
-                      Java le o MySQL e devolve pro Front --------+</pre>
+                      Java le o MySQL e devolve pro Front --------+
+
+gerar-insights tambem roda backtest.py e diario.py (paper trading): leem
+MySQL, nao chamam API nenhuma, e gravam evidencia de acerto contra a
+taxa-base em backtest_placar/sinal_resultado.</pre>
   `;
 }
 
 function caminhoDoDado() {
   const passos = [
     'Você cadastra um ticker na aba Gestão; o gestor grava em <code>ativo_monitorado</code>.',
-    'A cada 30s o agendador consulta a BRAPI e publica cotacao e historico em duas filas SQS.',
-    'O gerar-insights consome as filas, grava o snapshot e calcula Graham e o sinal tecnico.',
+    'A cada 30s o agendador consulta a BRAPI e publica cotacao e historico em duas filas SQS; 1x/dia consulta a B3 (proventos) e o BCB/IBGE (indices macro).',
+    'O gerar-insights consome as filas, grava o snapshot e calcula Graham (ajustado por juros), LPA normalizado e o sinal tecnico.',
     'Semanalmente o etl-fundamentos-cvm baixa as demonstracoes da CVM e grava os indicadores contabeis.',
     'O gestor le o MySQL, deriva P/L e P/VP com o preco mais recente e devolve tudo pronto.',
+    'Diariamente, backtest.py e diario.py medem a regra de producao contra a taxa-base, o CDI e a media da carteira, com proventos somados ao retorno.',
     'Este front so exibe.',
   ];
 
