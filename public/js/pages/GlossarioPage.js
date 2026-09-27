@@ -350,8 +350,44 @@ const GLOSSARIO = [
       {
         termo: 'Formula de Graham',
         definicao:
-          'Um calculo simples de preco justo criado por Benjamin Graham. A versao usada aqui e: preco justo = LPA x (8,5 + 2 x crescimento), onde 8,5 seria o multiplo de uma empresa que nao cresce.',
-        onde: 'Rodamos tres cenarios de crescimento: 0%, 3% e 5%.',
+          'Um calculo de preco justo criado por Benjamin Graham. A versao original (1962): preco justo = LPA x (8,5 + 2 x crescimento). A versao revisada (1974) multiplica isso por 4,4 / Y, onde Y e o rendimento de um titulo de referencia - sem esse ajuste, com juros de dois digitos como no Brasil, o preco justo sai inflado.',
+        onde: 'Usamos a versao ajustada: Y = Selic meta vigente. Tres cenarios de crescimento (0%, 3%, 5%). A versao sem ajuste (fator 1) continua calculada, mas so como referencia historica - nao decide a recomendacao.',
+      },
+      {
+        termo: 'Y (taxa livre de risco no Graham ajustado)',
+        definicao:
+          'O rendimento de referencia que divide o fator 4,4 na formula revisada de Graham. Quanto maior Y, menor o preco justo calculado - juros altos exigem desconto maior pra compensar o custo de oportunidade de nao deixar o dinheiro rendendo sem risco.',
+        onde: 'Selic meta vigente no dia da analise (indice_macro, codigo SELIC). Sem Selic disponivel no cache, o insight sai SEM_DADOS em vez de usar a formula sem ajuste escondida.',
+      },
+      {
+        termo: 'Graham Number',
+        definicao:
+          'Teto classico de Graham pro "investidor defensivo": raiz quadrada de 22,5 x LPA x VPA. Equivale a aceitar, no maximo, P/L 15 combinado com P/VP 1,5 ao mesmo tempo - nao usa juros, e um criterio patrimonial separado do preco justo.',
+        onde: 'Segunda trava de COMPRA_FORTE: mesmo com margem de seguranca e earnings yield altos, se o preco passa do Graham Number (barato pelo lucro, caro pelo patrimonio), a recomendacao e rebaixada pra COMPRA_MODERADA.',
+      },
+      {
+        termo: 'LPA normalizado',
+        definicao:
+          'Em vez do lucro por acao de um unico exercicio (que pode estar no pico de um ciclo), usa-se o menor valor entre o LPA atual e a media dos ultimos 3 a 5 anos entregues a CVM.',
+        onde: 'Evita que uma empresa ciclica (banco, commodity) pareca "barata" so porque o lucro do ano esta anormalmente alto.',
+      },
+      {
+        termo: 'Faixa neutra (de venda)',
+        definicao:
+          'Intervalo de margem de seguranca negativa que ainda nao justifica VENDA_VALUATION - hoje, entre -15% e 0%. Abaixo disso e venda; dentro da faixa, o sistema classifica como MANTER.',
+        onde: 'Sem faixa neutra, qualquer margem negativa virava "venda" e quase toda empresa de crescimento saia como venda, mesmo sendo so um pouco cara.',
+      },
+      {
+        termo: 'Versao da regra',
+        definicao:
+          'Identificador (formato AAAA.MM.DD-N) que muda toda vez que um limiar ou formula da recomendacao muda para a mesma entrada. Existe pra sinais de regras diferentes nunca caırem no mesmo placar de acerto.',
+        onde: 'Gravado em todo insight e no diario de sinais. Comparar regras (v1 vs. v2) so faz sentido separando por essa versao.',
+      },
+      {
+        termo: 'Point-in-time (data de entrega)',
+        definicao:
+          'Usar, numa simulacao do passado, so a informacao que ja era publica naquela data - nao o balanco "do periodo", mas a data em que ele de fato foi entregue e ficou disponivel pro mercado (a CVM chama isso de DT_RECEB).',
+        onde: 'Sem isso, o backtest usaria lucro que ninguem conhecia na epoca (look-ahead bias) - o balanco de um exercicio pode demorar meses para ser publicado.',
       },
       {
         termo: 'Margem de seguranca',
