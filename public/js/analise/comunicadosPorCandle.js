@@ -26,6 +26,16 @@ export function agruparPorCandle(candles, comunicados) {
     const dia = candle.dataIso;
     const anterior = i > 0 ? candles[i - 1].dataIso : null;
 
+    // Vela semanal ou mensal (dataFim depois do primeiro pregao): o que foi
+    // entregue do inicio dela ate o inicio da proxima pertence a ela - sem
+    // isso, o documento da semana iria parar na vela seguinte.
+    if (candle.dataFim && candle.dataFim !== dia) {
+      const proxima = i + 1 < candles.length ? candles[i + 1].dataIso : '9999-12-31';
+      const dentro = ordenados.filter((c) => c.dataEntrega >= dia && c.dataEntrega < proxima);
+      if (dentro.length) grupos.set(dia, { dataIso: dia, anteriorIso: anterior, noDia: dentro, desdeAnterior: [] });
+      return;
+    }
+
     const noDia = ordenados.filter((c) => c.dataEntrega === dia);
     const desdeAnterior = anterior
       ? ordenados.filter((c) => c.dataEntrega >= anterior && c.dataEntrega < dia)

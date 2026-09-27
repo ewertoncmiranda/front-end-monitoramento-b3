@@ -6,6 +6,14 @@ import {
   extrairCandles,
 } from '../api/historicoApi.js';
 import { listarAtivosMonitorados } from '../api/ativosMonitoradosApi.js';
+import {
+  INTERVALOS,
+  RANGES_DO_BANCO,
+  buscarPregoes,
+  inicioDoRange,
+  rangeDoBanco,
+  velasDoBanco,
+} from '../api/pregoesApi.js';
 import { buscarComunicadosDoPeriodo } from '../api/comunicadosApi.js';
 import {
   agruparPorCandle,
@@ -24,7 +32,12 @@ const RANGE_PADRAO = '1mo';
 const BASE_PADRAO = 'ajustado';
 
 // Unica responsabilidade: orquestrar a aba de candles - escolher ativo, range
-// e base de preco, e alimentar o grafico e o painel de padroes. Nao decide
+// e base de preco, e alimentar o grafico e o painel de padroes.
+//
+// Duas fontes, pelo periodo: ate 3 meses, a BRAPI ao vivo (com preco ajustado
+// por proventos); de 6 meses a "desde 2016", o banco (/ativos/{s}/pregoes -
+// COTAHIST da B3, preco bruto, velas por dia, semana ou mes, com os
+// desdobramentos marcados). Nao decide
 // "quantos candles bastam pra desenhar" (isso e do CandleChart) nem detecta
 // padrao (isso e do PainelPadroes).
 //
@@ -44,8 +57,8 @@ export class CandlesPage extends BaseComponent {
     return `
       <h4 class="mb-1">Velas (candles)</h4>
       <p class="text-muted small">
-        Gráfico de velas com o histórico diário de abertura, máxima, mínima e fechamento já
-        coletado pelo ecossistema. Ative os padrões no painel lateral (abaixo do gráfico, no
+        Gráfico de velas com abertura, máxima, mínima e fechamento: até 3 meses pela BRAPI, e de
+        6 meses a desde 2016 pelo preço oficial da B3, em velas de dia, semana ou mês. Ative os padrões no painel lateral (abaixo do gráfico, no
         celular); o significado de cada um está em <a href="#/padroes">Padrões e armadilhas</a>.
         Clique numa vela para ver os comunicados oficiais da CVM daquele dia.
       </p>
@@ -78,6 +91,8 @@ export class CandlesPage extends BaseComponent {
     this._simbolo = null;
     this._range = RANGE_PADRAO;
     this._base = BASE_PADRAO;
+    this._intervalo = 'dia';
+    this._pregoes = null;
     this._candles = [];
     this._comunicados = null;
     this._dataAberta = null;
@@ -110,6 +125,14 @@ export class CandlesPage extends BaseComponent {
       const botaoRange = evento.target.closest('[data-range]');
       if (botaoRange && botaoRange.dataset.range !== this._range) {
         this._range = botaoRange.dataset.range;
+        const doBanco = rangeDoBanco(this._range);
+        this._intervalo = doBanco ? doBanco.intervalo : 'dia';
+        this.carregar();
+        return;
+      }
+      const botaoIntervalo = evento.target.closest('[data-intervalo]');
+      if (botaoIntervalo && botaoIntervalo.dataset.intervalo !== this._intervalo) {
+        this._intervalo = botaoIntervalo.dataset.intervalo;
         this.carregar();
       }
     });
@@ -136,8 +159,7 @@ export class CandlesPage extends BaseComponent {
 
     let candles;
     try {
-      const historico = await buscarHistorico(this._simbolo, { range: this._range });
-      candles = comBase(extrairCandles(historico), this._base);
+      ({ candles, pregoes: this._pregoes } = await this.buscarVelas(this._simbolo));
     } catch (e) {
       areaGrafico.innerHTML = '';
       erro.innerHTML = `<status-alert mensagem="${e.message}" variante="danger"></status-alert>`;
@@ -162,6 +184,22 @@ export class CandlesPage extends BaseComponent {
     this._candles = candles;
     this.carregarComunicados(grafico, candles);
     this.carregarCarteira(painel);
+  }
+
+  /**
+   * Velas do ativo no periodo e intervalo escolhidos, da fonte certa. Devolve
+   * tambem a resposta do banco (resumo e saltos) quando e ele a fonte.
+   */
+  async buscarVelas(simbolo) {
+    if (rangeDoBanco(this._range)) {
+      const pregoes = await buscarPregoes(simbolo, {
+        de: inicioDoRange(this._range),
+        intervalo: this._intervalo,
+      });
+      return { candles: velasDoBanco(pregoes), pregoes };
+    }
+    const historico = await buscarHistorico(simbolo, { range: this._range });
+    return { candles: comBase(extrairCandles(historico), this._base), pregoes: null };
   }
 
   /**
@@ -255,8 +293,8 @@ export class CandlesPage extends BaseComponent {
    * extra, nao pode atrasar nem derrubar a visao principal.
    */
   async carregarCarteira(painel) {
-    const mesmoContexto =
-      this._carteiraCache && this._carteiraRange === this._range && this._carteiraBase === this._base;
+    const contexto = `${this._range}|${this._base}|${this._intervalo}`;
+    const mesmoContexto = this._carteiraCache && this._carteiraContexto === contexto;
 
     if (mesmoContexto) {
       painel.setCarteira(this._carteiraCache);
@@ -273,8 +311,8 @@ export class CandlesPage extends BaseComponent {
     const series = await Promise.all(
       (ativos || []).map(async (a) => {
         try {
-          const historico = await buscarHistorico(a.simbolo, { range: this._range });
-          return { simbolo: a.simbolo, candles: comBase(extrairCandles(historico), this._base) };
+          const { candles } = await this.buscarVelas(a.simbolo);
+          return { simbolo: a.simbolo, candles };
         } catch {
           return null;
         }
@@ -282,8 +320,7 @@ export class CandlesPage extends BaseComponent {
     );
 
     this._carteiraCache = series.filter((s) => s && s.candles.length > 0);
-    this._carteiraRange = this._range;
-    this._carteiraBase = this._base;
+    this._carteiraContexto = contexto;
     painel.setCarteira(this._carteiraCache);
   }
 
@@ -295,24 +332,31 @@ export class CandlesPage extends BaseComponent {
     return `
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">
-          ${this._simbolo} — ${rotuloRange(this._range)}
-          <span class="text-muted fw-normal">(${candles.length} candle${candles.length === 1 ? '' : 's'})</span>
+          ${escaparHtml(this._pregoes ? this._pregoes.simbolo : this._simbolo)} — ${rotuloRange(this._range)}
+          <span class="text-muted fw-normal">(${candles.length} vela${candles.length === 1 ? '' : 's'}${this._pregoes ? ` de ${rotuloIntervalo(this._intervalo).toLowerCase()}` : ''})</span>
         </h6>
         <div class="d-flex align-items-center gap-3 flex-wrap">
-          <div class="btn-group" role="group" aria-label="Período do gráfico">
-            ${RANGES_DISPONIVEIS.map(
+          <div class="btn-group flex-wrap" role="group" aria-label="Período do gráfico">
+            ${[...RANGES_DISPONIVEIS, ...RANGES_DO_BANCO].map(
               (r) =>
                 `<button type="button" class="btn btn-outline-primary btn-sm ${r.valor === this._range ? 'active' : ''}" data-range="${r.valor}">${r.rotulo}</button>`,
             ).join('')}
           </div>
+          ${this._pregoes ? `
+          <div class="btn-group" role="group" aria-label="Intervalo de cada vela">
+            ${INTERVALOS.map(
+              (i) =>
+                `<button type="button" class="btn btn-outline-secondary btn-sm ${i.valor === this._intervalo ? 'active' : ''}" data-intervalo="${i.valor}">${i.rotulo}</button>`,
+            ).join('')}
+          </div>` : `
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" role="switch" id="base-preco"
                    ${this._base === 'ajustado' ? 'checked' : ''}>
             <label class="form-check-label small" for="base-preco">Preço ajustado</label>
-          </div>
+          </div>`}
         </div>
       </div>
-      ${this.avisoBase(ajustados, candles.length)}
+      ${this._pregoes ? this.avisoBanco(this._pregoes) : this.avisoBase(ajustados, candles.length)}
       <p class="small text-muted mb-1">
         Clique numa vela para ver os comunicados da CVM do dia.
         <span class="text-danger" aria-hidden="true">●</span> fato relevante
@@ -320,6 +364,38 @@ export class CandlesPage extends BaseComponent {
       </p>
       <candle-chart></candle-chart>
     `;
+  }
+
+  /**
+   * Resumo do periodo (abertura -> fechamento, extremos com data) e os
+   * saltos de desdobramento/grupamento: no preco bruto eles viram degraus
+   * falsos, e quem olha o grafico precisa saber onde estao.
+   */
+  avisoBanco(pregoes) {
+    const r = pregoes.resumo;
+    if (!r || !r.pregoes) {
+      return '<p class="small text-warning mb-1 mt-1">Sem pregões no banco para este período.</p>';
+    }
+    const reais = (v) => `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
+    const pct = (v) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(1).replace('.', ',')}%`;
+    const antigos = pregoes.codigos.length > 1
+      ? ` Série emendada com o código antigo (${pregoes.codigos.slice(1).map(escaparHtml).join(', ')}).`
+      : '';
+    const saltos = pregoes.saltos.length
+      ? `<p class="small text-danger mb-1">
+          <strong>${pregoes.saltos.length} salto(s) de desdobramento/grupamento</strong> — degraus no preço
+          bruto, não movimento de mercado: ${pregoes.saltos.map((s) => `${formatarData(s.data)} (${pct(s.variacao)})`).join(', ')}.
+          Variações que atravessam essas datas não valem.
+        </p>`
+      : '';
+    return `
+      <p class="small text-muted mb-1 mt-1">
+        ${formatarData(r.primeiroPregao)} a ${formatarData(r.ultimoPregao)} · ${r.pregoes} pregões ·
+        abriu a ${reais(r.abertura)} e fechou a ${reais(r.fechamento)} (${pct(r.variacao)}) ·
+        máxima ${reais(r.maxima)} em ${formatarData(r.dataMaxima)} · mínima ${reais(r.minima)} em ${formatarData(r.dataMinima)}.
+      </p>
+      ${saltos}
+      <p class="small text-muted mb-1">Preço bruto oficial da B3 (COTAHIST), sem proventos.${antigos}</p>`;
   }
 
   /**
@@ -346,7 +422,11 @@ export class CandlesPage extends BaseComponent {
 }
 
 function rotuloRange(valor) {
-  return RANGES_DISPONIVEIS.find((r) => r.valor === valor)?.rotulo || valor;
+  return [...RANGES_DISPONIVEIS, ...RANGES_DO_BANCO].find((r) => r.valor === valor)?.rotulo || valor;
+}
+
+function rotuloIntervalo(valor) {
+  return { dia: 'Dia', semana: 'Semana', mes: 'Mês' }[valor] || valor;
 }
 
 customElements.define('candles-page', CandlesPage);
