@@ -10,7 +10,7 @@ import '../pages/ArquiteturaPage.js';
 import '../pages/PadroesPage.js';
 import '../pages/GlossarioPage.js';
 
-const secoes = { cursos: 'Cursos', trilhas: 'Planos de estudo', conhecimento: 'Conhecimento', orientacoes: 'Orientações', materiais: 'Material didático', referencia: 'Referência' };
+const secoes = { formacoes: 'Formações', conhecimento: 'Conhecimento', orientacoes: 'Orientações', materiais: 'Material didático', referencia: 'Referência' };
 
 export class EstudosPage extends BaseComponent {
   constructor() {
@@ -18,7 +18,8 @@ export class EstudosPage extends BaseComponent {
     let armazenamento;
     try { armazenamento = window.localStorage; } catch { /* O estudo funciona sem persistência. */ }
     this.progresso = new ProgressoEstudos(armazenamento, [...niveis, ...apimec].map(n => n.id));
-    this.secao = 'cursos';
+    this.secao = 'formacoes';
+    this.visaoFormacao = 'planos';
     this.cursoAberto = null;
     this.percurso = 'formacao';
     this.subReferencia = 'formulas';
@@ -54,6 +55,13 @@ export class EstudosPage extends BaseComponent {
         this.querySelector('#estudos-busca').value = '';
         this.renderConteudo();
       }
+      const visao = evento.target.closest('[data-formacao-visao]');
+      if (visao) {
+        this.visaoFormacao = visao.dataset.formacaoVisao;
+        this.cursoAberto = null;
+        this.querySelector('#estudos-busca').value = '';
+        this.renderConteudo();
+      }
       const curso = evento.target.closest('[data-abrir-curso]');
       if (curso) {
         this.cursoAberto = curso.dataset.abrirCurso;
@@ -86,6 +94,7 @@ export class EstudosPage extends BaseComponent {
       }
     };
     this.onchange = evento => {
+      if (evento.target.matches('[data-curso-filtro]')) { this.filtrar(); return; }
       if (!evento.target.matches('[data-concluir]')) return;
       const { concluir: id } = evento.target.dataset;
       this.progresso.concluir(id, evento.target.checked);
@@ -108,20 +117,28 @@ export class EstudosPage extends BaseComponent {
   idsPercurso() { return (this.percurso === 'apimec' ? apimec : niveis).map(n => n.id); }
 
   atualizarSalvamento() {
+    if (this.secao === 'formacoes' && (this.visaoFormacao === 'biblioteca' || this.cursoAberto)) {
+      this.querySelector('#estudos-salvamento').textContent = 'Cursos documentais: nenhuma conclusão ou progresso é registrado.';
+      return;
+    }
     this.querySelector('#estudos-salvamento').textContent = this.progresso.persistente
       ? 'Progresso salvo apenas neste navegador. Não sincroniza entre dispositivos.'
       : 'Armazenamento indisponível: progresso mantido apenas enquanto esta página estiver aberta.';
   }
 
   renderConteudo() {
-    const renderizadores = { cursos: () => this.cursoAberto ? renderCurso(this.cursoAberto) : renderCatalogoCursos(), trilhas: () => renderTrilhas(this.progresso, this.percurso), conhecimento: renderConhecimento, orientacoes: renderOrientacoes, materiais: renderMateriais, referencia: () => renderReferencia(this.subReferencia) };
+    const renderFormacoes = () => `<div class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Escolher visão das formações">
+      <button class="btn ${this.visaoFormacao === 'planos' ? 'btn-primary' : 'btn-outline-primary'}" data-formacao-visao="planos" aria-pressed="${this.visaoFormacao === 'planos'}">Planos de estudo</button>
+      <button class="btn ${this.visaoFormacao === 'biblioteca' ? 'btn-primary' : 'btn-outline-primary'}" data-formacao-visao="biblioteca" aria-pressed="${this.visaoFormacao === 'biblioteca'}">Biblioteca de cursos</button>
+    </div>${this.cursoAberto ? renderCurso(this.cursoAberto) : this.visaoFormacao === 'planos' ? renderTrilhas(this.progresso, this.percurso) : renderCatalogoCursos()}`;
+    const renderizadores = { formacoes: renderFormacoes, conhecimento: renderConhecimento, orientacoes: renderOrientacoes, materiais: renderMateriais, referencia: () => renderReferencia(this.subReferencia) };
     this.querySelector('#estudos-conteudo').innerHTML = renderizadores[this.secao]();
     this.atualizarSalvamento();
     this.filtrar();
   }
 
   filtrar() {
-    if (this.secao === 'referencia' || (this.secao === 'cursos' && this.cursoAberto)) {
+    if (this.secao === 'referencia' || (this.secao === 'formacoes' && this.cursoAberto)) {
       // Cada pagina embutida em Referencia tem sua propria busca interna
       // (ex.: o Glossario ja filtra os proprios verbetes) - a busca global
       // de Estudos nao se aplica aqui.
@@ -131,14 +148,19 @@ export class EstudosPage extends BaseComponent {
     }
 
     const termo = normalizar(this.querySelector('#estudos-busca').value.trim());
+    const nivel = this.querySelector('[data-curso-filtro="nivel"]')?.value || '';
+    const tipo = this.querySelector('[data-curso-filtro="tipo"]')?.value || '';
     let visiveis = 0;
     this.querySelectorAll('[data-estudo-busca]').forEach(el => {
-      const combina = !termo || el.dataset.estudoBusca.includes(termo);
+      const combinaTexto = !termo || el.dataset.estudoBusca.includes(termo);
+      const combinaNivel = !nivel || !el.matches('[data-curso-card]') || el.dataset.cursoNivel === nivel;
+      const combinaTipo = !tipo || !el.matches('[data-curso-card]') || el.dataset.cursoTipo === tipo;
+      const combina = combinaTexto && combinaNivel && combinaTipo;
       el.classList.toggle('d-none', !combina);
       if (combina) visiveis++;
     });
     this.querySelector('#estudos-vazio').classList.toggle('d-none', visiveis > 0);
-    this.querySelector('#estudos-contagem').textContent = termo ? `${visiveis} resultado(s) nesta seção` : '';
+    this.querySelector('#estudos-contagem').textContent = termo || nivel || tipo ? `${visiveis} resultado(s) nesta seção` : '';
   }
 }
 

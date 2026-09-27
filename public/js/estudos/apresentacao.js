@@ -1,5 +1,7 @@
 // Unica responsabilidade: renderizar o catálogo de estudos em componentes Bootstrap.
 import { niveis, apimec, conhecimentos, orientacoes, exercicios, fontes, fichaLaboratorio, recursosSistema, rotulosRotas } from './conteudo.js';
+import { cursos, obterCurso } from './cursos.js';
+import { cursosPorEtapa, cursosPorEtapaApimec } from './planosCursos.js';
 import { escapar, normalizar } from './texto.js';
 
 const lista = itens => `<ul class="mb-3">${itens.map(item => `<li class="mb-2">${escapar(item)}</li>`).join('')}</ul>`;
@@ -7,6 +9,12 @@ const atalhos = rotas => `<div class="d-flex flex-wrap gap-2">${rotas.map(rota =
 const linksFontes = ids => `<div class="d-flex flex-wrap gap-3 mt-3">${ids.map(id => { const fonte = fontes.find(f => f.id === id); return `<a href="${fonte.url}" target="_blank" rel="noopener noreferrer">${escapar(fonte.titulo)} ↗<span class="visually-hidden"> (nova aba)</span></a>`; }).join('')}</div>`;
 const pesquisavel = dado => `data-estudo-busca="${escapar(normalizar(JSON.stringify(dado)))}"`;
 const conclusao = (id, progresso) => `<div class="form-check border-top pt-3 mt-3"><input class="form-check-input" type="checkbox" id="concluir-${id}" data-concluir="${id}" ${progresso.concluidos.has(id) ? 'checked' : ''}><label class="form-check-label" for="concluir-${id}">Concluí a entrega e revisei o critério</label></div>`;
+const cursosDaEtapa = (id, percurso) => (percurso === 'apimec' ? cursosPorEtapaApimec : cursosPorEtapa)[id]?.map(obterCurso).filter(Boolean) || [];
+const renderCursosDaEtapa = (id, percurso) => {
+  const relacionados = cursosDaEtapa(id, percurso);
+  if (!relacionados.length) return '';
+  return `<div class="border-top pt-3 mt-3"><h4 class="h6">Cursos recomendados para esta etapa</h4><p class="small text-secondary">A ordem acompanha as competências do plano; use as obras como leitura guiada e consulte as páginas indicadas em cada aula.</p><div class="row g-2">${relacionados.map(curso => `<div class="col-12 col-lg-6"><button class="btn btn-outline-primary text-start w-100 h-100" data-abrir-curso="${curso.id}"><span class="d-block fw-semibold">${escapar(curso.titulo)}</span><span class="d-block small opacity-75">${escapar(curso.nivel)} · ${curso.paginas} páginas</span></button></div>`).join('')}</div></div>`;
+};
 
 export function renderTrilhas(progresso, percurso) {
   const ids = (percurso === 'apimec' ? apimec : niveis).map(n => n.id);
@@ -27,11 +35,12 @@ export function renderTrilhas(progresso, percurso) {
   </div></div>
   <p class="small text-secondary">${percurso === 'formacao' ? 'Avance quando conseguir demonstrar a competência. Os prazos não garantem domínio ou rentabilidade.' : 'CB + CG1 → CNPI · CB + CT1 → CNPI-T · CB + CG1 + CT1 → CNPI-P. Confira o manual vigente antes da inscrição.'}</p>
   ${percurso === 'apimec' ? `<p class="small text-secondary">Base pública consultada em 26/09/2026; não inclui áreas restritas nem extração integral do site. Certificação e credenciamento são etapas distintas.</p>${linksFontes(['cnpi', 'manual'])}` : ''}
-  <div class="vstack gap-3 mt-3">${(percurso === 'formacao' ? niveis : apimec).map((n, i) => `<details class="card shadow-sm" id="etapa-${n.id}" ${pesquisavel(n)}>
+  <div class="vstack gap-3 mt-3">${(percurso === 'formacao' ? niveis : apimec).map((n, i) => `<details class="card shadow-sm" id="etapa-${n.id}" ${pesquisavel({ ...n, cursos: cursosDaEtapa(n.id, percurso) })}>
     <summary class="card-header bg-white p-3"><span class="badge bg-primary-subtle text-primary me-2">${String(i + 1).padStart(2, '0')}</span><strong>${escapar(n.titulo)}</strong><span class="text-secondary ms-2 small">${n.semanas ? `${n.semanas} semanas · ${n.semanas * 8} h` : n.periodo}</span><span class="badge text-bg-success ms-2 ${progresso.concluidos.has(n.id) ? '' : 'd-none'}" data-selo="${n.id}">Concluído</span>${n.foco ? `<span class="d-block text-secondary small mt-2">${n.foco}</span>` : ''}</summary>
     <div class="card-body p-4">${n.pergunta ? `<h3 class="h5 mb-3">${escapar(n.pergunta)}</h3><h4 class="h6">O que estudar</h4>${lista(n.topicos)}<div class="bg-light rounded p-3 mb-3"><h4 class="h6">Laboratório no sistema</h4><p class="mb-0">${escapar(n.pratica)}</p></div>` : `<p>${escapar(n.descricao)}</p>`}
     <h4 class="h6">Sua entrega</h4><p>${escapar(n.entrega)}</p>
     ${n.criterio ? `<h4 class="h6">Critério para avançar</h4><p>${escapar(n.criterio)}</p>${atalhos(n.rotas)}` : linksFontes(n.fontes)}
+    ${renderCursosDaEtapa(n.id, percurso)}
     ${conclusao(n.id, progresso)}</div></details>`).join('')}</div>`;
 }
 

@@ -1,0 +1,42 @@
+export const TIPOS_CURSOS = {
+  fundamentos: 'Fundamentos do mercado',
+  fundamentalista: 'Análise fundamentalista',
+  macro: 'Macroeconomia e juros',
+  derivativos: 'Derivativos e risco',
+  quantitativo: 'Métodos quantitativos',
+  microestrutura: 'Microestrutura e trading',
+};
+
+const POR_CURSO = {
+  'historia-mercado-capitais': 'fundamentos',
+  'atualidades-mercado-financeiro': 'fundamentos',
+  'pessoa-fisica-b3': 'fundamentos',
+  'analise-empresas-vidal': 'fundamentalista',
+  'fundamentos-analise-fundamentalista': 'fundamentalista',
+  'value-investing-ibrx100': 'fundamentalista',
+  'fundamentalista-neoenergia': 'fundamentalista',
+  'mercados-financeiros-ufba': 'fundamentos',
+  'economia-financas-cpa10': 'fundamentos',
+  'metodos-quantitativos-financas': 'quantitativo',
+  'sustentabilidade-divida-publica': 'macro',
+  'regras-fiscais-divida-brasil': 'macro',
+  'derivativos-valor-empresas': 'derivativos',
+  'derivativos-conceitos-contabilizacao': 'derivativos',
+  'juros-acoes-brasil': 'macro',
+  'mercado-futuro-taxas-juros': 'derivativos',
+  'regimes-inflacionarios-ciclos': 'macro',
+  'leitura-curvas-expectativas': 'macro',
+  'estrategias-investimento-iniciantes': 'fundamentos',
+  'microestrutura-informacao-privada': 'microestrutura',
+  'politica-fiscal-divida-liquidez': 'macro',
+  'cambio-derivativos-cambiais': 'derivativos',
+  'opcoes-capital-ficticio': 'derivativos',
+  'inovacoes-financeiras-juros': 'macro',
+  'evidenciacao-derivativos': 'derivativos',
+  'testes-regressao-multipla': 'quantitativo',
+  'manual-curvas-b3': 'macro',
+  'politica-metodologia-risco': 'derivativos',
+  'previsao-curva-juros': 'quantitativo',
+};
+
+export const tipoDoCurso = curso => POR_CURSO[curso.id] || 'fundamentos';
