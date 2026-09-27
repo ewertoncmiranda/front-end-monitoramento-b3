@@ -4,6 +4,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cursos, obterCurso } from '../public/js/estudos/cursos.js';
 import { glossarioAcademico } from '../public/js/estudos/glossarioAcademico.js';
+import { cursosPorEtapa, cursosPorEtapaApimec } from '../public/js/estudos/planosCursos.js';
+import { TIPOS_CURSOS, tipoDoCurso } from '../public/js/estudos/tiposCursos.js';
+import { renderCatalogoCursos } from '../public/js/estudos/apresentacaoCursos.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ids = new Set(cursos.map(curso => curso.id));
@@ -16,6 +19,7 @@ for (const curso of cursos) {
   assert.ok(curso.titulo && curso.descricao && curso.autoria, `${curso.id} deve documentar identidade e descrição.`);
   assert.ok(curso.modulos.length > 0, `${curso.id} deve ter módulos.`);
   assert.ok(fs.existsSync(path.join(raiz, 'public', curso.pdf)), `PDF ausente: ${curso.pdf}`);
+  assert.ok(TIPOS_CURSOS[tipoDoCurso(curso)], `${curso.id} deve possuir um tipo editorial válido.`);
 
   for (const modulo of curso.modulos) {
     assert.ok(modulo.titulo && modulo.aulas.length > 0, `${curso.id} contém módulo incompleto.`);
@@ -27,6 +31,15 @@ for (const curso of cursos) {
     }
   }
 }
+
+const idsPlanoProgressivo = new Set(Object.values(cursosPorEtapa).flat());
+for (const curso of cursos) assert.ok(idsPlanoProgressivo.has(curso.id), `${curso.id} não foi associado ao plano progressivo.`);
+for (const id of Object.values(cursosPorEtapaApimec).flat()) assert.ok(ids.has(id), `Curso inexistente no plano APIMEC: ${id}`);
+
+const catalogo = renderCatalogoCursos();
+assert.match(catalogo, /data-curso-filtro="nivel"/, 'O catálogo deve filtrar por dificuldade.');
+assert.match(catalogo, /data-curso-filtro="tipo"/, 'O catálogo deve filtrar por tipo.');
+assert.match(catalogo, /data-curso-card/, 'Os cards devem expor atributos para filtragem combinada.');
 
 const termos = new Set(glossarioAcademico.flatMap(grupo => grupo.termos.map(item => item.termo)));
 for (const termo of ['ETTJ — Estrutura a Termo da Taxa de Juros', 'Contrato futuro', 'VaR — Value at Risk', 'MQO — Mínimos Quadrados Ordinários', 'Microestrutura de mercado']) {
