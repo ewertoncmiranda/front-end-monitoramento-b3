@@ -15,7 +15,7 @@ import { normalizar } from '../estudos/texto.js';
 //      varia por setor - margem de 2% e otima pra supermercado e pessima pra
 //      software.
 
-const GLOSSARIO = [
+export const GLOSSARIO = [
   {
     id: 'mercado',
     titulo: 'Onde as acoes sao negociadas',
@@ -757,6 +757,12 @@ export class GlossarioPage extends BaseComponent {
     const busca = this.querySelector('#glossario-busca');
     const contador = this.querySelector('#glossario-contador');
     this.destacarPadraoDoLink();
+
+    // Chegando por `#/glossario?q=<termo>` (busca global do cabecalho):
+    // pre-preenche e dispara o mesmo filtro que a digitacao manual usaria.
+    const consulta = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const termoDaBusca = consulta.get('q');
+    if (termoDaBusca) busca.value = termoDaBusca;
 
     busca.addEventListener('input', () => {
       const termo = normalizar(busca.value.trim());
