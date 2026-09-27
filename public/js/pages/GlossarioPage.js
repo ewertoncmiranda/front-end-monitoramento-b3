@@ -390,6 +390,18 @@ const GLOSSARIO = [
         onde: 'Sem isso, o backtest usaria lucro que ninguem conhecia na epoca (look-ahead bias) - o balanco de um exercicio pode demorar meses para ser publicado.',
       },
       {
+        termo: 'Universo amplo (backtest)',
+        definicao:
+          'O conjunto de ativos testado no backtest, ampliado pra incluir empresas que ja saíram da bolsa (deslistadas) - nao so as monitoradas hoje. Testar so quem sobreviveu ate agora infla artificialmente o resultado (vies de sobrevivencia): empresa que quebrou nunca aparece como "erro" da regra.',
+        onde: 'Ainda nao implementado (TASK-51/infra#TASK-31): o backtest hoje usa `ativo_monitorado`, a carteira de hoje. O universo amplo viria do COTAHIST (quem foi negociado em cada data) cruzado com os balancos em cache, com liquidez minima no ano anterior.',
+      },
+      {
+        termo: 'Placar segmentado',
+        definicao:
+          'Separar, no resultado do backtest, as janelas que tiveram um ajuste aplicado (ex.: provento somado ao retorno) das que nao tiveram - em vez de misturar as duas no mesmo numero sem dizer quantas de cada.',
+        onde: 'Proventos (ISS-F7/infra#TASK-36): hoje o retorno ja soma provento quando ha dado (a partir de 27/09/2026), mas o placar nao diz quantas janelas foram ajustadas e quantas ficaram sem - falta essa contagem (TASK-56).',
+      },
+      {
         termo: 'Margem de seguranca',
         definicao:
           'Quanto o preco justo esta acima do preco de mercado, em %. Positiva sugere desconto; negativa, que esta caro. Graham defendia so comprar com margem folgada, porque a conta pode estar errada.',
