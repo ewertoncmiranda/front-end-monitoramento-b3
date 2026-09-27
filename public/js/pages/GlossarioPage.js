@@ -50,15 +50,31 @@ const GLOSSARIO = [
         onde: 'Cada linha da tabela de historico e um pregao.',
       },
       {
+        termo: 'COTAHIST',
+        sigla: 'Cotacoes Historicas (arquivo da B3)',
+        definicao:
+          'O arquivo oficial de series historicas de cotacoes publicado pela propria B3 - o registro definitivo do que foi negociado em cada pregao, para todos os instrumentos (acoes, opcoes, termo, fracionario), desde a decada de 1980 ate hoje. E a fonte "verdade absoluta" de preco no mercado brasileiro: quando BRAPI ou qualquer outra fonte secundaria diverge, o COTAHIST e quem desempata.',
+        exemplo:
+          'Formato texto de largura fixa (posicional, nao CSV/JSON) - cada linha tem campos em posicoes de caractere fixas: codigo BDI (tipo de mercado), ticker, nome resumido da empresa, preco de abertura/maximo/minimo/medio/ultimo, melhor oferta de compra/venda, quantidade de negocios, quantidade de titulos negociados, volume financeiro, entre outros. Distribuido em arquivos anuais (COTAHIST_A{ano}.ZIP, ~80-90 MB cada), tambem existe versao mensal e diaria. Download direto, sem chave nem cadastro: bvmf.bmfbovespa.com.br/InstDados/SerHist/.',
+        onde: 'Tabela cotacao_b3_diaria (mysql-migrations V6) - carregada a partir dos arquivos anuais desde 2016, usada pra checagem cruzada contra a BRAPI e como fonte de preco do backtest (o motor de avaliacao usa preco oficial, nao o da API de cotacao em tempo quase real).',
+        cuidado:
+          'O preco no COTAHIST e BRUTO (nao ajustado por proventos/desdobramentos) - um dividendo ou split aparece como salto no preco de um dia pro outro, sem ninguem ter vendido nada. Ajustar isso exige cruzar com a base de proventos/eventos corporativos separadamente (ver Preco ajustado e Provento neste glossario) - o arquivo em si nao devolve preco ja ajustado.',
+      },
+      {
         termo: 'Companhia aberta',
         definicao:
           'Empresa autorizada a vender acoes ao publico. Em troca, e obrigada por lei a publicar seus numeros - e essa obrigacao que torna este sistema possivel.',
       },
       {
         termo: 'CVM',
+        sigla: 'Comissao de Valores Mobiliarios',
         definicao:
-          'Comissao de Valores Mobiliarios, o orgao do governo que fiscaliza o mercado. Publica de graca tudo o que as empresas sao obrigadas a entregar.',
-        onde: 'Fonte de todos os fundamentos contabeis deste sistema.',
+          'Autarquia federal criada pela Lei 6.385/1976, vinculada ao Ministerio da Fazenda, responsavel por regular, fiscalizar e disciplinar o mercado de valores mobiliarios brasileiro (acoes, debentures, fundos, derivativos). Equivalente brasileiro da SEC americana. Missao legal: proteger o investidor, assegurar o funcionamento eficiente do mercado e garantir acesso a informacao adequada - e essa terceira obrigacao que torna este sistema possivel: toda companhia aberta e obrigada por lei a publicar seus numeros, e a CVM os disponibiliza de graca.',
+        exemplo:
+          'Poderes praticos: registra companhias abertas e ofertas publicas (IPO), edita normas (as "Instrucoes"/"Resolucoes CVM" - ex.: Resolucao CVM 20/2021, que rege a certificacao de analistas), investiga e pune infracoes (processo administrativo sancionador, que pode culminar em multa, inabilitacao ou ate esfera penal em casos de fraude/insider trading).',
+        onde: 'Fonte de todos os fundamentos contabeis deste sistema (via etl-fundamentos-cvm) e dos comunicados oficiais (aba Comunicados). Dois canais: o Portal de Dados Abertos (dados.cvm.gov.br, machine-readable, gratis, sem cadastro - o que este sistema consome) e o RAD/ENET (Rede de Atendimento Digital, onde a propria empresa protocola os documentos e o publico le em PDF).',
+        cuidado:
+          'A CVM e o orgao regulador - nao o mesmo que a B3 (a bolsa, empresa privada que opera o ambiente de negociacao) nem que o Banco Central (que regula o sistema financeiro/bancario e a politica monetaria). Confundir os tres e erro comum entre iniciantes.',
       },
       {
         termo: 'Acoes em tesouraria',
@@ -388,6 +404,18 @@ const GLOSSARIO = [
         definicao:
           'Usar, numa simulacao do passado, so a informacao que ja era publica naquela data - nao o balanco "do periodo", mas a data em que ele de fato foi entregue e ficou disponivel pro mercado (a CVM chama isso de DT_RECEB).',
         onde: 'Sem isso, o backtest usaria lucro que ninguem conhecia na epoca (look-ahead bias) - o balanco de um exercicio pode demorar meses para ser publicado.',
+      },
+      {
+        termo: 'Universo amplo (backtest)',
+        definicao:
+          'O conjunto de ativos testado no backtest, ampliado pra incluir empresas que ja saíram da bolsa (deslistadas) - nao so as monitoradas hoje. Testar so quem sobreviveu ate agora infla artificialmente o resultado (vies de sobrevivencia): empresa que quebrou nunca aparece como "erro" da regra.',
+        onde: 'Ainda nao implementado (TASK-51/infra#TASK-31): o backtest hoje usa `ativo_monitorado`, a carteira de hoje. O universo amplo viria do COTAHIST (quem foi negociado em cada data) cruzado com os balancos em cache, com liquidez minima no ano anterior.',
+      },
+      {
+        termo: 'Placar segmentado',
+        definicao:
+          'Separar, no resultado do backtest, as janelas que tiveram um ajuste aplicado (ex.: provento somado ao retorno) das que nao tiveram - em vez de misturar as duas no mesmo numero sem dizer quantas de cada.',
+        onde: 'Proventos (ISS-F7/infra#TASK-36): hoje o retorno ja soma provento quando ha dado (a partir de 27/09/2026), mas o placar nao diz quantas janelas foram ajustadas e quantas ficaram sem - falta essa contagem (TASK-56).',
       },
       {
         termo: 'Margem de seguranca',
