@@ -3,6 +3,7 @@
 import './components/AppHeader.js';
 import './components/BottomNav.js';
 import './pages/GestaoPage.js';
+import './pages/BasePage.js';
 import './pages/AtivosMonitoradosPage.js';
 import './pages/CandlesPage.js';
 import './pages/ComunicadosPage.js';

@@ -6,6 +6,7 @@
 // reescrever URLs - diferente de roteamento via History API.
 const rotas = {
   '#/gestao': 'gestao-page',
+  '#/base': 'base-page',
   '#/monitorados': 'ativos-monitorados-page',
   '#/candles': 'candles-page',
   '#/comunicados': 'comunicados-page',

@@ -63,6 +63,21 @@ export function renderReferencia(subSecao) {
   <${tag}></${tag}>`;
 }
 
+const SUBSECOES_CONHECIMENTO = { conceitos: 'Conceitos', orientacoes: 'Orientações', materiais: 'Material didático', referencia: 'Referência' };
+
+/**
+ * Fusao das antigas secoes top-level Conhecimento/Orientacoes/Material
+ * didatico/Referencia numa unica aba "Conhecimento" com sub-navegacao
+ * interna - mesmo padrao ja usado dentro de Referencia para Formulas/
+ * Arquitetura/Padroes/Glossario.
+ */
+export function renderConhecimentoHub(subConhecimento, subReferencia) {
+  const atual = SUBSECOES_CONHECIMENTO[subConhecimento] ? subConhecimento : 'conceitos';
+  const nav = `<div class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Escolher dentro de Conhecimento">${Object.entries(SUBSECOES_CONHECIMENTO).map(([id, nome]) => `<button class="btn ${id === atual ? 'btn-primary' : 'btn-outline-primary'}" data-subconhecimento="${id}" aria-pressed="${id === atual}">${nome}</button>`).join('')}</div>`;
+  const corpos = { conceitos: renderConhecimento, orientacoes: renderOrientacoes, materiais: renderMateriais, referencia: () => renderReferencia(subReferencia) };
+  return nav + corpos[atual]();
+}
+
 export function renderMateriais() {
   return `<h2 class="h4">Material didático e prática guiada</h2><p class="text-secondary">Exercícios, ficha de pesquisa e fontes para transformar leitura em entregas.</p>
   <div class="vstack gap-3 mb-4">${exercicios.map(e => `<details class="card" ${pesquisavel(e)}><summary class="card-header bg-white p-3"><span class="badge text-bg-light me-2">${e.nivel}</span><strong>${e.titulo}</strong></summary><div class="card-body p-4">${e.formula ? `<p class="bg-light rounded p-3 font-monospace text-break">${escapar(e.formula)}</p>` : ''}<ol>${e.passos.map(p => `<li class="mb-2">${escapar(p)}</li>`).join('')}</ol><p><strong>Entrega:</strong> ${escapar(e.entrega)}</p>${atalhos(e.rotas)}</div></details>`).join('')}</div>

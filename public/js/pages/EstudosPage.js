@@ -3,7 +3,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { niveis, apimec } from '../estudos/conteudo.js';
 import { ProgressoEstudos } from '../estudos/progresso.js';
 import { normalizar } from '../estudos/texto.js';
-import { renderTrilhas, renderConhecimento, renderOrientacoes, renderMateriais, renderReferencia } from '../estudos/apresentacao.js';
+import { renderTrilhas, renderConhecimentoHub } from '../estudos/apresentacao.js';
 import { renderCatalogoCursos, renderCurso, abrirPdf } from '../estudos/apresentacaoCursos.js';
 import '../pages/FormulasPage.js';
 import '../pages/ArquiteturaPage.js';
@@ -11,7 +11,7 @@ import '../pages/DesignDeCodigoPage.js';
 import '../pages/PadroesPage.js';
 import '../pages/GlossarioPage.js';
 
-const secoes = { formacoes: 'Formações', conhecimento: 'Conhecimento', orientacoes: 'Orientações', materiais: 'Material didático', referencia: 'Referência' };
+const secoes = { formacoes: 'Formações', conhecimento: 'Conhecimento' };
 
 export class EstudosPage extends BaseComponent {
   constructor() {
@@ -23,6 +23,7 @@ export class EstudosPage extends BaseComponent {
     this.visaoFormacao = 'planos';
     this.cursoAberto = null;
     this.percurso = 'formacao';
+    this.subConhecimento = 'conceitos';
     this.subReferencia = 'formulas';
   }
 
@@ -86,6 +87,12 @@ export class EstudosPage extends BaseComponent {
       if (percurso) { this.percurso = percurso.dataset.percurso; this.renderConteudo(); }
       const subref = evento.target.closest('[data-subref]');
       if (subref) { this.subReferencia = subref.dataset.subref; this.renderConteudo(); }
+      const subconhecimento = evento.target.closest('[data-subconhecimento]');
+      if (subconhecimento) {
+        this.subConhecimento = subconhecimento.dataset.subconhecimento;
+        this.querySelector('#estudos-busca').value = '';
+        this.renderConteudo();
+      }
       if (evento.target.closest('[data-continuar]')) {
         this.querySelector('#estudos-busca').value = '';
         this.filtrar();
@@ -132,14 +139,14 @@ export class EstudosPage extends BaseComponent {
       <button class="btn ${this.visaoFormacao === 'planos' ? 'btn-primary' : 'btn-outline-primary'}" data-formacao-visao="planos" aria-pressed="${this.visaoFormacao === 'planos'}">Planos de estudo</button>
       <button class="btn ${this.visaoFormacao === 'biblioteca' ? 'btn-primary' : 'btn-outline-primary'}" data-formacao-visao="biblioteca" aria-pressed="${this.visaoFormacao === 'biblioteca'}">Biblioteca de cursos</button>
     </div>${this.cursoAberto ? renderCurso(this.cursoAberto) : this.visaoFormacao === 'planos' ? renderTrilhas(this.progresso, this.percurso) : renderCatalogoCursos()}`;
-    const renderizadores = { formacoes: renderFormacoes, conhecimento: renderConhecimento, orientacoes: renderOrientacoes, materiais: renderMateriais, referencia: () => renderReferencia(this.subReferencia) };
+    const renderizadores = { formacoes: renderFormacoes, conhecimento: () => renderConhecimentoHub(this.subConhecimento, this.subReferencia) };
     this.querySelector('#estudos-conteudo').innerHTML = renderizadores[this.secao]();
     this.atualizarSalvamento();
     this.filtrar();
   }
 
   filtrar() {
-    if (this.secao === 'referencia' || (this.secao === 'formacoes' && this.cursoAberto)) {
+    if ((this.secao === 'conhecimento' && this.subConhecimento === 'referencia') || (this.secao === 'formacoes' && this.cursoAberto)) {
       // Cada pagina embutida em Referencia tem sua propria busca interna
       // (ex.: o Glossario ja filtra os proprios verbetes) - a busca global
       // de Estudos nao se aplica aqui.
