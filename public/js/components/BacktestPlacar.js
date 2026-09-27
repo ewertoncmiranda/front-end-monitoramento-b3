@@ -80,12 +80,27 @@ export class BacktestPlacar extends BaseComponent {
         ${renderTabela(dados.placar, 'CALIBRACAO', h, versoes)}
       </details>
       <p class="small text-muted mt-2 mb-1" style="white-space: pre-line">${escaparHtml(e.observacoes || '')}</p>
+      ${renderProventos(dados.placar)}
       <p class="small text-muted mb-1">Entre parênteses, o intervalo de 95%. Ele supõe janelas independentes;
         como os sinais são mensais com horizonte de até 6 meses e os ativos andam juntos, o intervalo real é
         mais largo. Trate "acima da base" como indício, não prova.</p>
       <p class="small text-muted mb-0">${escaparHtml(dados.aviso)}</p>
     `;
   }
+}
+
+/**
+ * Quanto do placar tem retorno com proventos (infra#TASK-36). A B3 devolve so
+ * os ~12 meses anteriores a cada consulta (coleta desde 2026-09-27): janela
+ * mais antiga sem ajuste e, quase sempre, falta de dado.
+ */
+function renderProventos(placar) {
+  const total = placar.reduce((s, l) => s + l.avaliados, 0);
+  const comProvento = placar.reduce((s, l) => s + (l.janelasComProvento || 0), 0);
+  const fracao = total ? ((comProvento / total) * 100).toFixed(1).replace('.', ',') : '0';
+  return `<p class="small text-muted mb-1">Proventos no retorno: ${comProvento} de ${total} janelas (${fracao}%).
+    A fonte (B3) só devolve os proventos dos ~12 meses anteriores à coleta; nas janelas mais antigas o
+    preço é bruto, e pagadoras de dividendo aparecem piores do que são.</p>`;
 }
 
 function cartao(valor, rotulo) {
@@ -128,7 +143,7 @@ function renderTabela(placar, periodo, h, versoes) {
             return `<tr>
               ${i === 0 ? `<td rowspan="${g.linhas.length}"><span class="badge ${CLASSE_DIRECAO[l.direcao]}">${escaparHtml(ROTULO[l.recomendacao] || l.recomendacao)}</span></td>` : ''}
               <td class="text-nowrap">${escaparHtml(nomeDaVersao(l.versaoRegra, versoes))}</td>
-              <td class="text-end">${l.avaliados}</td>
+              <td class="text-end" title="${l.janelasComProvento || 0} janela(s) com retorno ajustado por provento">${l.avaliados}${l.janelasComProvento ? `<div class="text-muted" style="font-size:.75em">${l.janelasComProvento} c/ provento</div>` : ''}</td>
               <td class="text-end text-nowrap">${formatarTaxaComIc(l.taxaAcerto, l.icAcerto)}</td>
               <td class="text-end text-muted">${formatarTaxa(l.taxaBase)}</td>
               <td><span class="badge ${leitura.classe}">${leitura.rotulo}</span></td>
