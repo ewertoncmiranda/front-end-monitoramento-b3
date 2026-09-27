@@ -18,7 +18,7 @@ import '../components/BacktestPlacar.js';
 // Estrutura declarativa, mesmo padrao de ArquiteturaPage e FormulasPage.
 
 const AVALIADO_EM = '26/09/2026';
-const ATUALIZADO_EM = '26/09/2026, com identidade dos ativos, backtest, saúde dos dados e rotinas';
+const ATUALIZADO_EM = '27/09/2026, com schema único versionado, testes de valuation/recomendação e a correção de Graham/LPA/faixa neutra (ISS-F1/F2/F3) já sendo medida no backtest e no diário';
 
 const NOTAS = [
   {
@@ -34,13 +34,14 @@ const NOTAS = [
   },
   {
     dimensao: 'Engenharia',
-    nota: 7,
+    nota: 8,
     meta: 8,
     porque:
-      'Arquitetura limpa, testes, idempotência e specs vivas. Em contrapartida, cinco serviços para um usuário é complexidade alta.',
+      'Subiu de 7: o schema do gestor deixou de ter três fontes de verdade (mysql-init, Hibernate, SQLAlchemy) — as 4 tabelas que só existiam por ddl-auto=update (candle_diario, indice_macro, perfil_empresa_cache, cotacao_atual) agora estão versionadas em migração, e o gestor roda em modo "validate" (falha ao subir em vez de divergir em silêncio). Valuation e recomendação ganharam teste pela primeira vez (74 testes verdes). Cinco serviços para um usuário continua sendo complexidade alta.',
     paraSubir: [
       'Vocabulário único de recomendações entre os serviços (INT-01).',
       'Contratos em JSON Schema com teste nos dois lados; testes rodando no CI de todos os repositórios.',
+      'Medir cobertura real de app/core/analysis (não só "tem teste").',
     ],
   },
   {
@@ -60,9 +61,10 @@ const NOTAS = [
     nota: 4,
     meta: 6,
     porque:
-      'Subiu de 3 porque agora é medida: backtest de 2017 a 2026 com o período de teste congelado. O resultado é modesto: as compras da v1 acertam poucos pontos acima da taxa-base no teste e não na calibração, ou seja, a vantagem ainda não é estável. A v2 (juros, lucro dos últimos 12 meses, faixa neutra) roda em sombra no diário e no backtest.',
+      'Continua em 4: o backtest e o diário medem corretamente a regra de produção atual (Selic, LPA normalizado, faixa neutra −15%, VERSAO_REGRA 2026.09.27-1) contra a taxa-base, e a v2 (CDI+IPCA, −30%) como candidata em sombra — mas os números de 26/09 (vantagem pequena e instável) ainda são da regra anterior a essa correção; precisam ser recalculados com a versão nova para dizer algo sobre ela.',
     paraSubir: [
-      'Uma regra que vença a taxa-base nos DOIS períodos, não só em um.',
+      'Rodar o backtest de novo com a regra corrigida (2026.09.27-1) e comparar contra a v1 antiga e a v2 sombra nos mesmos períodos.',
+      'Uma regra que vença a taxa-base nos DOIS períodos (calibração e teste), não só em um.',
       'Placar do diário com amostra mínima confirmando o backtest.',
       'Confiança calibrada: "80%" precisa acertar ~80% das vezes.',
     ],
@@ -93,6 +95,10 @@ const NOTAS = [
 ];
 
 const PROGRESSO = [
+  { data: '27/09', item: 'Schema único versionado: as 4 tabelas do gestor que só existiam via Hibernate ddl-auto=update (candle_diario, indice_macro, perfil_empresa_cache, cotacao_atual) ganharam migração; ddl-auto passou para "validate" (testado: app sobe limpo, agendador gravando normalmente).' },
+  { data: '27/09', item: 'Graham com Y = Selic meta (ISS-F1), LPA normalizado por 3–5 anos + Graham Number como segunda trava de COMPRA_FORTE (ISS-F2), faixa neutra de venda em −15% (ISS-F3) — corrigidos e chamados por FinancialAnalyzerService, o caminho que gera o insight real.' },
+  { data: '27/09', item: 'Testes novos para valuation.py e recommendation.py (nenhum existia antes) — inclui os dois casos de aceite do TASK-20. Suíte completa: 74 testes verdes.' },
+  { data: '27/09', item: 'Preço anterior/atual da cotação (Monitorados) e mais índices macro (IGP-M, dólar PTAX, IBC-Br, desemprego via IBGE/SIDRA) e manchetes por ticker (Google News) — telas do painel, não muda o motor de decisão.' },
   { data: '26/09', item: 'Identidade do ativo: um código canônico por empresa (ELET3→AXIA3, EMBR3→EMBJ3, JBSS3→JBSS32, MRFG3→MBRF3), CSNA3 e RAIZ4 com CNPJ. O cadastro converte código antigo sozinho.' },
   { data: '26/09', item: 'Point-in-time: todo balanço (2016–2025) com a data de entrega na CVM; lucro dos últimos 12 meses (TTM) carregado pela primeira vez.' },
   { data: '26/09', item: 'COTAHIST oficial 2016–2026 (~79 mil pregões, com os códigos antigos emendados) e checagem cruzada com a BRAPI.' },
@@ -137,9 +143,9 @@ const BLOQUEADORES = [
       'O backtest existe e o resultado é modesto: as compras batem a taxa-base por poucos pontos no teste e não na calibração. Vantagem que aparece num período e some no outro ainda não é vantagem.',
   },
   {
-    titulo: 'A regra oficial ainda é a v1',
+    titulo: 'Backtest ainda não rodou com a regra corrigida',
     texto:
-      'Graham sem juros, lucro de exercício fechado e "qualquer margem negativa é venda" continuam nos insights da tela. A v2 corrige os três, mas só vira oficial se o placar mostrar que é melhor.',
+      'Os três defeitos de valuation (ISS-F1/F2/F3) foram corrigidos em 27/09 e o backtest/diário já sabem medir a versão nova (VERSAO_REGRA muda a cada correção) — mas o último resultado publicado (26/09) é de antes da correção. Falta rodar de novo para saber se a regra corrigida de fato vence a taxa-base.',
   },
   {
     titulo: 'Preço sem proventos',
@@ -165,8 +171,11 @@ const MELHORIAS = [
   { item: 'Diário de sinais (paper trading)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Rotina ativa (dias úteis, 19h), agora com v1 e v2 lado a lado. Primeiros resultados ~21 pregões depois de 28/09.' },
   { item: 'Backtest walk-forward sem viés de futuro', impacto: 'Crítico', classe: 'text-bg-danger', status: 'feito', porque: 'COTAHIST + CVM pela data de entrega, 2017–2026, calibração até 2022. Roda toda sexta.' },
   { item: 'Mapa de tickers renomeados', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Tabela ativo_identidade; o cadastro e o ETL usam o código canônico.' },
-  { item: 'Graham com juros reais', impacto: 'Alto', classe: 'text-bg-warning', status: 'andamento', porque: 'Na v2, em sombra: 4,4 / CDI anualizado, crescimento nominal com IPCA.' },
-  { item: 'TTM no valuation e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'andamento', porque: 'Na v2, em sombra. Venda só abaixo de −30% de margem.' },
+  { item: 'Graham com juros reais', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção: 4,4 / Selic meta vigente. Backtest e diário já medem essa versão (VERSAO_REGRA); falta rodar de novo desde a correção.' },
+  { item: 'LPA normalizado e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção: LPA = mínimo entre atual e média de 3–5 anos da CVM; Graham Number como segunda trava; venda só abaixo de −15%.' },
+  { item: 'Schema único versionado (gestor)', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'ddl-auto de "update" para "validate"; as 4 tabelas que só existiam via Hibernate foram migradas. Testado ao vivo.' },
+  { item: 'Teste para valuation e recomendação', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Não existia nenhum antes de 27/09. tests/test_valuation.py e tests/test_recommendation.py, 74 testes verdes na suíte completa.' },
+  { item: 'Rerodar backtest com a regra corrigida', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'O último resultado publicado (26/09) mediu a regra anterior à correção de ISS-F1/F2/F3. A infraestrutura já sabe medir a nova (VERSAO_REGRA); falta só rodar.' },
   { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Próximo passo: proventos da base IPE ou dos eventos da B3.' },
   { item: 'Janela temporal na consolidação', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'Só as análises dos últimos 30 dias; sem nenhuma, a mais recente.' },
   { item: 'Checagem cruzada de preço', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'BRAPI contra o fechamento oficial do COTAHIST; acima de 1% aparece na saúde dos dados.' },
@@ -248,6 +257,15 @@ export class AvaliacaoPage extends BaseComponent {
 
       <div class="alert alert-secondary small">
         Esta avaliação é sobre o software e o método, não uma recomendação de investimento.
+      </div>
+
+      <div class="alert alert-success small">
+        <strong>Correção de 27/09.</strong> Uma avaliação anterior desta página chegou a apontar que o
+        backtest/diário mediam uma regra diferente da que gera o insight de produção. Não é verdade: conferido
+        <code>backtest.py</code> e <code>diario.py</code> por completo, os dois já medem a regra de produção
+        (<code>VERSAO_REGRA</code>, via <code>ValuationAnalyzer</code>/<code>RecommendationPolicy</code> — o
+        mesmo caminho do <code>FinancialAnalyzerService</code>) como linha principal, e a <code>regra_v2.py</code>
+        (CDI+IPCA, −30%) só como candidata alternativa em sombra, de propósito. Nada a reconciliar aqui.
       </div>
 
       ${secao('Nota por dimensão — e o que falta para subir', renderNotas())}

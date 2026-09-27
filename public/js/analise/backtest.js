@@ -1,12 +1,13 @@
 // Unica responsabilidade: regras de leitura do backtest (/validacao/backtest,
 // infra#CTR-14). Modulo puro, sem DOM.
 
-/** Nome curto de cada versao: a primeira de `versoes` e a oficial, a segunda a sombra. */
+/**
+ * Nome curto de cada versao, pela posicao em `versoes`: oficial, sombra e a
+ * v1 antiga (sem juros), mantida no backtest so para comparar antes e depois.
+ */
 export function nomeDaVersao(versao, versoes = []) {
-  const posicao = versoes.indexOf(versao);
-  if (posicao === 0) return 'v1 (oficial)';
-  if (posicao === 1) return 'v2 (sombra)';
-  return versao;
+  const nomes = ['v1 (oficial)', 'v2 (sombra)', 'v1 antiga (sem juros)'];
+  return nomes[versoes.indexOf(versao)] || versao;
 }
 
 /**
