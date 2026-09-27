@@ -81,9 +81,7 @@ export class BacktestPlacar extends BaseComponent {
       </details>
       <p class="small text-muted mt-2 mb-1" style="white-space: pre-line">${escaparHtml(e.observacoes || '')}</p>
       ${renderProventos(dados.placar)}
-      <p class="small text-muted mb-1">Entre parênteses, o intervalo de 95%. Ele supõe janelas independentes;
-        como os sinais são mensais com horizonte de até 6 meses e os ativos andam juntos, o intervalo real é
-        mais largo. Trate "acima da base" como indício, não prova.</p>
+      ${renderNotaIntervalo(dados.placar)}
       <p class="small text-muted mb-0">${escaparHtml(dados.aviso)}</p>
     `;
   }
@@ -101,6 +99,23 @@ function renderProventos(placar) {
   return `<p class="small text-muted mb-1">Proventos no retorno: ${comProvento} de ${total} janelas (${fracao}%).
     A fonte (B3) só devolve os proventos dos ~12 meses anteriores à coleta; nas janelas mais antigas o
     preço é bruto, e pagadoras de dividendo aparecem piores do que são.</p>`;
+}
+
+/**
+ * Qual intervalo o placar mostra (infra#TASK-31): o bootstrap em blocos de
+ * meses respeita que ativos do mesmo mes andam juntos e que meses vizinhos se
+ * sobrepoem; o analitico (backtest antigo) supoe janelas independentes.
+ */
+function renderNotaIntervalo(placar) {
+  const blocos = placar.some((l) => l.metodoIntervalo === 'BOOTSTRAP_BLOCOS');
+  return blocos
+    ? `<p class="small text-muted mb-1">Entre parênteses, o intervalo de 95% por bootstrap em blocos de
+        meses: reamostra meses inteiros, em sequências do tamanho do horizonte, porque ativos do mesmo mês
+        andam juntos e janelas vizinhas se sobrepõem. É mais largo e mais honesto que tratar cada janela
+        como independente.</p>`
+    : `<p class="small text-muted mb-1">Entre parênteses, o intervalo de 95%. Ele supõe janelas
+        independentes; como os sinais são mensais com horizonte de até 6 meses e os ativos andam juntos,
+        o intervalo real é mais largo. Trate "acima da base" como indício, não prova.</p>`;
 }
 
 function cartao(valor, rotulo) {

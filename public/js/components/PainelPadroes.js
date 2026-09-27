@@ -38,6 +38,10 @@ export class PainelPadroes extends BaseComponent {
     this._escopo = 'ativo';
     this._ligados = new Set();
     this._horizonte = HORIZONTE_PADRAO;
+    // Ordem de clique (mais recente primeiro) - o card clicado sobe ao topo
+    // da sua lista (padroes ou alertas sao listas separadas).
+    this._ordemPadroes = [];
+    this._ordemAlertas = [];
     this.innerHTML = this.template();
     this.afterRender();
   }
@@ -63,9 +67,10 @@ export class PainelPadroes extends BaseComponent {
 
   afterRender() {
     this.addEventListener('click', (evento) => {
-      const alvo = evento.target.closest('[data-padrao]');
+      if (evento.target.closest('a')) return; // link do glossario tem comportamento proprio
+      const alvo = evento.target.closest('[data-padrao-card]');
       if (!alvo) return;
-      this.alternar(alvo.dataset.padrao);
+      this.alternar(alvo.dataset.padraoCard);
     });
 
     this.addEventListener('change', (evento) => {
@@ -83,8 +88,28 @@ export class PainelPadroes extends BaseComponent {
   alternar(id) {
     if (this._ligados.has(id)) this._ligados.delete(id);
     else this._ligados.add(id);
+    this.moverParaTopo(id);
     this.renderizar();
     this.emitirMarcadores();
+  }
+
+  /** O card clicado (ligando ou desligando o padrao) vai para o topo da
+   * propria lista - padroes e alertas tem ordem independente. */
+  moverParaTopo(id) {
+    const chave = ALERTAS.some((a) => a.id === id) ? '_ordemAlertas' : '_ordemPadroes';
+    this[chave] = [id, ...this[chave].filter((existente) => existente !== id)];
+  }
+
+  /** Ids na ordem de clique vem primeiro (mais recente no topo); o resto
+   * mantem a ordem original de PADROES/ALERTAS. Sort e estavel (ES2019+). */
+  ordenarPorClique(definicoes, ordem) {
+    if (ordem.length === 0) return definicoes;
+    const indice = new Map(ordem.map((id, i) => [id, i]));
+    return [...definicoes].sort((a, b) => {
+      const ia = indice.has(a.id) ? indice.get(a.id) : Infinity;
+      const ib = indice.has(b.id) ? indice.get(b.id) : Infinity;
+      return ia - ib;
+    });
   }
 
   /** Recalcula os marcadores dos padroes ligados e avisa quem desenha. */
@@ -124,7 +149,7 @@ export class PainelPadroes extends BaseComponent {
       ${this.cabecalho()}
       <div class="padroes-cartoes-scroll">
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-1 g-3 mb-3">
-          ${PADROES.map((p) => this.cartao(p, false)).join('')}
+          ${this.ordenarPorClique(PADROES, this._ordemPadroes).map((p) => this.cartao(p, false)).join('')}
         </div>
 
         <h6 class="mt-4">Alertas: armadilhas visiveis no proprio candle</h6>
@@ -134,7 +159,7 @@ export class PainelPadroes extends BaseComponent {
           <a href="#/padroes">Padrões</a>.
         </p>
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-1 g-3 mb-3">
-          ${ALERTAS.map((a) => this.cartao(a, true)).join('')}
+          ${this.ordenarPorClique(ALERTAS, this._ordemAlertas).map((a) => this.cartao(a, true)).join('')}
         </div>
 
         ${this.naoDetectaveis()}
@@ -189,6 +214,8 @@ export class PainelPadroes extends BaseComponent {
 
   cartao(definicao, ehAlerta) {
     const ligado = this._ligados.has(definicao.id);
+    const ordem = ehAlerta ? this._ordemAlertas : this._ordemPadroes;
+    const selecionado = ordem[0] === definicao.id;
     const ocorrencias = detectar(this._candles, definicao);
     const naCarteira = this._escopo === 'carteira' && this._carteira.length > 0;
     const totalCarteira = naCarteira
@@ -201,7 +228,8 @@ export class PainelPadroes extends BaseComponent {
 
     return `
       <div class="col">
-        <div class="card h-100 ${ligado ? 'border-primary' : ''}">
+        <div class="card h-100 ${ligado ? 'border-primary' : ''} ${selecionado ? 'shadow border-2' : ''}"
+             data-padrao-card="${definicao.id}">
           <div class="card-body py-2">
             <div class="d-flex justify-content-between align-items-start gap-2">
               <div>

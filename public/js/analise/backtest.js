@@ -51,7 +51,12 @@ export function resumoDasCompras(placar, versao, periodo, horizonte) {
   const acertos = linhas.reduce((s, l) => s + Math.round(Number(l.taxaAcerto || 0) * l.avaliados), 0);
   return {
     n,
-    icAcerto: wilson(acertos, n),
+    // Com intervalo por bootstrap nas linhas (infra#TASK-31), combina as
+    // larguras delas - Wilson sobre a soma trataria as janelas como
+    // independentes e sairia estreito demais.
+    icAcerto: linhas.some((l) => l.metodoIntervalo === 'BOOTSTRAP_BLOCOS')
+      ? icCombinado(linhas, 'taxaAcerto', 'icAcerto')
+      : wilson(acertos, n),
     icExcessoCarteira: icCombinado(linhas, 'excessoMedioCarteira', 'icExcessoCarteira'),
     taxaAcerto: media('taxaAcerto'),
     taxaBase: media('taxaBase'),
