@@ -1,7 +1,13 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { buscarBacktest } from '../api/validacaoApi.js';
 import { linhasLadoALado, nomeDaVersao, resumoDasCompras } from '../analise/backtest.js';
-import { formatarPercentual, formatarTaxa, leituraDoPlacar } from '../analise/diarioDeSinais.js';
+import {
+  formatarIcPercentual,
+  formatarPercentual,
+  formatarTaxa,
+  formatarTaxaComIc,
+  leituraDoPlacar,
+} from '../analise/diarioDeSinais.js';
 import { formatarData } from './ComunicadoItem.js';
 import { escaparHtml } from '../utils/html.js';
 import './LoadingSpinner.js';
@@ -74,6 +80,9 @@ export class BacktestPlacar extends BaseComponent {
         ${renderTabela(dados.placar, 'CALIBRACAO', h, versoes)}
       </details>
       <p class="small text-muted mt-2 mb-1" style="white-space: pre-line">${escaparHtml(e.observacoes || '')}</p>
+      <p class="small text-muted mb-1">Entre parênteses, o intervalo de 95%. Ele supõe janelas independentes;
+        como os sinais são mensais com horizonte de até 6 meses e os ativos andam juntos, o intervalo real é
+        mais largo. Trate "acima da base" como indício, não prova.</p>
       <p class="small text-muted mb-0">${escaparHtml(dados.aviso)}</p>
     `;
   }
@@ -89,8 +98,9 @@ function renderResumo(placar, versoes, h) {
     const r = resumoDasCompras(placar, versao, 'TESTE', h);
     if (!r) return '';
     return `<tr><td>${escaparHtml(nomeDaVersao(versao, versoes))}</td><td class="text-end">${r.n}</td>
-      <td class="text-end">${formatarTaxa(r.taxaAcerto)}</td><td class="text-end text-muted">${formatarTaxa(r.taxaBase)}</td>
-      <td class="text-end">${formatarPercentual(r.excessoCdi)}</td><td class="text-end">${formatarPercentual(r.excessoCarteira)}</td></tr>`;
+      <td class="text-end text-nowrap">${formatarTaxaComIc(r.taxaAcerto, r.icAcerto)}</td><td class="text-end text-muted">${formatarTaxa(r.taxaBase)}</td>
+      <td class="text-end">${formatarPercentual(r.excessoCdi)}</td><td class="text-end">${formatarPercentual(r.excessoCarteira)}
+        <div class="text-muted text-nowrap" style="font-size:.75em">${formatarIcPercentual(r.icExcessoCarteira)}</div></td></tr>`;
   };
   return `
     <div class="card border-primary-subtle"><div class="card-body py-2">
@@ -119,12 +129,13 @@ function renderTabela(placar, periodo, h, versoes) {
               ${i === 0 ? `<td rowspan="${g.linhas.length}"><span class="badge ${CLASSE_DIRECAO[l.direcao]}">${escaparHtml(ROTULO[l.recomendacao] || l.recomendacao)}</span></td>` : ''}
               <td class="text-nowrap">${escaparHtml(nomeDaVersao(l.versaoRegra, versoes))}</td>
               <td class="text-end">${l.avaliados}</td>
-              <td class="text-end">${formatarTaxa(l.taxaAcerto)}</td>
+              <td class="text-end text-nowrap">${formatarTaxaComIc(l.taxaAcerto, l.icAcerto)}</td>
               <td class="text-end text-muted">${formatarTaxa(l.taxaBase)}</td>
               <td><span class="badge ${leitura.classe}">${leitura.rotulo}</span></td>
               <td class="text-end">${formatarPercentual(l.retornoMedio)}</td>
               <td class="text-end">${formatarPercentual(l.excessoMedioCdi)}</td>
-              <td class="text-end">${formatarPercentual(l.excessoMedioCarteira)}</td>
+              <td class="text-end">${formatarPercentual(l.excessoMedioCarteira)}
+                <div class="text-muted text-nowrap" style="font-size:.75em">${formatarIcPercentual(l.icExcessoCarteira)}</div></td>
             </tr>`;
           }).join('')).join('')}
         </tbody>

@@ -6,7 +6,9 @@ import {
   agruparPorPregao,
   estadoDoHorizonte,
   formatarPercentual,
+  formatarTaxaComIc,
   leituraDoPlacar,
+  wilson,
 } from '../public/js/analise/diarioDeSinais.js';
 
 let casos = 0;
@@ -65,6 +67,27 @@ caso('percentual com sinal e virgula', () => {
   assert.equal(formatarPercentual(0.0315), '+3,2%');
   assert.equal(formatarPercentual(-0.02), '-2,0%');
   assert.equal(formatarPercentual(null), '—');
+});
+
+
+caso('com intervalo, so e acima/abaixo da base quando o intervalo nao cruza a taxa-base', () => {
+  const linha = (inferior, superior) => ({
+    amostraSuficiente: true, taxaAcerto: 0.58, taxaBase: 0.52, icAcerto: { inferior, superior },
+  });
+  assert.equal(leituraDoPlacar(linha(0.46, 0.69)).rotulo, 'Indistinguível da base');
+  assert.equal(leituraDoPlacar(linha(0.53, 0.63)).rotulo, 'Acima da base');
+  assert.equal(leituraDoPlacar(linha(0.30, 0.50)).rotulo, 'Abaixo da base');
+});
+
+caso('wilson da tela confere com o do gestor (14 em 24)', () => {
+  const ic = wilson(14, 24);
+  assert.equal(ic.inferior.toFixed(4), '0.3883');
+  assert.equal(ic.superior.toFixed(4), '0.7553');
+});
+
+caso('taxa com intervalo formatada', () => {
+  assert.equal(formatarTaxaComIc(0.5833, { inferior: 0.3883, superior: 0.7553 }), '58% (39–76%)');
+  assert.equal(formatarTaxaComIc(0.5833, null), '58%');
 });
 
 console.log(`\nTODOS os ${casos} casos do diario de sinais passaram`);

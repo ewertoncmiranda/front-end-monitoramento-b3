@@ -15,6 +15,29 @@ export function nomeDaVersao(versao, versoes = []) {
  * medias ponderadas por quantidade de janelas. E a pergunta que importa:
  * quando a regra manda comprar, bate a carteira e o CDI?
  */
+import { wilson } from './diarioDeSinais.js';
+
+/**
+ * Intervalo de 95% da media combinada de varias linhas, a partir de n, media
+ * e do intervalo de cada uma (o desvio de cada linha sai da largura do
+ * intervalo: sd = (sup - inf) / (2 x 1,96) x raiz(n)). Variancia combinada =
+ * dispersao dentro das linhas + dispersao entre as medias.
+ */
+export function icCombinado(linhas, campoMedia, campoIc) {
+  const z = 1.959964;
+  const validas = linhas.filter((l) => l[campoMedia] !== null && l[campoMedia] !== undefined && l[campoIc]);
+  const n = validas.reduce((s, l) => s + l.avaliados, 0);
+  if (n < 2) return null;
+  const media = validas.reduce((s, l) => s + Number(l[campoMedia]) * l.avaliados, 0) / n;
+  let soma = 0;
+  validas.forEach((l) => {
+    const sd = ((Number(l[campoIc].superior) - Number(l[campoIc].inferior)) / (2 * z)) * Math.sqrt(l.avaliados);
+    soma += (l.avaliados - 1) * sd * sd + l.avaliados * (Number(l[campoMedia]) - media) ** 2;
+  });
+  const erro = Math.sqrt(soma / (n - 1)) / Math.sqrt(n);
+  return { inferior: media - z * erro, superior: media + z * erro };
+}
+
 export function resumoDasCompras(placar, versao, periodo, horizonte) {
   const linhas = placar.filter((l) => l.versaoRegra === versao && l.periodo === periodo
     && l.horizonte === horizonte && l.direcao === 1);
@@ -25,8 +48,11 @@ export function resumoDasCompras(placar, versao, periodo, horizonte) {
     const peso = validas.reduce((s, l) => s + l.avaliados, 0);
     return peso ? validas.reduce((s, l) => s + Number(l[campo]) * l.avaliados, 0) / peso : null;
   };
+  const acertos = linhas.reduce((s, l) => s + Math.round(Number(l.taxaAcerto || 0) * l.avaliados), 0);
   return {
     n,
+    icAcerto: wilson(acertos, n),
+    icExcessoCarteira: icCombinado(linhas, 'excessoMedioCarteira', 'icExcessoCarteira'),
     taxaAcerto: media('taxaAcerto'),
     taxaBase: media('taxaBase'),
     excessoCdi: media('excessoMedioCdi'),

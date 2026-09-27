@@ -4,7 +4,9 @@ import {
   agruparPorPregao,
   estadoDoHorizonte,
   formatarPercentual,
+  formatarIcPercentual,
   formatarTaxa,
+  formatarTaxaComIc,
   leituraDoPlacar,
   nomeDaVersaoDoDiario,
 } from '../analise/diarioDeSinais.js';
@@ -132,10 +134,11 @@ function renderPlacar(dados) {
               <td><span class="badge ${CLASSE_DIRECAO[l.direcao]}">${escaparHtml(ROTULO[l.recomendacao] || l.recomendacao)}</span></td>
               <td>${l.horizonte} pregões</td>
               <td class="text-end">${l.avaliados}</td>
-              <td class="text-end">${formatarTaxa(l.taxaAcerto)}</td>
+              <td class="text-end text-nowrap">${formatarTaxaComIc(l.taxaAcerto, l.icAcerto)}</td>
               <td class="text-end text-muted">${formatarTaxa(l.taxaBase)}</td>
               <td class="text-end">${formatarPercentual(l.excessoMedioCdi)}</td>
-              <td class="text-end">${formatarPercentual(l.excessoMedioCarteira)}</td>
+              <td class="text-end">${formatarPercentual(l.excessoMedioCarteira)}
+                <div class="text-muted text-nowrap" style="font-size:.75em">${formatarIcPercentual(l.icExcessoCarteira)}</div></td>
               <td><span class="badge ${leitura.classe}">${leitura.rotulo}</span></td>
               <td class="text-muted text-nowrap" title="${escaparHtml(l.versaoRegra)}">${escaparHtml(nomeDaVersaoDoDiario(l.versaoRegra))}</td>
             </tr>`;
@@ -145,7 +148,9 @@ function renderPlacar(dados) {
     </div>
     <p class="small text-muted mb-0">
       Acerto só informa comparado com a taxa-base: se a maioria das janelas subiu, uma compra que
-      acerta na mesma proporção não acrescenta nada. Janelas com provável desdobramento ficam fora.
+      acerta na mesma proporção não acrescenta nada. Entre parênteses, o intervalo de 95%: só é
+      "acima" ou "abaixo" da base quando o intervalo inteiro fica de um lado dela.
+      Janelas com provável desdobramento ficam fora.
     </p>
   `;
 }
