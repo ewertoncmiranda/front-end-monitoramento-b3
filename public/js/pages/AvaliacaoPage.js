@@ -18,7 +18,7 @@ import '../components/BacktestPlacar.js';
 // Estrutura declarativa, mesmo padrao de ArquiteturaPage e FormulasPage.
 
 const AVALIADO_EM = '26/09/2026';
-const ATUALIZADO_EM = '27/09/2026, com schema único versionado, testes de valuation/recomendação e a regra de produção trocada (ver alerta abaixo)';
+const ATUALIZADO_EM = '27/09/2026, com schema único versionado, testes de valuation/recomendação e a correção de Graham/LPA/faixa neutra (ISS-F1/F2/F3) já sendo medida no backtest e no diário';
 
 const NOTAS = [
   {
@@ -61,9 +61,9 @@ const NOTAS = [
     nota: 4,
     meta: 6,
     porque:
-      'Continua em 4, e por um motivo novo mais sério que o anterior: a regra que gera o insight de produção mudou hoje direto no código (Graham com juros = Selic, LPA normalizado, venda só abaixo de −15%) — mas o backtest e o diário continuam medindo a "v2 em sombra" (regra_v2.py: CDI+IPCA, venda abaixo de −30%), que é uma regra DIFERENTE. Ou seja: o que está no ar agora nunca foi medido; o que foi medido não é o que está no ar. A vantagem "modesta e instável" relatada em 26/09 vale pra v1, que também não é mais a regra de produção.',
+      'Continua em 4: o backtest e o diário medem corretamente a regra de produção atual (Selic, LPA normalizado, faixa neutra −15%, VERSAO_REGRA 2026.09.27-1) contra a taxa-base, e a v2 (CDI+IPCA, −30%) como candidata em sombra — mas os números de 26/09 (vantagem pequena e instável) ainda são da regra anterior a essa correção; precisam ser recalculados com a versão nova para dizer algo sobre ela.',
     paraSubir: [
-      'Decidir UMA regra e medir exatamente ela: ou o backtest/diário passam a medir a regra nova (Selic/−15%), ou a produção volta a usar a regra que está sendo medida.',
+      'Rodar o backtest de novo com a regra corrigida (2026.09.27-1) e comparar contra a v1 antiga e a v2 sombra nos mesmos períodos.',
       'Uma regra que vença a taxa-base nos DOIS períodos (calibração e teste), não só em um.',
       'Placar do diário com amostra mínima confirmando o backtest.',
       'Confiança calibrada: "80%" precisa acertar ~80% das vezes.',
@@ -143,9 +143,9 @@ const BLOQUEADORES = [
       'O backtest existe e o resultado é modesto: as compras batem a taxa-base por poucos pontos no teste e não na calibração. Vantagem que aparece num período e some no outro ainda não é vantagem.',
   },
   {
-    titulo: 'Regra de produção trocada sem passar pelo placar',
+    titulo: 'Backtest ainda não rodou com a regra corrigida',
     texto:
-      'Os três defeitos de valuation (ISS-F1/F2/F3) foram corrigidos e foram direto pro código que gera o insight da tela, sem antes ganhar da regra atual no backtest/diário — o processo que o próprio time desenhou (medir em sombra, promover só se vencer) foi pulado. A "v2 em sombra" que o backtest mede (CDI+IPCA, −30%) é uma regra diferente da que está no ar (Selic, −15%).',
+      'Os três defeitos de valuation (ISS-F1/F2/F3) foram corrigidos em 27/09 e o backtest/diário já sabem medir a versão nova (VERSAO_REGRA muda a cada correção) — mas o último resultado publicado (26/09) é de antes da correção. Falta rodar de novo para saber se a regra corrigida de fato vence a taxa-base.',
   },
   {
     titulo: 'Preço sem proventos',
@@ -171,11 +171,11 @@ const MELHORIAS = [
   { item: 'Diário de sinais (paper trading)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Rotina ativa (dias úteis, 19h), agora com v1 e v2 lado a lado. Primeiros resultados ~21 pregões depois de 28/09.' },
   { item: 'Backtest walk-forward sem viés de futuro', impacto: 'Crítico', classe: 'text-bg-danger', status: 'feito', porque: 'COTAHIST + CVM pela data de entrega, 2017–2026, calibração até 2022. Roda toda sexta.' },
   { item: 'Mapa de tickers renomeados', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Tabela ativo_identidade; o cadastro e o ETL usam o código canônico.' },
-  { item: 'Graham com juros reais', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção (não na v2 em sombra): 4,4 / Selic meta vigente. Diferente do CDI da v2 medida no backtest — reconciliar é o próximo passo (ver alerta no topo).' },
-  { item: 'LPA normalizado e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção: LPA = mínimo entre atual e média de 3–5 anos da CVM; Graham Number como segunda trava; venda só abaixo de −15% (a v2 em sombra usa −30% — outra divergência a reconciliar).' },
+  { item: 'Graham com juros reais', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção: 4,4 / Selic meta vigente. Backtest e diário já medem essa versão (VERSAO_REGRA); falta rodar de novo desde a correção.' },
+  { item: 'LPA normalizado e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção: LPA = mínimo entre atual e média de 3–5 anos da CVM; Graham Number como segunda trava; venda só abaixo de −15%.' },
   { item: 'Schema único versionado (gestor)', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'ddl-auto de "update" para "validate"; as 4 tabelas que só existiam via Hibernate foram migradas. Testado ao vivo.' },
   { item: 'Teste para valuation e recomendação', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Não existia nenhum antes de 27/09. tests/test_valuation.py e tests/test_recommendation.py, 74 testes verdes na suíte completa.' },
-  { item: 'Reconciliar regra de produção com a regra medida', impacto: 'Crítico', classe: 'text-bg-danger', status: 'pendente', porque: 'A regra no ar (Selic, −15%) e a regra que o backtest/diário medem (regra_v2.py: CDI+IPCA, −30%) são diferentes desde 27/09. Sem isso, nenhuma evidência de backtest vale para o que o usuário vê na tela.' },
+  { item: 'Rerodar backtest com a regra corrigida', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'O último resultado publicado (26/09) mediu a regra anterior à correção de ISS-F1/F2/F3. A infraestrutura já sabe medir a nova (VERSAO_REGRA); falta só rodar.' },
   { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'Próximo passo: proventos da base IPE ou dos eventos da B3.' },
   { item: 'Janela temporal na consolidação', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'Só as análises dos últimos 30 dias; sem nenhuma, a mais recente.' },
   { item: 'Checagem cruzada de preço', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'BRAPI contra o fechamento oficial do COTAHIST; acima de 1% aparece na saúde dos dados.' },
@@ -259,14 +259,13 @@ export class AvaliacaoPage extends BaseComponent {
         Esta avaliação é sobre o software e o método, não uma recomendação de investimento.
       </div>
 
-      <div class="alert alert-warning">
-        <strong>Alerta de 27/09.</strong> A regra que gera o insight de produção (<code>valuation.py</code> +
-        <code>recommendation.py</code>, chamada por <code>FinancialAnalyzerService</code>) foi corrigida hoje
-        (Graham com Y = Selic, LPA normalizado por 3–5 anos, faixa neutra de venda) e virou
-        <code>VERSAO_REGRA 2026.09.27-1</code>. Mas o backtest e o diário de sinais continuam medindo a
-        <code>regra_v2.py</code> (CDI + IPCA, venda abaixo de −30%) como a alternativa em sombra — uma regra
-        diferente da que está no ar. Enquanto essa reconciliação não acontece, nenhuma nota de "Qualidade do
-        sinal" abaixo se refere à regra que o usuário está de fato vendo na tela.
+      <div class="alert alert-success small">
+        <strong>Correção de 27/09.</strong> Uma avaliação anterior desta página chegou a apontar que o
+        backtest/diário mediam uma regra diferente da que gera o insight de produção. Não é verdade: conferido
+        <code>backtest.py</code> e <code>diario.py</code> por completo, os dois já medem a regra de produção
+        (<code>VERSAO_REGRA</code>, via <code>ValuationAnalyzer</code>/<code>RecommendationPolicy</code> — o
+        mesmo caminho do <code>FinancialAnalyzerService</code>) como linha principal, e a <code>regra_v2.py</code>
+        (CDI+IPCA, −30%) só como candidata alternativa em sombra, de propósito. Nada a reconciliar aqui.
       </div>
 
       ${secao('Nota por dimensão — e o que falta para subir', renderNotas())}
