@@ -388,6 +388,18 @@ const GLOSSARIO = [
         onde: 'Evita que uma empresa ciclica (banco, commodity) pareca "barata" so porque o lucro do ano esta anormalmente alto.',
       },
       {
+        termo: 'Lucro ciclico (ciclica no pico)',
+        definicao:
+          'Empresa ciclica (banco, commodity) no pico do ciclo tem o LPA do ano bem acima da media historica; usar esse LPA sozinho faria a formula de Graham calcular um preco justo inflado e sair COMPRA_FORTE, mesmo com o lucro perto de cair. O LPA normalizado corrige isso antes do calculo (ver "LPA normalizado").',
+        onde: 'Testado fixando o modo G_REAL (tests/test_valuation_selic_e_ciclo.py): esse modo nao depende do IPCA do dia, entao a proporcao entre LPA normalizado e preco justo sai exata; em G_NOMINAL/Y_REAL o resultado varia com o IPCA e nao daria um numero fixo pro teste.',
+      },
+      {
+        termo: 'Referencia sem juros (cenario)',
+        definicao:
+          'Segundo calculo de preco justo pela formula de Graham, feito com a taxa fixa historica (Y = 4,4%, fator 1) em vez da Selic do dia, e sempre no modo G_REAL - nao depende do IPCA, por isso nunca fica sem dado. Fica ao lado do cenario oficial so como referencia historica: nao entra na recomendacao nem na margem de seguranca de COMPRA/VENDA.',
+        onde: 'Calculado em paralelo ao valuation oficial (ValuationAnalyzer.analyze, campo "referencia"). Usa G_REAL mesmo quando o cenario oficial usa outro modo - hoje G_NOMINAL, escolhido no DEC-08/TASK-54.',
+      },
+      {
         termo: 'Faixa neutra (de venda)',
         definicao:
           'Intervalo de margem de seguranca negativa que ainda nao justifica VENDA_VALUATION - hoje, entre -15% e 0%. Abaixo disso e venda; dentro da faixa, o sistema classifica como MANTER.',

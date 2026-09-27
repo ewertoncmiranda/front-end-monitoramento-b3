@@ -6,7 +6,8 @@
 // Nome curto das versoes de regra em uso. A v2 roda em sombra (gerar-insights
 // app/core/analysis/regra_v2.py): gravada no diario ao lado da v1, sem ir para a tela.
 export const NOME_DA_VERSAO = {
-  '2026.09.27-2': 'v1 (oficial)',
+  '2026.09.27-3': 'v1 (oficial)',
+  '2026.09.27-2': 'v1 sem IPCA (27/09)',
   '2026.09.26-2': 'v2 (sombra)',
   '2026.09.26-1': 'v1 antiga (sem juros)',
 };
