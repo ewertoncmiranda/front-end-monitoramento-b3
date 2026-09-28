@@ -1,5 +1,5 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
-import { listarSetores } from '../api/setoresApi.js';
+import { listarSetoresBase, listarAtivosBase } from '../api/baseAtivosApi.js';
 import { buscarCotacaoRobusta } from '../api/ativosApi.js';
 import { buscarAnalise, buscarFundamentos } from '../api/analisesApi.js';
 import '../components/LoadingSpinner.js';
@@ -9,15 +9,20 @@ import '../components/AnaliseResultCard.js';
 import '../components/FundamentosCard.js';
 
 const COLUNAS = 3;
+// So os primeiros N ativos de cada setor - a lista completa e assunto da
+// aba Base (#/base?setor=), que ja pagina. Aqui e amostra de comparacao.
+const LIMITE_POR_SETOR = 5;
 
 // Unica responsabilidade: orquestrar a visao "Mercado por setor" - busca o
-// universo de referencia agrupado por setor (curado manualmente no backend,
-// SetoresReferencia.java) e delega a renderizacao aos cartoes por setor.
+// universo REAL de setores da CVM (cvm_empresa.setor, via /base, TASK-59),
+// nao mais os 10 setores/30 tickers hardcoded em SetoresReferencia.java -
+// e delega a renderizacao aos cartoes por setor.
 //
-// Cada linha e clicavel: expande abaixo dela cotacao, decisao e fundamentos
-// do ativo - mesma mecanica de linha expansivel da tela de Monitorados
-// (AtivosMonitoradosTable), so que sem o historico de candles: aqui e uma
-// visao rapida de comparacao entre pares do setor, nao uma analise a fundo.
+// Cada linha e clicavel: expande abaixo dela cotacao intradiaria, decisao e
+// fundamentos do ativo - mesma mecanica de linha expansivel da tela de
+// Monitorados (AtivosMonitoradosTable). Cotacao/decisao so existem pra quem
+// ja e favorito (BRAPI); o card fica vazio pros demais - o preco de
+// fechamento oficial ja aparece na propria linha, sem precisar expandir.
 export class SetoresPage extends BaseComponent {
   connectedCallback() {
     this._expandidos = new Set();
@@ -29,9 +34,10 @@ export class SetoresPage extends BaseComponent {
     return `
       <h4 class="mb-1">Mercado por setor</h4>
       <p class="text-muted small">
-        Universo de referencia curado manualmente (nao vem de um indice oficial da B3) - os
-        papeis mais liquidos de cada setor, pra dar contexto de comparacao que um unico ativo
-        isolado nao tem. Cotacao atualizada a cada hora pelo backend.
+        Setores reais da CVM, com o universo amplo do COTAHIST (1.785 codigos) - nao mais uma
+        lista curada de poucos papeis. Preco e o fechamento oficial mais recente; cotacao
+        intradiaria e decisao so aparecem pra quem ja e favorito. Veja a lista completa de um
+        setor na aba <a href="#/base">Base</a>.
       </p>
       <div id="setores-conteudo"><loading-spinner></loading-spinner></div>
     `;
@@ -45,7 +51,14 @@ export class SetoresPage extends BaseComponent {
   async carregar() {
     const area = this.querySelector('#setores-conteudo');
     try {
-      this._setores = await listarSetores();
+      const nomes = await listarSetoresBase();
+      this._setores = await Promise.all(
+        nomes.map(async (nome) => {
+          const pagina = await listarAtivosBase({ setor: nome, tamanho: LIMITE_POR_SETOR });
+          return { nome, ativos: pagina.content || [] };
+        }),
+      );
+      this._setores = this._setores.filter((setor) => setor.ativos.length > 0);
       this.renderizar();
     } catch (erro) {
       area.innerHTML = `<status-alert mensagem="${erro.message}" variante="danger"></status-alert>`;
@@ -54,8 +67,13 @@ export class SetoresPage extends BaseComponent {
 
   renderizar() {
     const area = this.querySelector('#setores-conteudo');
+    // align-items-start: sem isso, o flexbox do Bootstrap (row com
+    // align-items:stretch por padrao) estica o card vizinho na mesma linha
+    // pra acompanhar a altura do card que acabou de expandir - parece um
+    // segundo card "abrindo" sozinho, mas e so o grid esticando o espaco
+    // vazio. Cada card cresce so com o proprio conteudo agora.
     area.innerHTML = `
-      <div class="row row-cols-1 row-cols-lg-2 g-3">
+      <div class="row row-cols-1 row-cols-lg-2 g-3 align-items-start">
         ${this._setores.map((setor) => this.renderSetor(setor)).join('')}
       </div>
     `;
@@ -137,16 +155,14 @@ export class SetoresPage extends BaseComponent {
 
   renderLinhaAtivo(ativo) {
     const expandido = this._expandidos.has(ativo.simbolo);
-    const variacao = ativo.variacaoPercent;
-    const classe = variacao == null ? 'text-muted' : variacao >= 0 ? 'text-success' : 'text-danger';
-    const variacaoTexto = variacao == null ? 'sem cotacao ainda' : `${variacao >= 0 ? '+' : ''}${Number(variacao).toFixed(2)}%`;
-    const precoTexto = ativo.preco == null ? '-' : `R$ ${Number(ativo.preco).toFixed(2)}`;
+    const precoTexto = ativo.ultimoFechamento == null ? '-' : `R$ ${Number(ativo.ultimoFechamento).toFixed(2)}`;
+    const dataTexto = ativo.dataUltimoFechamento || 'sem cotacao ainda';
 
     const linhaPrincipal = `
       <tr data-simbolo="${ativo.simbolo}" style="cursor: pointer;" class="${expandido ? 'table-active' : ''}">
-        <td class="fw-semibold ps-3">${ativo.simbolo}</td>
+        <td class="fw-semibold ps-3">${ativo.simbolo}${ativo.favorito ? ' <span class=\"badge bg-primary\">★</span>' : ''}</td>
         <td class="text-end">${precoTexto}</td>
-        <td class="text-end pe-3 ${classe}">${variacaoTexto}</td>
+        <td class="text-end pe-3 text-muted small">${dataTexto}</td>
       </tr>
     `;
 
