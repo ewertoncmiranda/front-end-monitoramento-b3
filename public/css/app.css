@@ -132,3 +132,133 @@ body {
     min-height: 28rem;
   }
 }
+
+/* ficha do ativo (aba Gestao) ------------------------------------------- */
+.ficha-cartao {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color-translucent);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+.ficha-rotulo {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color);
+  margin-bottom: 0.35rem;
+}
+
+.ficha-simbolo {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ficha-preco {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ficha-numero {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ficha-selo {
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.ficha-selo-success { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+.ficha-selo-info { background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis); }
+
+/* Grafico de linha do cabecalho */
+.ficha-grafico { min-height: 110px; }
+.ficha-grafico-leitura { min-height: 1.4rem; }
+.ficha-linha { width: 100%; height: 90px; display: block; cursor: crosshair; outline: none; }
+.ficha-linha:focus-visible { box-shadow: 0 0 0 0.2rem var(--bs-primary-bg-subtle); border-radius: 4px; }
+.ficha-linha-traco { fill: none; stroke-width: 2; }
+.ficha-linha.sobe .ficha-linha-traco { stroke: var(--bs-success); }
+.ficha-linha.desce .ficha-linha-traco { stroke: var(--bs-danger); }
+.ficha-linha.sobe .ficha-linha-area { fill: var(--bs-success); opacity: 0.08; }
+.ficha-linha.desce .ficha-linha-area { fill: var(--bs-danger); opacity: 0.08; }
+.ficha-linha-cursor { stroke: var(--bs-secondary-color); stroke-width: 1; stroke-dasharray: 3 3; }
+
+/* Recomendacao e chips */
+.ficha-recomendacao {
+  font-size: 1.15rem;
+  font-weight: 600;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+}
+
+.ficha-tom-success { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+.ficha-tom-danger { background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); }
+.ficha-tom-warning { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+.ficha-tom-secondary { background: var(--bs-secondary-bg); color: var(--bs-emphasis-color); }
+
+.ficha-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.ficha-chip-success { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+.ficha-chip-danger { background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); }
+.ficha-chip-warning { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+.ficha-chip-info { background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis); }
+.ficha-chip-secondary { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
+.ficha-chip-botao { cursor: help; }
+.ficha-chip-botao:hover, .ficha-chip-botao:focus-visible { border-color: currentColor; outline: none; }
+
+.ficha-progresso { height: 6px; }
+.ficha-historico {
+  border-top: 1px solid var(--bs-border-color-translucent);
+  padding-top: 0.75rem;
+}
+
+/* Regua do valor justo: trilho, faixa entre cenarios, marcas e o preco */
+.ficha-regua { position: relative; height: 50px; margin: 0.5rem 0.75rem 0.25rem; }
+.ficha-regua-trilho,
+.ficha-regua-faixa { position: absolute; top: 30px; height: 8px; border-radius: 4px; }
+.ficha-regua-trilho { left: 0; right: 0; background: var(--bs-secondary-bg); }
+.ficha-regua-faixa { background: var(--bs-success-bg-subtle); border: 1px solid var(--bs-success-border-subtle); }
+.ficha-regua-marca { position: absolute; top: 24px; width: 2px; height: 20px; background: var(--bs-success); transform: translateX(-1px); }
+.ficha-regua-marca.base { width: 3px; background: var(--bs-success-text-emphasis); }
+.ficha-regua-legenda { display: inline-block; width: 2px; height: 10px; margin-right: 0.3rem; background: var(--bs-success); vertical-align: -1px; }
+.ficha-regua-legenda.base { width: 3px; background: var(--bs-success-text-emphasis); }
+.ficha-regua-preco {
+  position: absolute; top: 26px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--bs-primary); border: 2px solid var(--bs-body-bg); transform: translateX(-8px);
+  box-shadow: 0 0 0 1px var(--bs-primary);
+}
+.ficha-regua-preco span {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  font-size: 0.72rem; font-weight: 600; white-space: nowrap; color: var(--bs-primary-text-emphasis);
+}
+
+/* Indicadores */
+.ficha-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
+.ficha-kpi {
+  display: flex; flex-direction: column; gap: 0.1rem;
+  background: var(--bs-body-bg); border: 1px solid var(--bs-border-color-translucent); border-radius: 10px;
+  padding: 0.7rem 0.85rem; cursor: help; color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.ficha-kpi:hover, .ficha-kpi:focus-visible { border-color: var(--bs-secondary-color); transform: translateY(-1px); outline: none; }
+.ficha-kpi-rotulo { font-size: 0.75rem; color: var(--bs-secondary-color); }
+.ficha-kpi-valor { font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ficha-kpi-leitura { font-size: 0.75rem; }
+
+.ficha-detalhes summary { cursor: pointer; font-size: 0.9rem; color: var(--bs-secondary-color); }
+.ficha-abas .nav-link { padding: 0.25rem 0.8rem; font-size: 0.9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ficha-kpi { transition: none; }
+  .ficha-kpi:hover { transform: none; }
+}

@@ -1,38 +1,40 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
+import { escaparHtml } from '../utils/html.js';
 import '../pages/ConsultaPage.js';
 import '../pages/CadastroPage.js';
-import '../pages/MetodologiaPage.js';
 
-// Unica responsabilidade: agrupar Consulta, Cadastro e Como funciona numa so
-// aba do menu, pra nao espalhar o fluxo de "lidar com um ativo" em 3 lugares
-// diferentes. Nao duplica logica nenhuma: cada aba interna e o proprio
-// componente de pagina existente (<consulta-page>, <cadastro-page>,
-// <metodologia-page>), so trocando de visibilidade via abas do Bootstrap -
-// o visual e o comportamento de cada uma continuam exatamente os mesmos.
+/** `#/gestao/PETR4` (rota da busca global) ou `#/gestao?ativo=PETR4` -> "PETR4". */
+function ativoDoHash() {
+  const [caminho, consulta = ''] = window.location.hash.split('?');
+  const doCaminho = decodeURIComponent(caminho.replace(/^#\/gestao\/?/, ''));
+  return (doCaminho || new URLSearchParams(consulta).get('ativo') || '').trim().toUpperCase();
+}
+
+// Unica responsabilidade: a aba Gestao - a ficha do ativo (<consulta-page>)
+// como tela principal e o cadastro ao lado. O antigo "Como funciona" virou
+// parte da ficha: explicacao em popover em cada indicador e os numeros
+// completos num bloco expansivel, junto do ativo que se esta olhando.
 export class GestaoPage extends BaseComponent {
   template() {
+    const ativo = ativoDoHash();
     return `
-      <h4 class="mb-3">Gestão de ativos</h4>
-      <ul class="nav nav-tabs mb-3" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="gestao-tab-consulta" data-bs-toggle="tab" data-bs-target="#gestao-painel-consulta" type="button" role="tab">Consulta</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="gestao-tab-cadastro" data-bs-toggle="tab" data-bs-target="#gestao-painel-cadastro" type="button" role="tab">Cadastro</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="gestao-tab-metodologia" data-bs-toggle="tab" data-bs-target="#gestao-painel-metodologia" type="button" role="tab">Como funciona</button>
-        </li>
-      </ul>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h4 class="mb-0">Ficha do ativo</h4>
+        <ul class="nav nav-pills nav-sm ficha-abas" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#gestao-painel-ficha" type="button" role="tab">Ficha</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#gestao-painel-cadastro" type="button" role="tab">Cadastro</button>
+          </li>
+        </ul>
+      </div>
       <div class="tab-content">
-        <div class="tab-pane fade show active" id="gestao-painel-consulta" role="tabpanel">
-          <consulta-page></consulta-page>
+        <div class="tab-pane fade show active" id="gestao-painel-ficha" role="tabpanel">
+          <consulta-page ${ativo ? `simbolo="${escaparHtml(ativo)}"` : ''}></consulta-page>
         </div>
         <div class="tab-pane fade" id="gestao-painel-cadastro" role="tabpanel">
           <cadastro-page></cadastro-page>
-        </div>
-        <div class="tab-pane fade" id="gestao-painel-metodologia" role="tabpanel">
-          <metodologia-page></metodologia-page>
         </div>
       </div>
     `;
