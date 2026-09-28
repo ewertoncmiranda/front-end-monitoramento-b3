@@ -1,13 +1,13 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { listarAtivosBase, listarSetoresBase } from '../api/baseAtivosApi.js';
-import { registrarAtivo } from '../api/ativosApi.js';
+import { favoritar } from '../api/favoritosApi.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
 // Unica responsabilidade: a tela "Base" - busca/filtro sobre o universo
 // amplo de ativos que o ecossistema conhece (cvm_ticker/cvm_empresa +
-// ultimo fechamento oficial do COTAHIST), diferente de Monitorados/
-// Favoritos, que so mostra quem o usuario ja escolheu acompanhar.
+// ultimo fechamento oficial do COTAHIST), diferente de Favoritos, que so
+// mostra quem o usuario ja escolheu acompanhar de perto.
 export class BasePage extends BaseComponent {
   constructor() {
     super();
@@ -143,7 +143,7 @@ export class BasePage extends BaseComponent {
     botao.disabled = true;
     botao.textContent = 'Adicionando…';
     try {
-      await registrarAtivo(simbolo);
+      await favoritar(simbolo);
       botao.outerHTML = '<span class="badge bg-primary">Favorito</span>';
     } catch (erro) {
       botao.disabled = false;

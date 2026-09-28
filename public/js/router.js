@@ -7,6 +7,7 @@
 const rotas = {
   '#/gestao': 'gestao-page',
   '#/base': 'base-page',
+  '#/favoritos': 'favoritos-page',
   '#/monitorados': 'ativos-monitorados-page',
   '#/candles': 'candles-page',
   '#/comunicados': 'comunicados-page',
@@ -31,7 +32,10 @@ export function iniciarRouter(outletSelector) {
     // `#/glossario?padrao=martelo`: o que vem depois do `?` e parametro da
     // pagina (ela mesma le), nao parte da rota.
     const hash = (window.location.hash || ROTA_PADRAO).split('?')[0];
-    const tagName = rotas[hash] || rotas[ROTA_PADRAO];
+    // `#/gestao/PETR4`: o simbolo e parametro de rota (a propria GestaoPage
+    // le de window.location.hash), nao uma rota nova - so o prefixo importa
+    // pra escolher a pagina.
+    const tagName = rotas[hash] || (hash.startsWith('#/gestao/') ? rotas['#/gestao'] : null) || rotas[ROTA_PADRAO];
     outlet.innerHTML = `<${tagName}></${tagName}>`;
   }
 

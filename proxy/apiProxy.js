@@ -14,6 +14,9 @@ const ROTAS_PROXIADAS = [
   '/comunicados',
   // Diario de sinais / validacao das regras (infra#CTR-11)
   '/validacao',
+  // Universo amplo (TASK-59) e favoritos do usuario (infra V13)
+  '/base',
+  '/favoritos',
 ];
 
 export function registrarProxy(app, backendUrl) {

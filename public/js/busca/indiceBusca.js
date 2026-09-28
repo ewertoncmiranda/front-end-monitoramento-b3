@@ -44,6 +44,20 @@ function itemDeEstudo(e, categoria) {
   };
 }
 
+// Ticker da B3: 4 letras + 1 ou 2 digitos (PETR4, WEGE3, TAEE11...). Sem
+// lista fechada de simbolos no front - a ficha do ativo (#/gestao/{SIMBOLO})
+// decide se o dado existe; a busca so reconhece o formato e oferece o atalho.
+const REGEX_TICKER = /^[A-Z]{4}\d{1,2}$/;
+
+function itemDeTicker(simbolo) {
+  return {
+    categoria: 'Ativo',
+    titulo: simbolo,
+    trecho: 'Abrir ficha do ativo',
+    rota: `#/gestao/${simbolo}`,
+  };
+}
+
 let indiceCompleto = null;
 
 function construirIndice() {
@@ -58,9 +72,12 @@ function construirIndice() {
 
 /** Busca por texto simples (sem acento, sem caixa) em titulo e conteudo indexado. */
 export function buscarNaPlataforma(termo, limite = LIMITE_PADRAO) {
-  const query = normalizar((termo || '').trim());
+  const bruto = (termo || '').trim().toUpperCase();
+  const query = normalizar(bruto);
   if (!query) return [];
   if (!indiceCompleto) indiceCompleto = construirIndice();
+
+  const atalhoTicker = REGEX_TICKER.test(bruto) ? [itemDeTicker(bruto)] : [];
 
   const noTitulo = [];
   const noConteudo = [];
@@ -69,5 +86,5 @@ export function buscarNaPlataforma(termo, limite = LIMITE_PADRAO) {
     else if (item.indice.includes(query)) noConteudo.push(item);
     if (noTitulo.length >= limite) break;
   }
-  return [...noTitulo, ...noConteudo].slice(0, limite);
+  return [...atalhoTicker, ...noTitulo, ...noConteudo].slice(0, limite);
 }
