@@ -39,6 +39,12 @@ export class FavoritoToggle extends BaseComponent {
   }
 
   afterRender() {
+    // connectedCallback (logo acima) roda de novo toda vez que o elemento e
+    // desconectado e reconectado ao DOM (ex.: um pai que troca innerHTML) -
+    // sem essa guarda, cada reconexao registrava mais um listener e um clique
+    // so alternava duas vezes.
+    if (this._listenerLigado) return;
+    this._listenerLigado = true;
     this.addEventListener('click', (evento) => {
       const botao = evento.target.closest('[data-favorito-toggle]');
       if (botao) this.alternar();
