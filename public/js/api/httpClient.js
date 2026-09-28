@@ -19,6 +19,11 @@ export async function httpPost(path) {
   return handleResponse(response);
 }
 
+export async function httpDelete(path) {
+  const response = await executarFetch(() => fetch(`${apiConfig.baseUrl}${path}`, { method: 'DELETE' }));
+  return handleResponse(response);
+}
+
 async function executarFetch(fazerRequisicao) {
   try {
     return await fazerRequisicao();

@@ -7,6 +7,7 @@
 const rotas = {
   '#/gestao': 'gestao-page',
   '#/base': 'base-page',
+  '#/favoritos': 'favoritos-page',
   '#/monitorados': 'ativos-monitorados-page',
   '#/candles': 'candles-page',
   '#/comunicados': 'comunicados-page',

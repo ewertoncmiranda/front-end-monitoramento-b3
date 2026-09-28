@@ -19,9 +19,9 @@ export class BottomNav extends BaseComponent {
             <div aria-hidden="true">🔎</div>
             <small>Base</small>
           </a>
-          <a class="nav-link text-center flex-shrink-0 px-2" href="#/monitorados">
-            <div>📋</div>
-            <small>Monitorados</small>
+          <a class="nav-link text-center flex-shrink-0 px-2" href="#/favoritos">
+            <div>⭐</div>
+            <small>Favoritos</small>
           </a>
           <a class="nav-link text-center flex-shrink-0 px-2" href="#/candles">
             <div>🕯️</div>

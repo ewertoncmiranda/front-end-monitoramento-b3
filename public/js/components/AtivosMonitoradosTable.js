@@ -14,12 +14,18 @@ import './LoadingSpinner.js';
 const COLUNAS = 10;
 
 // Unica responsabilidade: renderizar a lista de ativos monitorados
-// (contrato de GET /ativos/registrados), enriquecida com a ultima decisao
-// consolidada de cada ativo (contrato de GET /analises/{simbolo}/analise,
-// ja usado na tela de consulta) para dar contexto de decisao direto na lista.
+// (contrato de GET /ativos/registrados ou GET /favoritos - mesmo formato de
+// AtivoMonitoradoDTO), enriquecida com a ultima decisao consolidada de cada
+// ativo (contrato de GET /analises/{simbolo}/analise, ja usado na tela de
+// consulta) para dar contexto de decisao direto na lista.
 // Cada linha e clicavel: expande abaixo dela a mesma visao estruturada da
 // tela de Consulta (cotacao, decisao, historico), reaproveitando os mesmos
 // componentes - sem duplicar renderizacao.
+//
+// A coluna de remover e opcional (mostrarRemover): quem so lista (Monitorados)
+// nao pede essa capacidade; quem deixa o usuario curar a lista (Favoritos)
+// pede - extensao aberta, sem mudar o comportamento de quem ja usava o
+// componente (OCP).
 export class AtivosMonitoradosTable extends BaseComponent {
   connectedCallback() {
     this._ativos = [];
@@ -27,7 +33,9 @@ export class AtivosMonitoradosTable extends BaseComponent {
     this._expandidos = new Set();
     this._detalhesPorSimbolo = {};
     this._ordenacao = { coluna: null, direcao: 1 };
+    this._mostrarRemover = false;
     this.innerHTML = this.template();
+    this.addEventListener('click', (evento) => this.aoClicarRemover(evento));
     this.addEventListener('click', (evento) => this.aoClicarLinha(evento));
     this.addEventListener('click', (evento) => this.aoClicarCabecalho(evento));
   }
@@ -35,6 +43,24 @@ export class AtivosMonitoradosTable extends BaseComponent {
   setAtivos(ativos) {
     this._ativos = ativos || [];
     this.renderizar();
+  }
+
+  /** Liga a coluna de remover e o evento `remover-ativo` (detail: {simbolo}). */
+  mostrarRemover(mostrar) {
+    this._mostrarRemover = mostrar;
+    this.renderizar();
+  }
+
+  aoClicarRemover(evento) {
+    const botao = evento.target.closest('[data-remover]');
+    if (!botao) {
+      return;
+    }
+    evento.stopPropagation(); // nao expande/recolhe a linha ao remover
+    this.dispatchEvent(new CustomEvent('remover-ativo', {
+      detail: { simbolo: botao.dataset.remover },
+      bubbles: true,
+    }));
   }
 
   aoClicarCabecalho(evento) {
@@ -132,6 +158,7 @@ export class AtivosMonitoradosTable extends BaseComponent {
               ${this.th('valorAtual', 'Valor atual')}
               ${this.th('decisao', 'Decisao')}
               ${this.th('confianca', 'Confiança')}
+              ${this._mostrarRemover ? '<th></th>' : ''}
             </tr>
           </thead>
           <tbody>${linhas}</tbody>
@@ -163,6 +190,7 @@ export class AtivosMonitoradosTable extends BaseComponent {
         ${celulaValorAnterior(a)}
         ${celulaValorAtual(a)}
         ${this.celulaDecisao(a.simbolo)}
+        ${this._mostrarRemover ? `<td><button type="button" class="btn btn-sm btn-outline-danger" data-remover="${a.simbolo}" title="Remover dos favoritos">✕</button></td>` : ''}
       </tr>
     `;
 
@@ -184,9 +212,10 @@ export class AtivosMonitoradosTable extends BaseComponent {
       `
       : '<loading-spinner></loading-spinner>';
 
+    const colunas = COLUNAS + (this._mostrarRemover ? 1 : 0);
     return `
       <tr data-detalhe="${simbolo}">
-        <td colspan="${COLUNAS}" class="bg-body-tertiary">${conteudo}</td>
+        <td colspan="${colunas}" class="bg-body-tertiary">${conteudo}</td>
       </tr>
     `;
   }
