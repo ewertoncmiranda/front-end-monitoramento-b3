@@ -54,8 +54,13 @@ export class SetoresPage extends BaseComponent {
 
   renderizar() {
     const area = this.querySelector('#setores-conteudo');
+    // align-items-start: sem isso, o flexbox do Bootstrap (row com
+    // align-items:stretch por padrao) estica o card vizinho na mesma linha
+    // pra acompanhar a altura do card que acabou de expandir - parece um
+    // segundo card "abrindo" sozinho, mas e so o grid esticando o espaco
+    // vazio. Cada card cresce so com o proprio conteudo agora.
     area.innerHTML = `
-      <div class="row row-cols-1 row-cols-lg-2 g-3">
+      <div class="row row-cols-1 row-cols-lg-2 g-3 align-items-start">
         ${this._setores.map((setor) => this.renderSetor(setor)).join('')}
       </div>
     `;
