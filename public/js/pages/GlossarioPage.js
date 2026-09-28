@@ -421,13 +421,13 @@ export const GLOSSARIO = [
         termo: 'Universo amplo (backtest)',
         definicao:
           'O conjunto de ativos testado no backtest, ampliado pra incluir empresas que ja saíram da bolsa (deslistadas) - nao so as monitoradas hoje. Testar so quem sobreviveu ate agora infla artificialmente o resultado (vies de sobrevivencia): empresa que quebrou nunca aparece como "erro" da regra.',
-        onde: 'Ainda nao implementado (TASK-51/infra#TASK-31): o backtest hoje usa `ativo_monitorado`, a carteira de hoje. O universo amplo viria do COTAHIST (quem foi negociado em cada data) cruzado com os balancos em cache, com liquidez minima no ano anterior.',
+        onde: 'Em uso desde 27/09/2026 (TASK-59/51): o universo de cada ano sai do COTAHIST - ativos com pelo menos 200 pregões e volume médio de R$ 5 milhões por dia no ano anterior, sem units nem BDRs, incluindo quem saiu da bolsa. O último backtest cobriu 258 ativos.',
       },
       {
         termo: 'Placar segmentado',
         definicao:
           'Separar, no resultado do backtest, as janelas que tiveram um ajuste aplicado (ex.: provento somado ao retorno) das que nao tiveram - em vez de misturar as duas no mesmo numero sem dizer quantas de cada.',
-        onde: 'Proventos (ISS-F7/infra#TASK-36): hoje o retorno ja soma provento quando ha dado (a partir de 27/09/2026), mas o placar nao diz quantas janelas foram ajustadas e quantas ficaram sem - falta essa contagem (TASK-56).',
+        onde: 'Proventos (ISS-F7/infra#TASK-36 e TASK-56): o retorno soma provento quando há dado, e o placar da aba Avaliação mostra quantas janelas de cada linha tiveram provento.',
       },
       {
         termo: 'Margem de seguranca',
@@ -541,6 +541,226 @@ export const GLOSSARIO = [
     ],
   },
   {
+    id: 'estrutura',
+    titulo: 'Tendência, suporte e resistência',
+    resumo:
+      'A leitura da estrutura do preço, que vem antes de qualquer indicador ou padrão de vela. Os padrões do grupo seguinte dependem destes termos.',
+    termos: [
+      {
+        termo: 'Tendência de alta e de baixa',
+        definicao:
+          'Alta é uma sequência de topos e fundos cada vez mais altos; baixa, de topos e fundos cada vez mais baixos. Um candle sozinho não faz tendência: o que conta é o encadeamento dos extremos.',
+        exemplo: 'Fundos em 30, 32 e 34 com topos em 33, 36 e 38 descrevem alta. Perder o último fundo (34) é o primeiro sinal de enfraquecimento.',
+        cuidado: 'Marque os pivôs com uma regra fixa (ex.: maior máxima entre 5 pregões de cada lado); escolher os pontos no olho depois do fato cria a tendência que você queria ver.',
+        onde: 'A posição no range de 52 semanas e o z-score da ficha dizem onde o preço está, não a direção da tendência - o sistema ainda não marca pivôs.',
+      },
+      {
+        termo: 'Lateralização',
+        definicao:
+          'Preço oscilando dentro de uma faixa, sem topos nem fundos progressivos. É o regime em que rompimentos falham com mais frequência e médias móveis dão mais sinais falsos.',
+        cuidado: 'Muitos sinais em mercado lateral multiplicam custos de corretagem e spread sem ganho correspondente.',
+      },
+      {
+        termo: 'Teoria de Dow',
+        definicao:
+          'Leitura clássica que separa movimentos primários (meses a anos), secundários (semanas a meses, correções) e menores (dias). Deu origem à definição de tendência por topos e fundos.',
+        cuidado: 'É uma forma de descrever o preço, não uma promessa de que o padrão se repete.',
+      },
+      {
+        termo: 'Suporte e resistência',
+        definicao:
+          'Suporte é uma região de preço onde as quedas vinham parando (compradores apareciam); resistência, onde as altas vinham parando (vendedores apareciam). São faixas aproximadas, não um preço exato.',
+        exemplo: 'Uma ação que recuou três vezes perto de R$ 32 tem resistência na região de R$ 31,50 a R$ 32,50. Superada, essa região pode virar suporte - mas não necessariamente.',
+        cuidado: 'Quanto mais óbvia a região, mais gente olha para ela e mais comuns são os falsos rompimentos.',
+        onde: 'A máxima e a mínima de 52 semanas funcionam como resistência e suporte de referência na ficha e nos cartões de padrão da aba Velas.',
+      },
+      {
+        termo: 'Linha de tendência e canal',
+        definicao:
+          'Linha de tendência liga fundos ascendentes (alta) ou topos descendentes (baixa) e mostra inclinação e aceleração. Canal é o par de linhas paralelas que contém as oscilações.',
+        cuidado: 'Não force a linha para o gráfico caber nela. Romper uma linha sozinha informa menos que uma mudança na sequência de topos e fundos.',
+      },
+      {
+        termo: 'Falso rompimento',
+        definicao:
+          'O preço atravessa um suporte ou resistência e volta logo para dentro da faixa anterior. Também chamado de armadilha: pega quem entrou no rompimento.',
+        exemplo: 'Fecha a R$ 32,40 acima da resistência de R$ 32 e, dois pregões depois, está de volta a R$ 31,20.',
+        cuidado: 'Defina antes o que é rompimento válido (fechamento acima da faixa, não só sombra) e registre as falhas, não apenas os casos que deram certo.',
+        onde: 'O cartão de rompimento da aba Velas avisa quando o volume foi fraco - o caso mais comum de falso rompimento.',
+      },
+      {
+        termo: 'Reteste',
+        definicao:
+          'Depois de romper uma região, o preço volta até ela e a usa como apoio antes de seguir. Resistência rompida sendo testada como suporte é o caso clássico.',
+        cuidado: 'Não presuma que o reteste vai acontecer: muitos rompimentos verdadeiros seguem sem voltar.',
+      },
+      {
+        termo: 'Prazos operacionais (intradiário, swing, posição)',
+        definicao:
+          'Intradiário: abre e fecha no mesmo dia, gráficos de minutos. Swing trade: dias a semanas, gráfico diário. Posição: meses, gráfico semanal. O mesmo padrão tem peso diferente em cada prazo.',
+        cuidado: 'Leia do maior para o menor: uma alta no diário pode ser só um repique dentro de uma baixa no semanal. Trocar de prazo até concordar com a sua tese é timeframe shopping.',
+        onde: 'O sistema trabalha com pregões diários (COTAHIST) e agrupa em semana e mês na aba Velas; não há dado intradiário.',
+      },
+    ],
+  },
+  {
+    id: 'indicadores-tecnicos',
+    titulo: 'Indicadores técnicos',
+    resumo:
+      'Transformações do preço e do volume. Todos olham para trás e atrasam em relação ao movimento - e vários são versões do mesmo dado, não evidências independentes.',
+    termos: [
+      {
+        termo: 'SMA e EMA (média simples e exponencial)',
+        sigla: 'Simple / Exponential Moving Average',
+        definicao:
+          'A SMA dá o mesmo peso aos N últimos fechamentos. A EMA dá mais peso aos recentes: EMA de hoje = α × preço + (1 − α) × EMA de ontem, com α = 2 / (N + 1). A EMA reage mais rápido e erra mais em mercado lateral.',
+        exemplo: 'SMA20 é a média dos últimos 20 fechamentos. Médias de 50 e 200 períodos são referências comuns, não leis.',
+        cuidado: 'Cruzamento de médias costuma chegar tarde depois de um movimento forte. Preço acima de média subindo sugere regime de alta, não garante continuação.',
+        onde: 'O sistema usa a SMA de 20 pregões (média móvel da ficha e base do z-score). EMA não é calculada.',
+      },
+      {
+        termo: 'Sobrecompra e sobrevenda',
+        definicao:
+          'Faixas convencionais do RSI (IFR): acima de 70 chama-se sobrecompra; abaixo de 30, sobrevenda. A linha de 50 separa predomínio recente de ganhos (acima) e de perdas (abaixo). A configuração clássica de Wilder usa 14 períodos.',
+        cuidado: 'Não são ordens de venda ou compra: em tendência forte o RSI fica semanas acima de 70 enquanto o preço segue subindo.',
+        onde: 'O RSI não é calculado pelo sistema; o z-score da ficha cumpre papel parecido (preço esticado em relação à média).',
+      },
+      {
+        termo: 'Divergência',
+        definicao:
+          'Preço e indicador contam histórias diferentes. De baixa: o preço faz topo mais alto e o RSI (ou MACD) faz topo mais baixo - o momentum está perdendo força. De alta: o preço faz fundo mais baixo e o indicador, fundo mais alto.',
+        exemplo: 'Novo topo em R$ 42 com o RSI abaixo do topo anterior.',
+        cuidado: 'Divergências podem durar muito antes de qualquer reversão. Compare pivôs equivalentes e confirme com perda de estrutura, não com a divergência sozinha.',
+      },
+      {
+        termo: 'Histograma do MACD',
+        definicao:
+          'Barras com a diferença entre a linha MACD (EMA12 − EMA26) e a linha de sinal (EMA9 do MACD). Barras crescendo mostram momentum acelerando; encolhendo, desacelerando.',
+        cuidado: 'Histograma positivo não garante alta futura, e em mercado lateral o MACD cruza o sinal o tempo todo.',
+        onde: 'O MACD não é calculado pelo sistema.',
+      },
+      {
+        termo: 'Volatilidade',
+        definicao:
+          'O quanto o preço oscila, independentemente da direção. Um ativo pode subir e ainda assim oscilar o bastante para acionar o stop de uma operação mal dimensionada.',
+        cuidado: 'Direção e risco são perguntas diferentes: indicador de volatilidade não diz se o preço vai subir ou cair.',
+        onde: 'A amplitude intradiária e o desvio-padrão por trás do z-score são as medidas de oscilação que o sistema calcula.',
+      },
+      {
+        termo: 'True Range e ATR',
+        sigla: 'Average True Range',
+        definicao:
+          'True Range é o maior entre: máxima − mínima do dia; |máxima − fechamento anterior|; |mínima − fechamento anterior| - ou seja, a amplitude contando o gap. ATR é a média suavizada do True Range, em geral de 14 períodos (Wilder).',
+        exemplo: 'ATR14 de R$ 1,20 significa que o papel oscila, em média, R$ 1,20 por pregão. Um stop a 2 ATR ficaria R$ 2,40 abaixo da entrada.',
+        cuidado: 'Stop baseado em ATR se adapta à volatilidade, mas não elimina perdas nem garante o preço de execução.',
+        onde: 'O ATR não é calculado pelo sistema, mas as velas do banco (máxima, mínima e fechamento desde 2016) permitem calculá-lo.',
+      },
+      {
+        termo: 'VWAP',
+        sigla: 'Volume Weighted Average Price',
+        definicao:
+          'Preço médio do período ponderado pelo volume negociado em cada preço. Muito usado dentro do dia como referência de execução de ordens grandes.',
+        cuidado: 'VWAP do dia não é preço justo fundamental - é só o preço médio pelo qual o mercado negociou.',
+        onde: 'Exige dados intradiários, que o sistema não tem.',
+      },
+      {
+        termo: 'OBV',
+        sigla: 'On-Balance Volume',
+        definicao:
+          'Volume acumulado: soma o volume dos dias de alta e subtrai o dos dias de baixa. Usado para ver se o volume acompanha o preço ou diverge dele.',
+        cuidado: 'Um dia de volume extraordinário (rebalanceamento de índice, leilão) distorce a série inteira dali para frente.',
+      },
+      {
+        termo: 'Volume x número de negócios',
+        definicao:
+          'Volume é a quantidade (ou valor) negociada; número de negócios é quantas operações aconteceram. Um único negócio grande pode gerar volume alto com poucos participantes.',
+        cuidado: 'Volume alto de poucos negócios confirma menos um movimento que o mesmo volume espalhado em muitos.',
+        onde: 'O COTAHIST traz os dois; o sistema usa o volume (score de volume da análise técnica e filtro de liquidez do backtest).',
+      },
+      {
+        termo: 'Liquidez de negociação',
+        definicao:
+          'Facilidade de comprar ou vender sem mover o preço: volume diário, spread entre compra e venda e profundidade do livro de ofertas. Diferente da liquidez corrente, que é um indicador contábil.',
+        cuidado: 'Uma estratégia que funciona no papel pode ser inexecutável em ativo pouco líquido - a própria ordem move o preço.',
+        onde: 'O universo do backtest exige volume médio de pelo menos R$ 5 milhões por dia no ano anterior; a aba Velas marca pregões de liquidez baixa.',
+      },
+    ],
+  },
+  {
+    id: 'risco-operacao',
+    titulo: 'Risco e resultado de uma operação',
+    resumo:
+      'Como medir se uma regra ou operação valeu a pena, e como limitar o estrago quando a hipótese estiver errada.',
+    termos: [
+      {
+        termo: 'Stop (ordem de proteção)',
+        definicao:
+          'Ordem que encerra a posição se o preço atingir um nível definido antes da entrada, para limitar a perda quando a hipótese se mostra errada.',
+        cuidado: 'Stop não garante preço: numa abertura com gap a ordem executa no primeiro preço disponível, que pode estar bem abaixo do planejado.',
+        onde: 'O backtest do sistema não simula stop: mede o retorno do sinal em horizontes fixos de 21, 63 e 126 pregões.',
+      },
+      {
+        termo: 'Relação retorno/risco',
+        definicao:
+          'Quanto se espera ganhar para cada real arriscado. Risco de R$ 2 por ação (entrada até o stop) e alvo de R$ 4 dão 2:1, antes de custos.',
+        cuidado: 'Uma razão atraente não compensa sozinha uma taxa de acerto baixa: 2:1 acertando 30% das vezes perde dinheiro.',
+      },
+      {
+        termo: 'Payoff',
+        definicao:
+          'Ganho médio das operações vencedoras dividido pela perda média das perdedoras. Junto com a taxa de acerto, define a expectativa da estratégia.',
+        exemplo: 'Payoff 1,5 com 45% de acerto: 0,45 × 1,5 − 0,55 × 1 = +0,125 por unidade arriscada, antes de custos.',
+        cuidado: 'Taxa de acerto isolada não diz nada; payoff isolado também não.',
+      },
+      {
+        termo: 'Retorno simples e anualizado',
+        definicao:
+          'Retorno simples = preço final ÷ preço inicial − 1. Anualizado converte para uma base de um ano, para comparar horizontes diferentes: (1 + retorno) ^ (252 ÷ pregões) − 1.',
+        exemplo: '+2% em 63 pregões equivale a cerca de +8,2% ao ano.',
+        cuidado: 'Anualizar um período curto e bom extrapola sorte.',
+        onde: 'O placar do backtest mostra o retorno médio por horizonte (21, 63, 126 pregões), com custo de 0,10% ida e volta e proventos quando há dado.',
+      },
+      {
+        termo: 'Índice de Sharpe',
+        definicao:
+          'Retorno acima da taxa livre de risco dividido pela volatilidade desse retorno. Mede retorno por unidade de oscilação: quanto maior, melhor a recompensa pelo risco corrido.',
+        cuidado: 'Supõe que volatilidade é todo o risco - ignora caudas gordas e sequências de perdas. Compare Sharpe só entre períodos e universos iguais.',
+        onde: 'Não é calculado; o placar compara com o CDI e com a carteira pelo excesso médio e seu intervalo de confiança.',
+      },
+      {
+        termo: 'Buy-and-hold',
+        definicao:
+          'Comprar e manter, sem operar. É a referência mínima de qualquer estratégia: se a regra não bate simplesmente segurar o mesmo universo no mesmo período, os sinais não agregaram nada.',
+        onde: 'A "carteira" do placar do backtest é essa referência: a média de todos os ativos do universo em cada janela.',
+      },
+      {
+        termo: 'Turnover',
+        definicao:
+          'Quanto da carteira é trocado por período. Turnover alto multiplica custos de corretagem, emolumentos, spread e impostos.',
+        cuidado: 'Uma estratégia com resultado bruto bom pode virar prejuízo líquido só pelo giro.',
+      },
+      {
+        termo: 'Ordem a mercado e ordem limitada',
+        definicao:
+          'A mercado executa já, no melhor preço disponível. Limitada só executa no preço definido ou melhor - pode não executar.',
+        cuidado: 'A mercado troca certeza de execução por risco de preço (slippage); limitada troca certeza de preço por risco de ficar de fora.',
+      },
+      {
+        termo: 'Custos de negociação',
+        definicao:
+          'Corretagem, emolumentos e taxa de liquidação da B3, spread, slippage e imposto sobre o ganho. Somados, podem consumir todo o resultado de uma estratégia de giro alto.',
+        onde: 'O backtest desconta 0,10% por operação (ida e volta); impostos não entram.',
+      },
+      {
+        termo: 'Diário de operações',
+        definicao:
+          'Registro feito ANTES do resultado: ativo, data e prazo; contexto do prazo maior; hipótese; gatilho objetivo; risco planejado e cenário de gap. Depois, o resultado líquido e se o plano foi seguido.',
+        cuidado: 'Regra alterada depois de ver o desfecho não testa nada.',
+        onde: 'O Diário de sinais da aba Avaliação é a versão automática: grava o sinal de cada regra no pregão em que foi dado e só depois mede o resultado.',
+      },
+    ],
+  },
+  {
     id: 'padroes',
     titulo: 'Padroes de grafico',
     resumo:
@@ -590,12 +810,24 @@ export const GLOSSARIO = [
         sigla: 'OCO',
         definicao:
           'Tres picos, com o do meio mais alto, sugerindo reversao de tendencia.',
-        onde: 'Leva de 3 a 6 meses para se formar — nao cabe no range maximo de 3 meses deste painel.',
+        onde: 'Leva de 3 a 6 meses para se formar: use os períodos de 1 ano ou 5 anos da aba Velas (pregões do banco desde 2016). O sistema não detecta OCO automaticamente.',
       },
       {
         termo: 'Triangulo',
         definicao:
           'Ascendente: topos no mesmo nivel e fundos subindo. Descendente: o inverso. Simetrico: os dois convergem, e rompe para qualquer lado.',
+      },
+      {
+        termo: 'Retângulo',
+        definicao:
+          'Faixa lateral com topos e fundos em níveis parecidos: uma pausa em que compradores e vendedores se equilibram. O significado vem do lado por onde o preço sai da faixa.',
+        cuidado: 'Não presuma continuação só pela aparência: o retângulo rompe para qualquer lado.',
+      },
+      {
+        termo: 'Cunha',
+        definicao:
+          'Duas linhas convergentes inclinadas para o mesmo lado. Cunha ascendente (topos e fundos subindo cada vez mais devagar) costuma ser lida como perda de força da alta; descendente, o inverso.',
+        cuidado: 'Definições vagas de onde começa e termina a cunha criam viés de seleção: qualquer oscilação vira cunha depois do fato.',
       },
       {
         termo: 'Bandeira e flamula',
@@ -611,7 +843,7 @@ export const GLOSSARIO = [
         termo: 'Golden cross e death cross',
         definicao:
           'Cruzamento da media de 50 periodos com a de 200. Golden cross e a de 50 subindo acima da de 200; death cross o contrario.',
-        onde: 'Precisa de 200 pregoes, entao nao existe no range de 3 meses deste painel.',
+        onde: 'Precisa de 200 pregões: dá para observar nos períodos longos da aba Velas (banco desde 2016), mas o sistema não calcula nem desenha as médias de 50 e 200.',
       },
       {
         termo: 'Gap',
