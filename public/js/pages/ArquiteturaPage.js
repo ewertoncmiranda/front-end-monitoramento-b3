@@ -46,7 +46,7 @@ const PECAS = [
     imagem: 'gestor-ativos-brutos',
     porta: '8091',
     descricao: `A porta de entrada HTTP do ecossistema. Fala com a BRAPI (cotacao/historico) e,
-      desde 27/09/2026, direto com endpoints publicos da B3 (proventos) e com o Banco Central e o
+      desde 27-09-2026, direto com endpoints publicos da B3 (proventos) e com o Banco Central e o
       IBGE (indices macro). Publica o dado bruto em filas SQS e le o MySQL pra devolver analises
       prontas. Schema agora e fonte unica versionada (Flyway, migrations V1-V8 em
       <code>infra-b3-ecossytem</code>) - o Hibernate roda em <code>ddl-auto=validate</code>, so
@@ -69,7 +69,7 @@ const PECAS = [
     imagem: 'gerar-insights',
     porta: '—',
     descricao: `Worker sem API propria: fica consumindo filas SQS. Para cada cotacao que chega,
-      grava o snapshot, calcula o valuation de Graham (desde 27/09/2026, com ajuste de juros -
+      grava o snapshot, calcula o valuation de Graham (desde 27-09-2026, com ajuste de juros -
       Selic - e LPA normalizado por 3-5 anos, ver Design de codigo) e, quando ha serie historica
       suficiente, deriva o sinal tecnico. Roda tambem um backtest walk-forward e um diario de
       sinais (paper trading) que gravam evidencia de acerto contra a taxa-base, nao so a

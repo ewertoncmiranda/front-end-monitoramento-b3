@@ -1,6 +1,7 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { badgeClassParaRecomendacao } from '../utils/recomendacaoBadge.js';
 import { buscarIndiceMacro } from '../api/indicesMacroApi.js';
+import { formatarDataHora } from '../utils/dataHora.js';
 
 // Unica responsabilidade: renderizar o retrato bruto (nao mediado) da ultima
 // analise de um ativo (contrato de GET /analises/{simbolo}/fundamentos) - os
@@ -285,8 +286,7 @@ function formatarInteiro(valor) {
 }
 
 function formatarData(valor) {
-  if (!valor) return '-';
-  return String(valor).replace('T', ' ').slice(0, 19);
+  return formatarDataHora(valor);
 }
 
 customElements.define('fundamentos-card', FundamentosCard);

@@ -1,4 +1,5 @@
 import { BaseComponent } from './base/BaseComponent.js';
+import { formatarData as formatarDataBrasilia, paraInstante } from '../utils/dataHora.js';
 
 // Unica responsabilidade: renderizar em cards as manchetes de mercado
 // buscadas por ticker (Google News RSS, via /noticias/{ticker} do proprio
@@ -68,14 +69,8 @@ function renderCard(n) {
 }
 
 function formatarData(valor) {
-  if (!valor) {
-    return '';
-  }
-  const data = new Date(valor);
-  if (Number.isNaN(data.getTime())) {
-    return '';
-  }
-  return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  // pubDate do RSS vem com fuso ("... GMT"): o dia sai o de Brasilia.
+  return paraInstante(valor) ? formatarDataBrasilia(valor, '') : '';
 }
 
 customElements.define('noticias-secao', NoticiasSecao);

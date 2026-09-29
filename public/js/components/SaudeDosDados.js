@@ -9,6 +9,7 @@ import {
   formatarPrazo,
 } from '../analise/saudeDosDados.js';
 import { formatarPercentual } from '../analise/diarioDeSinais.js';
+import { formatarData, formatarDataHora } from '../utils/dataHora.js';
 import { escaparHtml } from '../utils/html.js';
 import './LoadingSpinner.js';
 
@@ -87,7 +88,7 @@ function renderFontes(fontes) {
             const estado = ESTADO_FONTE[f.estado] || ESTADO_FONTE.SEM_DADO;
             return `<tr>
               <td class="fw-semibold">${escaparHtml(f.nome)}</td>
-              <td title="${escaparHtml(f.atualizadoEm || '')}">${formatarIdade(f.idadeHoras)}</td>
+              <td title="${escaparHtml(formatarDataHora(f.atualizadoEm, ''))}">${formatarIdade(f.idadeHoras)}</td>
               <td class="text-muted">${formatarPrazo(f.prazoHoras)}</td>
               <td><span class="badge ${estado.classe}">${estado.rotulo}</span>
                 ${f.ultimoErro ? `<div class="text-danger">${escaparHtml(f.ultimoErro)}</div>` : ''}</td>
@@ -112,7 +113,7 @@ function renderPrecos(p) {
     <div class="table-responsive"><table class="table table-sm small mb-0">
       <thead><tr><th>Ativo</th><th>Pregão</th><th class="text-end">BRAPI</th><th class="text-end">B3</th><th class="text-end">Diferença</th></tr></thead>
       <tbody>${p.divergencias.slice(0, 10).map((d) => `<tr>
-        <td>${escaparHtml(d.simbolo)}</td><td>${escaparHtml(d.data)}</td>
+        <td>${escaparHtml(d.simbolo)}</td><td>${escaparHtml(formatarData(d.data))}</td>
         <td class="text-end">${Number(d.fechamentoBrapi).toFixed(2)}</td>
         <td class="text-end">${Number(d.fechamentoB3).toFixed(2)}</td>
         <td class="text-end text-danger">${formatarPercentual(d.diferenca)}</td></tr>`).join('')}

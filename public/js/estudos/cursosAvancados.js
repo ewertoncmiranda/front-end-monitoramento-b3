@@ -178,7 +178,7 @@ export const cursosAvancados = [
     id: 'manual-curvas-b3', titulo: 'Manual de curvas da B3', nivel: 'Especialização', paginas: 62, ano: '2023',
     autoria: 'B3 - Brasil, Bolsa, Balcão', origem: 'Manual técnico de informação pública', instituicao: 'B3',
     descricao: 'Metodologias de construção, interpolação e divulgação de curvas locais, internacionais, spreads e índices.', pdf: 'assets/pdfs/27-manual-curvas-b3.pdf',
-    aviso: 'Manual técnico de 11/12/2023; consulte a edição vigente antes de uso operacional.',
+    aviso: 'Manual técnico de 11-12-2023; consulte a edição vigente antes de uso operacional.',
     modulos: [
       modulo('Estruturas matemáticas', [aula('Vértices, valores e interpolação', [4, 12], 'Entender os elementos comuns às curvas publicadas.', ['Vértice', 'Taxa zero', 'Fator de desconto', 'Interpolação'], 'Implemente conceitualmente uma interpolação entre dois vértices.')]),
       modulo('Curvas locais', [aula('PRE, DI x IPCA e cupons', [13, 33], 'Distinguir estruturas nominais, reais e cambiais.', ['Curva PRE', 'Cupom IPCA', 'Cupom cambial', 'Dias úteis'], 'Mapeie entradas, transformações e saídas de uma curva.')]),

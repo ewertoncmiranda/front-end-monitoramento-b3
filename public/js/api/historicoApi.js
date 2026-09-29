@@ -2,6 +2,7 @@
 // a resposta bruta da BRAPI (candles com `date` em epoch/segundos) pro formato
 // que a tabela e o grafico de candles consomem.
 import { httpGet } from './httpClient.js';
+import { formatarData } from '../utils/dataHora.js';
 
 // Ranges aceitos pelo plano Gratuito da BRAPI (validado em 2026-09-25) - "1y"
 // devolve 400 INVALID_RANGE pra qualquer ticker fora da lista de demonstracao.
@@ -18,7 +19,7 @@ export function buscarHistorico(simbolo, { range = '1mo', interval = '1d', sortO
 
 /**
  * Extrai e normaliza os candles de uma resposta de /historical. `date` vem da
- * BRAPI em epoch (segundos); aqui ganha `dataFormatada` (pt-BR) e `dataIso`
+ * BRAPI em epoch (segundos); aqui ganha `dataFormatada` (dd-MM-yyyy, Brasilia) e `dataIso`
  * (yyyy-mm-dd, formato exigido pelo lightweight-charts).
  */
 export function extrairCandles(respostaHistorico) {
@@ -28,7 +29,7 @@ export function extrairCandles(respostaHistorico) {
     return {
       ...c,
       ...precosAjustados(c),
-      dataFormatada: data.toLocaleDateString('pt-BR'),
+      dataFormatada: formatarData(data),
       dataIso: data.toISOString().slice(0, 10),
     };
   });

@@ -1,4 +1,8 @@
 import { BaseComponent } from './base/BaseComponent.js';
+import {
+  formatarData as formatarDataBrasilia,
+  formatarDataHora as formatarDataHoraBrasilia,
+} from '../utils/dataHora.js';
 
 // Unica responsabilidade: renderizar os fundamentos contabeis vindos da CVM.
 // Nao busca dado nem calcula nada - recebe pronto de GET
@@ -248,14 +252,11 @@ function formatarBilhoes(valor) {
 }
 
 function formatarData(valor) {
-  if (!valor) return '-';
-  const partes = String(valor).slice(0, 10).split('-');
-  return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : String(valor);
+  return formatarDataBrasilia(valor);
 }
 
 function formatarDataHora(valor) {
-  if (!valor) return 'cotação indisponível';
-  return String(valor).replace('T', ' ').slice(0, 16);
+  return formatarDataHoraBrasilia(valor, 'cotação indisponível');
 }
 
 customElements.define('fundamentos-cvm-card', FundamentosCvmCard);

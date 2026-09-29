@@ -1,5 +1,6 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarIndiceMacro } from '../api/indicesMacroApi.js';
+import { formatarData } from '../utils/dataHora.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -69,14 +70,14 @@ function renderIndice(indice, pontos) {
           ${
             atual
               ? `<p class="display-6 mb-0">${Number(atual.valor).toFixed(2)}<small class="fs-6 text-muted"> ${indice.unidade}</small></p>
-                 <p class="small text-muted mb-2">${atual.data}</p>`
+                 <p class="small text-muted mb-2">${formatarData(atual.data)}</p>`
               : '<p class="text-muted small">Sem dado ainda - aguardando o primeiro ciclo do agendador (roda 1x/dia).</p>'
           }
           ${
             historico.length
               ? `<table class="table table-sm mb-0">
                    <tbody>
-                     ${historico.map((p) => `<tr><td class="small">${p.data}</td><td class="text-end small">${Number(p.valor).toFixed(2)}</td></tr>`).join('')}
+                     ${historico.map((p) => `<tr><td class="small">${formatarData(p.data)}</td><td class="text-end small">${Number(p.valor).toFixed(2)}</td></tr>`).join('')}
                    </tbody>
                  </table>`
               : ''
