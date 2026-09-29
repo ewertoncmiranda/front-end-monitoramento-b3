@@ -4,6 +4,7 @@ import { buscarCotacaoRobusta } from '../api/ativosApi.js';
 import { buscarHistorico, extrairCandles } from '../api/historicoApi.js';
 import { buscarFundamentos } from '../api/analisesApi.js';
 import { buscarNoticias } from '../api/noticiasApi.js';
+import { formatarDataHora } from '../utils/dataHora.js';
 import './AtivoQuoteCard.js';
 import './AnaliseResultCard.js';
 import './HistoricoTable.js';
@@ -280,10 +281,7 @@ function formatarTipoColeta(tipo) {
 }
 
 function formatarData(valor) {
-  if (!valor) {
-    return '-';
-  }
-  return String(valor).replace('T', ' ').slice(0, 19);
+  return formatarDataHora(valor);
 }
 
 // So mostra o par anterior/atual quando ha uma mudanca de preco de fato

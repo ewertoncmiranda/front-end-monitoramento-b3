@@ -38,7 +38,7 @@ const TEMAS = [
         status: 'implementado',
         nome: 'Preco justo por Graham ajustado por juros (3 cenarios)',
         cenarios: ['LONGO_PRAZO'],
-        descricao: 'Formula revisada de Graham (1974): o multiplo classico e multiplicado por 4,4/Y, onde Y e a Selic meta vigente. Sem esse ajuste, com juros de dois digitos, o preco justo sai varias vezes inflado (correcao de 27/09/2026 - ver Glossario). O cenario sem ajuste (Y=4,4) continua calculado so como referencia historica, fora da recomendacao.',
+        descricao: 'Formula revisada de Graham (1974): o multiplo classico e multiplicado por 4,4/Y, onde Y e a Selic meta vigente. Sem esse ajuste, com juros de dois digitos, o preco justo sai varias vezes inflado (correcao de 27-09-2026 - ver Glossario). O cenario sem ajuste (Y=4,4) continua calculado so como referencia historica, fora da recomendacao.',
         formula: 'fator = 4,4 / Selic; multiplo = (8,5 + 2 x crescimento) x fator; preco justo = LPA_normalizado x multiplo; margem = (preco justo - preco atual) / preco justo',
       },
       {

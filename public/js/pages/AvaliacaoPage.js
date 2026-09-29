@@ -17,8 +17,8 @@ import '../components/BacktestPlacar.js';
 //
 // Estrutura declarativa, mesmo padrao de ArquiteturaPage e FormulasPage.
 
-const AVALIADO_EM = '26/09/2026';
-const ATUALIZADO_EM = '27/09/2026, com proventos somados ao retorno (sinal e régua da carteira), backtest rerodado com a regra corrigida, e a Fase 3 (TASK-50 a 58: intervalo de confiança, universo amplo, recalibração) registrada e em andamento em outra sessão';
+const AVALIADO_EM = '26-09-2026';
+const ATUALIZADO_EM = '27-09-2026, com proventos somados ao retorno (sinal e régua da carteira), backtest rerodado com a regra corrigida, e a Fase 3 (TASK-50 a 58: intervalo de confiança, universo amplo, recalibração) registrada e em andamento em outra sessão';
 
 const NOTAS = [
   {
@@ -49,9 +49,9 @@ const NOTAS = [
     nota: 7,
     meta: 7,
     porque:
-      'Subiu de 6: proventos (dividendo/JCP) agora entram no retorno do sinal E da régua da carteira — sem isso o excesso saía viesado a favor de quem paga dividendo. Cobertura só a partir de 27/09/2026 (a fonte da B3 só devolve ~12 meses por consulta; backfill de anos anteriores é TASK-46, aberto). Some a isso identidade única por empresa, point-in-time, COTAHIST cruzado com a BRAPI e checagem de quantidade de ações.',
+      'Subiu de 6: proventos (dividendo/JCP) agora entram no retorno do sinal E da régua da carteira — sem isso o excesso saía viesado a favor de quem paga dividendo. Cobertura só a partir de 27-09-2026 (a fonte da B3 só devolve ~12 meses por consulta; backfill de anos anteriores é TASK-46, aberto). Some a isso identidade única por empresa, point-in-time, COTAHIST cruzado com a BRAPI e checagem de quantidade de ações.',
     paraSubir: [
-      'Backfill de proventos anteriores a 27/09/2026 (TASK-46) — hoje o ajuste só vale pra sinais recentes.',
+      'Backfill de proventos anteriores a 27-09-2026 (TASK-46) — hoje o ajuste só vale pra sinais recentes.',
       '30 dias seguidos com o painel de saúde verde, sem intervenção manual.',
       'Idade do dado também nas telas de ativo, não só aqui.',
     ],
@@ -95,27 +95,27 @@ const NOTAS = [
 ];
 
 const PROGRESSO = [
-  { data: '27/09', item: 'Proventos somados ao retorno (ISS-F7): sinal e régua da carteira, não só o sinal — sem a régua receber também, o excesso saía viesado a favor de quem paga dividendo. Testado contra o backtest real duas vezes (execuções id=8 e id=9).' },
-  { data: '27/09', item: 'Backtest rerodado com a regra corrigida (Selic, LPA normalizado, faixa neutra) — o resultado de 26/09 era da regra anterior.' },
-  { data: '27/09', item: 'Fase 3 registrada no SPEC (TASK-50 a 58, infra#TASK-30 a 38): intervalo de confiança, universo amplo, calibração do score, crescimento nominal, placar com/sem provento, recalibração pelo IC e decisão v1×v2 — em andamento em paralelo.' },
-  { data: '27/09', item: 'Schema único versionado: as 4 tabelas do gestor que só existiam via Hibernate ddl-auto=update (candle_diario, indice_macro, perfil_empresa_cache, cotacao_atual) ganharam migração; ddl-auto passou para "validate" (testado: app sobe limpo, agendador gravando normalmente).' },
-  { data: '27/09', item: 'Graham com Y = Selic meta (ISS-F1), LPA normalizado por 3–5 anos + Graham Number como segunda trava de COMPRA_FORTE (ISS-F2), faixa neutra de venda em −15% (ISS-F3) — corrigidos e chamados por FinancialAnalyzerService, o caminho que gera o insight real.' },
-  { data: '27/09', item: 'Testes novos para valuation.py e recommendation.py (nenhum existia antes) — inclui os dois casos de aceite do TASK-20. Suíte completa: 74 testes verdes.' },
-  { data: '27/09', item: 'Preço anterior/atual da cotação (Monitorados) e mais índices macro (IGP-M, dólar PTAX, IBC-Br, desemprego via IBGE/SIDRA) e manchetes por ticker (Google News) — telas do painel, não muda o motor de decisão.' },
-  { data: '26/09', item: 'Identidade do ativo: um código canônico por empresa (ELET3→AXIA3, EMBR3→EMBJ3, JBSS3→JBSS32, MRFG3→MBRF3), CSNA3 e RAIZ4 com CNPJ. O cadastro converte código antigo sozinho.' },
-  { data: '26/09', item: 'Point-in-time: todo balanço (2016–2025) com a data de entrega na CVM; lucro dos últimos 12 meses (TTM) carregado pela primeira vez.' },
-  { data: '26/09', item: 'COTAHIST oficial 2016–2026 (~79 mil pregões, com os códigos antigos emendados) e checagem cruzada com a BRAPI.' },
-  { data: '26/09', item: 'Checagem da quantidade de ações entre anos: corrige unidade (milhar) e anula pico isolado, em vez de gravar LPA 1000× errado.' },
-  { data: '26/09', item: 'Backtest walk-forward 2017–2026 publicado, v1 contra v2, calibração até 2022 e teste depois.' },
-  { data: '26/09', item: 'Regra v2 em sombra: Graham com juros (CDI) e IPCA, TTM e faixa neutra de venda. Gravada no diário ao lado da v1.' },
-  { data: '26/09', item: 'Consolidação das análises só com os últimos 30 dias; aviso legal em todo insight.' },
-  { data: '26/09', item: 'Rotinas agendadas: cargas do ETL (dias úteis 20h), backup com restauração testada (todo dia) e alerta por Telegram quando configurado.' },
-  { data: '26/09', item: 'Motor de avaliação único (backtest e diário): entrada na abertura seguinte, custo, excesso sobre o CDI e sobre a média da carteira, janela de desdobramento marcada.' },
-  { data: '26/09', item: 'Versão da regra gravada em todo insight: regras diferentes nunca caem no mesmo placar.' },
-  { data: '26/09', item: 'Diário de sinais: um sinal por ativo por pregão, só inclusão, com resultado por horizonte quando ele vence. Rotina diária ativa no Agendador do Windows.' },
-  { data: '26/09', item: 'Histórico diário do CDI desde 2016 (2.693 pontos), completado sozinho na subida do gestor.' },
-  { data: '26/09', item: 'Régua de mercado do diário: média simples da carteira monitorada no lugar do BOVA11 (que não é coletado). Mede se a regra escolhe melhor do que pegar todos por igual.' },
-  { data: '26/09', item: 'Comunicados oficiais da CVM por ativo e por vela do gráfico.' },
+  { data: '27-09-2026', item: 'Proventos somados ao retorno (ISS-F7): sinal e régua da carteira, não só o sinal — sem a régua receber também, o excesso saía viesado a favor de quem paga dividendo. Testado contra o backtest real duas vezes (execuções id=8 e id=9).' },
+  { data: '27-09-2026', item: 'Backtest rerodado com a regra corrigida (Selic, LPA normalizado, faixa neutra) — o resultado de 26-09-2026 era da regra anterior.' },
+  { data: '27-09-2026', item: 'Fase 3 registrada no SPEC (TASK-50 a 58, infra#TASK-30 a 38): intervalo de confiança, universo amplo, calibração do score, crescimento nominal, placar com/sem provento, recalibração pelo IC e decisão v1×v2 — em andamento em paralelo.' },
+  { data: '27-09-2026', item: 'Schema único versionado: as 4 tabelas do gestor que só existiam via Hibernate ddl-auto=update (candle_diario, indice_macro, perfil_empresa_cache, cotacao_atual) ganharam migração; ddl-auto passou para "validate" (testado: app sobe limpo, agendador gravando normalmente).' },
+  { data: '27-09-2026', item: 'Graham com Y = Selic meta (ISS-F1), LPA normalizado por 3–5 anos + Graham Number como segunda trava de COMPRA_FORTE (ISS-F2), faixa neutra de venda em −15% (ISS-F3) — corrigidos e chamados por FinancialAnalyzerService, o caminho que gera o insight real.' },
+  { data: '27-09-2026', item: 'Testes novos para valuation.py e recommendation.py (nenhum existia antes) — inclui os dois casos de aceite do TASK-20. Suíte completa: 74 testes verdes.' },
+  { data: '27-09-2026', item: 'Preço anterior/atual da cotação (Monitorados) e mais índices macro (IGP-M, dólar PTAX, IBC-Br, desemprego via IBGE/SIDRA) e manchetes por ticker (Google News) — telas do painel, não muda o motor de decisão.' },
+  { data: '26-09-2026', item: 'Identidade do ativo: um código canônico por empresa (ELET3→AXIA3, EMBR3→EMBJ3, JBSS3→JBSS32, MRFG3→MBRF3), CSNA3 e RAIZ4 com CNPJ. O cadastro converte código antigo sozinho.' },
+  { data: '26-09-2026', item: 'Point-in-time: todo balanço (2016–2025) com a data de entrega na CVM; lucro dos últimos 12 meses (TTM) carregado pela primeira vez.' },
+  { data: '26-09-2026', item: 'COTAHIST oficial 2016–2026 (~79 mil pregões, com os códigos antigos emendados) e checagem cruzada com a BRAPI.' },
+  { data: '26-09-2026', item: 'Checagem da quantidade de ações entre anos: corrige unidade (milhar) e anula pico isolado, em vez de gravar LPA 1000× errado.' },
+  { data: '26-09-2026', item: 'Backtest walk-forward 2017–2026 publicado, v1 contra v2, calibração até 2022 e teste depois.' },
+  { data: '26-09-2026', item: 'Regra v2 em sombra: Graham com juros (CDI) e IPCA, TTM e faixa neutra de venda. Gravada no diário ao lado da v1.' },
+  { data: '26-09-2026', item: 'Consolidação das análises só com os últimos 30 dias; aviso legal em todo insight.' },
+  { data: '26-09-2026', item: 'Rotinas agendadas: cargas do ETL (dias úteis 20h), backup com restauração testada (todo dia) e alerta por Telegram quando configurado.' },
+  { data: '26-09-2026', item: 'Motor de avaliação único (backtest e diário): entrada na abertura seguinte, custo, excesso sobre o CDI e sobre a média da carteira, janela de desdobramento marcada.' },
+  { data: '26-09-2026', item: 'Versão da regra gravada em todo insight: regras diferentes nunca caem no mesmo placar.' },
+  { data: '26-09-2026', item: 'Diário de sinais: um sinal por ativo por pregão, só inclusão, com resultado por horizonte quando ele vence. Rotina diária ativa no Agendador do Windows.' },
+  { data: '26-09-2026', item: 'Histórico diário do CDI desde 2016 (2.693 pontos), completado sozinho na subida do gestor.' },
+  { data: '26-09-2026', item: 'Régua de mercado do diário: média simples da carteira monitorada no lugar do BOVA11 (que não é coletado). Mede se a regra escolhe melhor do que pegar todos por igual.' },
+  { data: '26-09-2026', item: 'Comunicados oficiais da CVM por ativo e por vela do gráfico.' },
 ];
 
 const DIFERENCIAIS = [
@@ -151,7 +151,7 @@ const BLOQUEADORES = [
       '"58% de acerto" sem saber a margem pode ser 46% ou 69% — indistinguível de ruído com poucas janelas. Em andamento (TASK-50): Wilson 95% pro acerto, média ± 1,96×erro-padrão pro excesso, direto em backtest_placar.',
   },
   {
-    titulo: 'Proventos só a partir de 27/09/2026',
+    titulo: 'Proventos só a partir de 27-09-2026',
     texto: 'O ajuste existe (sinal e régua da carteira), mas a fonte da B3 só cobre os últimos ~12 meses por consulta — sinais mais antigos no backtest (2017+) continuam sem provento. Backfill é TASK-46, aberto.',
   },
   {
@@ -171,15 +171,15 @@ const STATUS = {
 };
 
 const MELHORIAS = [
-  { item: 'Diário de sinais (paper trading)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Rotina ativa (dias úteis, 19h), agora com v1 e v2 lado a lado. Primeiros resultados ~21 pregões depois de 28/09.' },
+  { item: 'Diário de sinais (paper trading)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'Rotina ativa (dias úteis, 19h), agora com v1 e v2 lado a lado. Primeiros resultados ~21 pregões depois de 28-09-2026.' },
   { item: 'Backtest walk-forward sem viés de futuro', impacto: 'Crítico', classe: 'text-bg-danger', status: 'feito', porque: 'COTAHIST + CVM pela data de entrega, 2017–2026, calibração até 2022. Roda toda sexta.' },
   { item: 'Mapa de tickers renomeados', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Tabela ativo_identidade; o cadastro e o ETL usam o código canônico.' },
   { item: 'Graham com juros reais', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção: 4,4 / Selic meta vigente. Backtest e diário já medem essa versão (VERSAO_REGRA); falta rodar de novo desde a correção.' },
   { item: 'LPA normalizado e faixa neutra', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Direto na regra de produção: LPA = mínimo entre atual e média de 3–5 anos da CVM; Graham Number como segunda trava; venda só abaixo de −15%.' },
   { item: 'Schema único versionado (gestor)', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'ddl-auto de "update" para "validate"; as 4 tabelas que só existiam via Hibernate foram migradas. Testado ao vivo.' },
-  { item: 'Teste para valuation e recomendação', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Não existia nenhum antes de 27/09. tests/test_valuation.py e tests/test_recommendation.py, 74 testes verdes na suíte completa.' },
+  { item: 'Teste para valuation e recomendação', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Não existia nenhum antes de 27-09-2026. tests/test_valuation.py e tests/test_recommendation.py, 74 testes verdes na suíte completa.' },
   { item: 'Rerodar backtest com a regra corrigida', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Rodado duas vezes (id=8 e id=9) com a regra 2026.09.27-2 e proventos.' },
-  { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'ClienteB3Proventos (gestor) + avaliador.py somam data-com ao retorno do sinal e da régua da carteira. Cobertura só a partir de 27/09/2026 (TASK-46 pro backfill).' },
+  { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'ClienteB3Proventos (gestor) + avaliador.py somam data-com ao retorno do sinal e da régua da carteira. Cobertura só a partir de 27-09-2026 (TASK-46 pro backfill).' },
   { item: 'Intervalo de confiança no placar (Wilson 95%)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'TASK-50, outra sessão: acerto com Wilson 95%, excesso com média ± 1,96×erro-padrão em backtest_placar.' },
   { item: 'Universo amplo point-in-time (viés de sobrevivência)', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'TASK-51: backtest passa a incluir empresas deslistadas, não só as monitoradas hoje.' },
   { item: 'Placar separando janelas com/sem provento', impacto: 'Médio', classe: 'text-bg-info', status: 'pendente', porque: 'TASK-56: hoje o placar mistura janela ajustada e não-ajustada por proventos sem distinguir.' },
@@ -238,7 +238,7 @@ const NEGOCIO = [
 
 const ROTEIRO = [
   { periodo: 'Dias 1–30', foco: 'Base confiável', itens: 'Feito: identidade dos ativos, data de entrega, COTAHIST, checagem de preço e de ações, backup, rotinas e aviso legal. Falta: Telegram e cópia do backup fora da máquina.' },
-  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Proventos no retorno (feito, 27/09); intervalo de confiança no placar (TASK-50, em andamento); universo amplo point-in-time (TASK-51); recalibrar pelo limite inferior do IC (TASK-57).' },
+  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Proventos no retorno (feito, 27-09-2026); intervalo de confiança no placar (TASK-50, em andamento); universo amplo point-in-time (TASK-51); recalibrar pelo limite inferior do IC (TASK-57).' },
   { periodo: 'Dias 61–90', foco: 'Prova em tempo real', itens: 'Placares do diário com amostra mínima (v1 x v2) e decisão pelos números: manter, promover a v2 ou descartar cada regra.' },
 ];
 

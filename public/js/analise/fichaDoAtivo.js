@@ -3,6 +3,8 @@
 // /pregoes e /validacao/backtest no que cada cartao da ficha mostra. Modulo
 // puro, sem DOM: os componentes de components/ficha so desenham o resultado.
 
+import { formatarData } from '../utils/dataHora.js';
+
 /** Rotulo legivel e tom (verde/cinza/vermelho/amarelo) de cada recomendacao. */
 const RECOMENDACOES = {
   COMPRA_FORTE: { rotulo: 'Compra forte', tom: 'success' },
@@ -37,11 +39,9 @@ export function pontos(valor, casas = 1, comSinal = false) {
   return `${comSinal && Number(valor) > 0 ? '+' : ''}${texto}%`;
 }
 
-/** "2026-09-25" -> "25/09/2026". */
+/** "2026-09-25" -> "25-09-2026" (horario de Brasilia; ver utils/dataHora.js). */
 export function dataBr(iso) {
-  if (!iso) return '—';
-  const [ano, mes, dia] = String(iso).slice(0, 10).split('-');
-  return `${dia}/${mes}/${ano}`;
+  return formatarData(iso, '—');
 }
 
 export function diasEntre(isoAntes, hoje = new Date()) {

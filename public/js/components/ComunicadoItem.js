@@ -1,4 +1,5 @@
 import { categoriaComunicado } from '../api/comunicadosApi.js';
+import { formatarData as formatarDataBrasilia } from '../utils/dataHora.js';
 import { escaparHtml } from '../utils/html.js';
 
 // Unica responsabilidade: desenhar UM comunicado oficial da CVM. Funcao pura,
@@ -50,8 +51,8 @@ function renderAssunto(comunicado) {
   `;
 }
 
+// Mantido como export porque candles, backtest, diario e noticias importam
+// daqui; o formato e o fuso sao os de utils/dataHora.js.
 export function formatarData(iso) {
-  if (!iso) return '';
-  const [ano, mes, dia] = String(iso).split('-');
-  return `${dia}/${mes}/${ano}`;
+  return formatarDataBrasilia(iso, '');
 }

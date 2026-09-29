@@ -2,6 +2,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { listarSetoresBase, listarAtivosBase } from '../api/baseAtivosApi.js';
 import { buscarCotacaoRobusta } from '../api/ativosApi.js';
 import { buscarAnalise, buscarFundamentos } from '../api/analisesApi.js';
+import { formatarData } from '../utils/dataHora.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 import '../components/AtivoQuoteCard.js';
@@ -156,7 +157,7 @@ export class SetoresPage extends BaseComponent {
   renderLinhaAtivo(ativo) {
     const expandido = this._expandidos.has(ativo.simbolo);
     const precoTexto = ativo.ultimoFechamento == null ? '-' : `R$ ${Number(ativo.ultimoFechamento).toFixed(2)}`;
-    const dataTexto = ativo.dataUltimoFechamento || 'sem cotacao ainda';
+    const dataTexto = formatarData(ativo.dataUltimoFechamento, 'sem cotacao ainda');
 
     const linhaPrincipal = `
       <tr data-simbolo="${ativo.simbolo}" style="cursor: pointer;" class="${expandido ? 'table-active' : ''}">

@@ -1,6 +1,7 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { listarAtivosBase, listarSetoresBase } from '../api/baseAtivosApi.js';
 import { favoritar } from '../api/favoritosApi.js';
+import { formatarData } from '../utils/dataHora.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -99,7 +100,7 @@ export class BasePage extends BaseComponent {
         <td>${item.nome ?? '-'}</td>
         <td>${item.setor ?? '-'}</td>
         <td class="text-end">${this.formatarPreco(item.ultimoFechamento)}</td>
-        <td class="text-muted small">${item.dataUltimoFechamento ?? '-'}</td>
+        <td class="text-muted small">${formatarData(item.dataUltimoFechamento)}</td>
         <td class="text-center">${item.temFundamento ? '<span class="badge bg-success">Sim</span>' : '<span class="badge bg-secondary">Não</span>'}</td>
         <td class="text-center">
           ${item.favorito
