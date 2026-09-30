@@ -188,3 +188,18 @@ Não existe mais configuração do lado do cliente (`window.PAINEL_ATIVOS_API_BA
 | TASK-03 | Testes de componente (ex.: Web Test Runner) para `TechnicalSeriesAnalyzer`-like pure functions e componentes de renderização, e testes do proxy (`backendConfig`/`apiProxy`) | ISS-03 | ABERTO |
 | TASK-04 | Adicionar este front como serviço no `docker-compose.yml` do `infra-b3-ecossystem` (rede `infra-b3-ecossytem_observability`, mesma do `gestor-ativos-brutos`), pra subir junto com o resto do ecossistema | — | RESOLVIDO |
 | TASK-05 | Desativar/pausar um ativo monitorado pela UI (a coluna `ativo` já existe no schema, mas nada escreve `false` ainda) | REQ-05 | ABERTO — fora do escopo do pedido original (2026-09-25) |
+
+## Plano LAC: 9 lacunas de assertividade (proposta de 30-09-2026, EM AVALIAÇÃO)
+
+Plano completo em `infra-b3-ecossytem/SPEC.md`, seção Plano LAC. O painel só exibe; consome os endpoints LAC-GES-1..4 do gestor.
+
+| ID | Tarefa | Endpoint |
+|---|---|---|
+| LAC-FE-1 | Aba Avaliação: placar por ranking ao lado do placar por classes. Por versão de regra, correlação de ranking com intervalo, barras por quintil e janelas sucessivas lado a lado. A hipótese registrada antes da execução aparece junto do resultado | `/validacao/backtest?metodo=RANKING` |
+| LAC-FE-2 | Ficha do ativo: cartão "Fatores" com percentil no universo e no setor, agrupado por família (preço, qualidade, valor, evento), com a data do cálculo | `/ativos/{s}/fatores` |
+| LAC-FE-3 | Ficha do ativo: proventos por período (DVA) junto dos eventos, marcando a origem de cada valor | `/ativos/{s}/proventos-contabeis` |
+| LAC-FE-4 | Saúde dos dados: novas fontes (eventos corporativos, fatores, cobertura de proventos) | `/validacao/saude-dados` |
+
+- Datas pelo `utils/dataHora.js` (Brasília, dd-MM-yyyy).
+- Toda tela de recomendação mantém o aviso de regra **experimental** até uma versão ser promovida pelos critérios de LAC-INS-9 (gerar-insights).
+- Aceite: `npm test` com os novos formatadores; telas com o banco sem a V16 mostram "sem dado ainda" em vez de erro.
