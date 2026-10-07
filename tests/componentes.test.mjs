@@ -69,7 +69,7 @@ caso('grafico de proventos: ordena por periodo, descarta periodo sem valor e nao
   assert.deepEqual(pontos.map((p) => p.rotulo), ['2022', '2024']);
   const svg = svgProventos([{ tipoDoc: 'DFP', dtFimExercicio: '2024-12-31', jcp: 1134258, dividendos: 2056668 }]);
   assert.match(svg, /<svg/);
-  assert.match(svg, /role="img"/);
+  assert.match(svg, /role="list"/); // colunas focaveis (REQ-UX-11): "img" esconderia os filhos
   assert.match(svg, /2024/);
   assert.equal(svgProventos([]), '');
   assert.equal(svgProventos([{ dtFimExercicio: '2024-12-31', jcp: null, dividendos: null }]), '');

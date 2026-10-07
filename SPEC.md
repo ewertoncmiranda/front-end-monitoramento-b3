@@ -392,3 +392,28 @@ TASK-ETL-5. Única tarefa que cria uma rota nova. Requer endpoint dedicado no ge
 - `REQ-ETL-4`: ITUB4 exibe rosca ON × PN com dois setores distintos; WEGE3 exibe rosca com PN = 0 (empresa sem ações preferenciais).
 - `REQ-ETL-5`: PETRD... (call de PETR4) aparece na cadeia com `data_vencimento` e `preco_exercicio` não nulos; linha ATM destacada; recarregar a tela não duplica linhas.
 - `npm test` cobre `calcularTicketMedio` e a renderização dos novos componentes com dados mockados.
+
+---
+
+## Gráfico de proventos legível e ligado à tabela (2026-10-07)
+
+**Motivo.** Com o backfill histórico da DVA (ETL, 2010–2026), a ficha passou a ter ~60 períodos por empresa (ALOS3: 63 linhas). O gráfico de REQ-UX-4 desenhava uma coluna por período com o valor em cima e o rótulo embaixo em 520 px: os textos se atropelavam, "R$ 0,00" aparecia em cada trimestre sem provento, trimestres e anos ficavam lado a lado como se fossem comparáveis, e o hover era só o `<title>` nativo, sem relação com a tabela.
+
+| ID | Requisito | Estado |
+|---|---|---|
+| REQ-UX-11 | Proventos por período: visão **Anual** (padrão, um exercício por coluna) e **Trimestral** (últimos 12 períodos); eixo Y com grade em 0, metade e teto "redondo"; sem valor escrito por coluna; rótulos do eixo X espaçados para não encostar (sempre o último); ano sem DFP marcado `*` (parcial); ano sem nenhum valor como lacuna tracejada (ausente, não zero). Passar o mouse ou focar uma coluna destaca a coluna (as outras esmaecem, linha-guia), mostra a dica (JCP, dividendos, total; no trimestral também por ação e entrega) e destaca e rola **só a tabela** até as linhas do período (no anual, todas as do exercício); passar o mouse numa linha destaca a coluna; clique/toque fixa o destaque (celular); setas ←/→ navegam entre colunas (roving tabindex, `aria-live` na dica), Esc solta | IMPLEMENTADO (2026-10-07) |
+
+| ID | Tarefa | Estado |
+|---|---|---|
+| TASK-UX-9 | `analise/graficoProventos.js` (puro): `pontosAnuais`, `pontosDoModo`, `chaveDaLinha`, `tetoDoEixo`, `indicesDosRotulos`, `svgProventos(proventos, modo)` com `data-chave` e alvo invisível da altura toda por coluna; `components/ficha/ProventosContabeis.js`: seletor Anual/Trimestral, legenda fora do SVG, dica posicionada no cartão, um listener delegado (mouseover/focusin/click/keydown) que alterna `.ativo` no gráfico e nas linhas (`tr[data-ano][data-fim]`); CSS em `app.css` (seção REQ-UX-11) com variáveis do Bootstrap (claro e escuro); `tests/graficoProventos.test.mjs` (10 casos) no `npm test` | IMPLEMENTADO (2026-10-07) |
+
+**Decisões.**
+- O SVG passa a ter `role="list"` (antes `img`): `img` esconde os filhos da acessibilidade e impediria navegar pelas colunas pelo teclado. O teste antigo em `tests/componentes.test.mjs` foi ajustado.
+- Agregação anual pelo ano civil do fim do período. Os períodos já chegam isolados do ETL (o 4º trimestre é DFP − 3º ITR), então a soma não conta nada duas vezes. Quem fecha o exercício fora de dezembro (RAIZ4, CAML3) só tem DFP na DVA e aparece com um valor por ano.
+- A rolagem da tabela ajusta o `scrollTop` do contêiner `.tabela-rolavel`, sem `scrollIntoView`, para nunca mover a página; ela só acontece quando o destaque vem do gráfico (passar o mouse na tabela não a faz pular).
+
+**Aceite (verificado em 2026-10-07 no navegador, ALOS3, tema escuro, com o gestor real).**
+- Anual com 17 colunas (2010–2026), rótulos legíveis e lacunas visíveis; passar o mouse em 2013 destaca as 4 linhas do exercício e a tabela rola até elas.
+- Trimestral mostra exatamente 12 colunas (2023-09 a 2026-06); passar o mouse na linha de 03/2026 destaca a coluna 2026-03-31 e a dica mostra "Por ação: R$ 0,2896 · Entregue em 07-05-2026".
+- Com o foco na coluna mais recente, a seta ← leva o foco ao período anterior.
+- `npm test` verde.
