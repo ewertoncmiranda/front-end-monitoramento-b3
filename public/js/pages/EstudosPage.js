@@ -5,6 +5,8 @@ import { ProgressoEstudos } from '../estudos/progresso.js';
 import { normalizar } from '../estudos/texto.js';
 import { renderTrilhas, renderConhecimentoHub } from '../estudos/apresentacao.js';
 import { renderCatalogoCursos, renderCurso, abrirPdf } from '../estudos/apresentacaoCursos.js';
+import { cursos } from '../estudos/cursos.js';
+import { lerEstado, montarHash } from '../estudos/urlEstado.js';
 import '../pages/FormulasPage.js';
 import '../pages/ArquiteturaPage.js';
 import '../pages/DesignDeCodigoPage.js';
@@ -119,7 +121,47 @@ export class EstudosPage extends BaseComponent {
       this.atualizarSalvamento();
     };
     this.querySelector('#estudos-busca').addEventListener('input', () => this.filtrar());
+    this.aplicarEstadoDaUrl(lerEstado(window.location.hash, cursos.map(c => c.id)));
     this.renderConteudo();
+    this.restaurarFiltros(this._estadoInicial);
+  }
+
+  /** ISS-11: abre direto na secao/curso/visao do link compartilhado. */
+  aplicarEstadoDaUrl(estado) {
+    this._estadoInicial = estado;
+    if (estado.secao) this.secao = estado.secao;
+    if (estado.visao) this.visaoFormacao = estado.visao;
+    if (estado.curso) this.cursoAberto = estado.curso;
+    if (!estado.secao && !estado.curso) return;
+    this.querySelectorAll('[data-secao]').forEach(btn => {
+      const ativo = btn.dataset.secao === this.secao;
+      btn.classList.toggle('btn-primary', ativo);
+      btn.classList.toggle('btn-outline-secondary', !ativo);
+      btn.setAttribute('aria-pressed', String(ativo));
+    });
+  }
+
+  restaurarFiltros(estado = {}) {
+    if (estado.q) this.querySelector('#estudos-busca').value = estado.q;
+    const nivel = this.querySelector('[data-curso-filtro="nivel"]');
+    const tipo = this.querySelector('[data-curso-filtro="tipo"]');
+    if (estado.nivel && nivel) nivel.value = estado.nivel;
+    if (estado.tipo && tipo) tipo.value = estado.tipo;
+    this._estadoInicial = {};
+    this.filtrar();
+  }
+
+  /** Reflete o estado no hash sem recarregar a pagina (replaceState nao dispara hashchange). */
+  sincronizarUrl() {
+    const hash = montarHash({
+      secao: this.secao,
+      visao: this.visaoFormacao,
+      curso: this.secao === 'formacoes' ? this.cursoAberto : null,
+      q: this.querySelector('#estudos-busca')?.value.trim(),
+      nivel: this.querySelector('[data-curso-filtro="nivel"]')?.value,
+      tipo: this.querySelector('[data-curso-filtro="tipo"]')?.value,
+    });
+    try { window.history.replaceState(null, '', hash); } catch { /* sem History API: o link so nao acompanha */ }
   }
 
   idsPercurso() { return (this.percurso === 'apimec' ? apimec : niveis).map(n => n.id); }
@@ -146,6 +188,7 @@ export class EstudosPage extends BaseComponent {
   }
 
   filtrar() {
+    this.sincronizarUrl();
     if ((this.secao === 'conhecimento' && this.subConhecimento === 'referencia') || (this.secao === 'formacoes' && this.cursoAberto)) {
       // Cada pagina embutida em Referencia tem sua propria busca interna
       // (ex.: o Glossario ja filtra os proprios verbetes) - a busca global

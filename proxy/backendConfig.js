@@ -2,14 +2,42 @@
 // validando por healthcheck e caindo para um fallback quando o primario nao responde.
 // Nao sabe nada sobre proxy, rotas ou HTTP do lado do cliente.
 import http from 'node:http';
+import https from 'node:https';
 
 const TIMEOUT_MS = 2000;
 
-function verificarSaude(baseUrl) {
+// Saudavel = HTTP 2xx do actuator. 3xx/4xx/5xx (inclusive 404, que um servidor
+// qualquer na porta devolve) nao contam: escolheriam o backend errado sem alarme.
+// Se o corpo for JSON com "status", ele tem de ser UP.
+export function saudavel(statusCode, corpo) {
+  if (statusCode < 200 || statusCode >= 300) return false;
+  try {
+    const json = JSON.parse(corpo);
+    if (json && typeof json.status === 'string') return json.status === 'UP';
+  } catch {
+    // corpo nao e JSON: o 2xx basta
+  }
+  return true;
+}
+
+export function verificarSaude(baseUrl) {
   return new Promise((resolve) => {
-    const req = http.get(`${baseUrl}/actuator/health`, { timeout: TIMEOUT_MS }, (res) => {
-      res.resume();
-      resolve(res.statusCode >= 200 && res.statusCode < 500);
+    let url;
+    try {
+      url = new URL(`${baseUrl.replace(/\/+$/, '')}/actuator/health`);
+    } catch {
+      resolve(false);
+      return;
+    }
+    const cliente = url.protocol === 'https:' ? https : http;
+    const req = cliente.get(url, { timeout: TIMEOUT_MS }, (res) => {
+      let corpo = '';
+      res.setEncoding('utf8');
+      res.on('data', (parte) => {
+        if (corpo.length < 4096) corpo += parte;
+      });
+      res.on('end', () => resolve(saudavel(res.statusCode, corpo)));
+      res.on('error', () => resolve(false));
     });
     req.on('timeout', () => {
       req.destroy();
