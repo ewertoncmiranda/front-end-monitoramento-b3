@@ -2,6 +2,8 @@
 // Nao contem regra de negocio nenhuma.
 import './components/AppHeader.js';
 import './components/BottomNav.js';
+import './pages/InicioPage.js';
+import './pages/InicioPage.js';
 import './pages/GestaoPage.js';
 import './pages/BasePage.js';
 import './pages/FavoritosPage.js';
