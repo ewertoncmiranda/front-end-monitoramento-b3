@@ -21,6 +21,10 @@ import './LoadingSpinner.js';
 // (infra#CTR-11); a regra de leitura fica em analise/diarioDeSinais.js.
 
 const ROTULO = {
+  SINAL_POSITIVO_FORTE: 'Sinal positivo forte',
+  SINAL_POSITIVO: 'Sinal positivo',
+  SEM_MARGEM: 'Sem margem',
+  NEUTRO: 'Neutro',
   COMPRA_FORTE: 'Compra forte',
   COMPRA_MODERADA: 'Compra moderada',
   COMPRA_TECNICA: 'Compra técnica',

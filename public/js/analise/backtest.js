@@ -67,7 +67,10 @@ export function resumoDasCompras(placar, versao, periodo, horizonte) {
 
 /** Linhas de um periodo/horizonte agrupadas por recomendacao, v1 e v2 lado a lado. */
 export function linhasLadoALado(placar, periodo, horizonte) {
-  const ordem = ['COMPRA_FORTE', 'COMPRA_MODERADA', 'MANTER', 'ALERTA_RISCO', 'VENDA_VALUATION'];
+  const ordem = [
+    'SINAL_POSITIVO_FORTE', 'SINAL_POSITIVO', 'NEUTRO', 'ALERTA_RISCO', 'SEM_MARGEM',
+    'COMPRA_FORTE', 'COMPRA_MODERADA', 'MANTER', 'VENDA_VALUATION',
+  ];
   const filtradas = placar.filter((l) => l.periodo === periodo && l.horizonte === horizonte);
   const recomendacoes = [...new Set(filtradas.map((l) => l.recomendacao))]
     .sort((a, b) => (ordem.indexOf(a) + 99) % 99 - (ordem.indexOf(b) + 99) % 99);

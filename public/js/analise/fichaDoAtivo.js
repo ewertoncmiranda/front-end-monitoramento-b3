@@ -7,6 +7,9 @@ import { formatarData } from '../utils/dataHora.js';
 
 /** Rotulo legivel e tom (verde/cinza/vermelho/amarelo) de cada recomendacao. */
 const RECOMENDACOES = {
+  SINAL_POSITIVO_FORTE: { rotulo: 'Sinal positivo forte', tom: 'success' },
+  SINAL_POSITIVO: { rotulo: 'Sinal positivo', tom: 'success' },
+  NEUTRO: { rotulo: 'Neutro', tom: 'secondary' },
   COMPRA_FORTE: { rotulo: 'Compra forte', tom: 'success' },
   COMPRA_MODERADA: { rotulo: 'Compra moderada', tom: 'success' },
   MANTER: { rotulo: 'Manter', tom: 'secondary' },
