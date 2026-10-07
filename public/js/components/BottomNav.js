@@ -1,6 +1,7 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { GRUPOS } from '../navegacao.js';
 import { marcarAtivo } from './AppHeader.js';
+import './TemaToggle.js';
 
 // Unica responsabilidade: navegacao inferior estilo app mobile, nos mesmos 5
 // grupos do menu superior (navegacao.js). Grupo com varias paginas abre um
@@ -21,8 +22,8 @@ function item(g) {
 export class BottomNav extends BaseComponent {
   template() {
     return `
-      <nav class="app-bottom-nav navbar fixed-bottom navbar-light bg-white border-top d-flex d-md-none" aria-label="Navegação principal">
-        <div class="container d-flex flex-nowrap justify-content-around">${GRUPOS.map(item).join('')}</div>
+      <nav class="app-bottom-nav navbar fixed-bottom bg-body border-top d-flex d-md-none" aria-label="Navegação principal">
+        <div class="container d-flex flex-nowrap justify-content-around">${GRUPOS.map(item).join('')}<tema-toggle modo="bottom"></tema-toggle></div>
       </nav>
     `;
   }

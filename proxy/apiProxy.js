@@ -17,6 +17,8 @@ const ROTAS_PROXIADAS = [
   // Universo amplo (TASK-59) e favoritos do usuario (infra V13)
   '/base',
   '/favoritos',
+  // Tabela unica de ativos do painel (gestor TASK-UX-5, REQ-UX-8)
+  '/painel',
 ];
 
 export function registrarProxy(app, backendUrl) {

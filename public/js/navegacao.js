@@ -8,8 +8,8 @@ export const GRUPOS = [
     id: 'ativos', rotulo: 'Ativos', icone: '🗂️',
     itens: [
       { rotulo: 'Ficha do ativo', rota: '#/gestao' },
-      { rotulo: 'Base de ativos', rota: '#/base' },
-      { rotulo: 'Favoritos', rota: '#/favoritos' },
+      // Tabela unica (REQ-UX-8): substitui as listas Base, Favoritos, Monitorados e Setores.
+      { rotulo: 'Tabela de ativos', rota: '#/ativos' },
     ],
   },
   {
@@ -18,7 +18,6 @@ export const GRUPOS = [
       { rotulo: 'Velas', rota: '#/candles' },
       { rotulo: 'Comunicados', rota: '#/comunicados' },
       { rotulo: 'Notícias', rota: '#/noticias' },
-      { rotulo: 'Setores', rota: '#/setores' },
       { rotulo: 'Índices', rota: '#/indices' },
     ],
   },
@@ -28,7 +27,11 @@ export const GRUPOS = [
 
 // Rotas que existem mas nao tem item proprio: pertencem a um grupo.
 const EXTRAS = {
+  // Rotas antigas das listas: abrem a tabela unica na visao correspondente.
+  '#/base': 'ativos',
+  '#/favoritos': 'ativos',
   '#/monitorados': 'ativos',
+  '#/setores': 'ativos',
   '#/formulas': 'estudos',
   '#/glossario': 'estudos',
   '#/padroes': 'estudos',

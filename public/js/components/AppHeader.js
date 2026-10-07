@@ -1,6 +1,7 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { GRUPOS, grupoDaRota, rotaAtiva } from '../navegacao.js';
 import '../components/BuscaGlobal.js';
+import '../components/TemaToggle.js';
 
 // Unica responsabilidade: barra de navegacao superior em grupos, visivel a
 // partir de telas medias (em telas de celular, quem navega e o BottomNav).
@@ -26,6 +27,7 @@ export class AppHeader extends BaseComponent {
           <a class="navbar-brand" href="#/inicio">Painel de Ativos B3</a>
           <div class="navbar-nav flex-wrap flex-grow-1">${GRUPOS.map(item).join('')}</div>
           <busca-global style="min-width:220px;"></busca-global>
+          <tema-toggle></tema-toggle>
         </div>
       </nav>
     `;

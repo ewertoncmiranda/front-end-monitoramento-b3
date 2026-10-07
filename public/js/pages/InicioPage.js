@@ -79,7 +79,7 @@ export function htmlSaude(saude) {
 
 export function htmlFavoritos(favoritos) {
   if (!favoritos || !favoritos.length) {
-    return htmlEstadoVazio({ titulo: 'Nenhum favorito ainda', causa: 'Favoritos recebem cotação intradiária no pregão.', acaoHref: '#/base', acaoRotulo: 'Escolher na Base' });
+    return htmlEstadoVazio({ titulo: 'Nenhum favorito ainda', causa: 'Favoritos recebem cotação intradiária no pregão.', acaoHref: '#/ativos', acaoRotulo: 'Escolher na tabela de ativos' });
   }
   const linhas = maioresMovimentos(favoritos);
   return `<div class="table-responsive"><table class="table table-sm align-middle small mb-1 tabela-cartoes">

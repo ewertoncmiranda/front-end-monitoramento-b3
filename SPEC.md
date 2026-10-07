@@ -46,11 +46,10 @@ Fonte: public/js/router.js e public/js/main.js.
 | Rota | Conteúdo |
 |---|---|
 | #/gestao | Padrão. Agrupa Consulta, Cadastro e Como funciona em abas internas |
-| #/monitorados | Carteira monitorada, decisões e detalhes expansíveis |
+| #/ativos | Tabela única de ativos (REQ-UX-8): chips Todos/Favoritos/Monitorados, busca e setor no link; `#/base`, `#/favoritos`, `#/monitorados` e `#/setores` abrem esta tela na visão correspondente |
 | #/candles | Velas, padrões, notícias e comunicados relacionados |
 | #/comunicados | Newsletter por semana e linha do tempo por ativo |
 | #/noticias | Notícias |
-| #/setores | Ativos agrupados por setor |
 | #/indices | Séries macroeconômicas |
 | #/avaliacao | Avaliação editorial, saúde de dados, backtest e diário de sinais |
 | #/estudos | Formações, Conhecimento, Orientações, Material didático e Referência |
@@ -307,9 +306,9 @@ Origem: revisão visual do painel em 2026-10-07. Princípio: **juntar o que é c
 | REQ-UX-5 | Tabelas com cabeçalho fixo ao rolar e modo cartão em tela estreita (`data-label`) | 2 | IMPLEMENTADO (2026-10-07), aplicado em Base, Saúde dos dados, Fatores, Proventos, Favoritos e Monitorados (verificado em 375 px) |
 | REQ-UX-6 | Menu em 5 grupos (Início, Ativos, Mercado, Avaliação, Estudos) a partir de uma única definição, no topo e na barra inferior | 5 | IMPLEMENTADO (2026-10-07) |
 | REQ-UX-7 | Página Início: saúde dos dados, comunicados da semana, favoritos com variação e fontes fora do prazo; cada bloco falha sozinho | 5 | IMPLEMENTADO (2026-10-07) |
-| REQ-UX-8 | Tabela única de ativos (Base + Favoritos + Setores + Monitorados) com chips de filtro, sparkline, sinal e último comunicado | 3 | EM ANDAMENTO: filtros da Base (busca, setor, página) já viajam no link `#/base?q=&setor=&pagina=` e o símbolo abre a ficha; a fusão das listas, sparkline, sinal e último comunicado dependem do endpoint de listagem no gestor (TASK-UX-5, um GET para não fazer 3 chamadas por linha) |
+| REQ-UX-8 | Tabela única de ativos (Base + Favoritos + Setores + Monitorados) com chips de filtro, sparkline, sinal e último comunicado | 3 | IMPLEMENTADO (2026-10-07, TASK-UX-6): `#/ativos` com uma chamada por página a `GET /painel/ativos`; linha com fechamento oficial, variação, sparkline de 20 pregões, sinal (rótulo da ficha + aviso de regra experimental e versão), último comunicado, selos e favoritar/remover; filtros no link (`analise/filtrosBase.js`); BasePage, FavoritosPage, AtivosMonitoradosPage e SetoresPage removidas; tests/listagemAtivos.test.mjs. Validado no navegador com dados reais via gestor de teste; falta reimplantar o gestor |
 | REQ-UX-9 | Ficha do ativo em abas (Resumo, Fundamentos, Fatores e proventos, Comunicados), aba no link (`?aba=`), teclado (setas/Home/End) e barra de abas fixa | 4 | IMPLEMENTADO (2026-10-07). O gráfico de preço fica no cabeçalho da ficha, com link para Velas e padrões; comunicados marcados no gráfico seguem só na tela de Velas (embutir a tela de Velas na ficha fica PLANEJADO) |
-| REQ-UX-10 | Tema escuro (Bootstrap 5.3 `data-bs-theme`) | — | PLANEJADO, opcional |
+| REQ-UX-10 | Tema escuro (Bootstrap 5.3 `data-bs-theme`) | — | IMPLEMENTADO (2026-10-07: `data-bs-theme` no `<html>`, alternador no topo e na barra inferior, preferência local `b3.tema.v1`; tests/tema.test.mjs) |
 
 ### Tarefas
 
@@ -319,8 +318,8 @@ Origem: revisão visual do painel em 2026-10-07. Princípio: **juntar o que é c
 | TASK-UX-2 | Barras de percentil, gráfico de proventos (`analise/graficoProventos.js`), CSS de tabela fixa/cartões | TASK-UX-1 | IMPLEMENTADO |
 | TASK-UX-3 | `navegacao.js` (definição única) + `AppHeader`/`BottomNav` em grupos | — | IMPLEMENTADO |
 | TASK-UX-4 | `InicioPage` (`#/inicio`, nova rota padrão) | TASK-UX-1, TASK-UX-3 | IMPLEMENTADO |
-| TASK-UX-5 | Endpoint de listagem de ativos no gestor (preço, variação, sinal, último comunicado, favorito, setor, selos) | — | PLANEJADO (gestor; registrar no hub) |
-| TASK-UX-6 | Tabela única de ativos e remoção das listas redundantes | TASK-UX-5 | PLANEJADO |
+| TASK-UX-5 | Endpoint de listagem de ativos no gestor (preço, variação, sinal, último comunicado, favorito, setor, selos) | — | IMPLEMENTADO (2026-10-07 no gestor, commit `bef0ab0`: `GET /painel/ativos`, paginado e sem efeito colateral; contrato registrado no hub do gestor) |
+| TASK-UX-6 | Tabela única de ativos e remoção das listas redundantes | TASK-UX-5 | IMPLEMENTADO (2026-10-07; ver REQ-UX-8) |
 | TASK-UX-7 | Ficha em abas (`analise/abasFicha.js`, `ComunicadosDoAtivo`, painéis lazy) | — | IMPLEMENTADO |
 | TASK-UX-8 | Filtros da Base no link (`analise/filtrosBase.js`) | — | IMPLEMENTADO |
 

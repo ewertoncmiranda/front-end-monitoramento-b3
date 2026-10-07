@@ -14,3 +14,21 @@ export function listarAtivosBase({ q, setor, pagina = 0, tamanho = 30 } = {}) {
 export function listarSetoresBase() {
   return httpGet('/base/setores');
 }
+
+export function listarAtivosPainel({
+  q,
+  setor,
+  favoritos = false,
+  monitorados = false,
+  pagina = 0,
+  tamanho = 30,
+} = {}) {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (setor) params.set('setor', setor);
+  if (favoritos) params.set('favoritos', 'true');
+  if (monitorados) params.set('monitorados', 'true');
+  params.set('pagina', pagina);
+  params.set('tamanho', tamanho);
+  return httpGet(`/painel/ativos?${params.toString()}`);
+}

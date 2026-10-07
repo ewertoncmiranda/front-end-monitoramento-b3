@@ -11,8 +11,18 @@
     href="vendor/bootstrap-5.3.3/bootstrap.min.css"
   />
   <link rel="stylesheet" href="css/app.css" />
+  <script>
+    (() => {
+      try {
+        const tema = localStorage.getItem('b3.tema.v1');
+        document.documentElement.setAttribute('data-bs-theme', tema === 'dark' ? 'dark' : 'light');
+      } catch {
+        document.documentElement.setAttribute('data-bs-theme', 'light');
+      }
+    })();
+  </script>
 </head>
-<body class="bg-light">
+<body class="bg-body-tertiary">
   <div id="app-header-outlet"></div>
 
   <main id="app-outlet" class="container py-3 pb-5"></main>
