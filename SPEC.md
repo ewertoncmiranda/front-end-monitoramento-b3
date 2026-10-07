@@ -107,7 +107,7 @@ As aulas são roteiros de leitura: objetivos, tópicos, atividades e referência
 
 A biblioteca combina busca textual, dificuldade e tipo por interseção (AND), com normalização de caixa e acentos, contador e mensagem de nenhum resultado.
 
-Valores atuais de nivel: Introdutório, Básico, Intermediário, Avançado, Especialização e Formação completa. “Formação completa” descreve abrangência, não dificuldade: inconsistência editorial registrada em ISS-08.
+Valores atuais de dificuldade (`nivel`): Introdutório, Básico, Intermediário, Avançado e Especialização. A abrangência fica em `escopo`: cursos sem escopo explícito usam “Curso focal”; o curso abrangente usa “Formação completa”. A biblioteca filtra dificuldade, escopo e tipo por interseção.
 
 Tipos editoriais: Fundamentos do mercado, Análise fundamentalista, Macroeconomia e juros, Derivativos e risco, Métodos quantitativos, Microestrutura e trading. O mapeamento está em tiposCursos.js; curso não mapeado recebe fundamentos por padrão, o que exige cuidado na manutenção.
 
@@ -195,7 +195,7 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | REQ-12 | 29 cursos com IDs únicos, módulos, aulas, PDFs e páginas declaradas válidas | VERIFICADO — tests/cursos.test.mjs |
 | REQ-13 | Exibir metadados disponíveis sem inventar ausentes | IMPLEMENTADO — renderMetadados; fidelidade às fontes não revalidada |
 | REQ-14 | Leitor PDF sob demanda, referência de página e nova aba | IMPLEMENTADO — teste visual pendente |
-| REQ-15 | Busca combinada com dificuldade e tipo | IMPLEMENTADO — testes verificam atributos HTML e o estado em URL; interação visual conferida manualmente em 2026-10-07 (restauração de busca/visão por link), sem teste automatizado de clique |
+| REQ-15 | Busca combinada com dificuldade, escopo e tipo | IMPLEMENTADO — testes verificam atributos HTML e o estado em URL; interação visual conferida manualmente em 2026-10-07 (restauração de busca/visão por link), sem teste automatizado de clique |
 | REQ-16 | Todos os cursos associados ao plano progressivo; IDs APIMEC válidos | VERIFICADO — tests/cursos.test.mjs |
 | REQ-17 | Glossário acadêmico e reconciliação integral com PDFs | EM ANDAMENTO — 118 verbetes; completude não demonstrada |
 | REQ-18 | Progresso por etapa local; cursos documentais sem progresso | IMPLEMENTADO |
@@ -226,12 +226,12 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 |---|---|---|---|
 | ISS-01 | Histórico | Listagem de monitorados entregue | IMPLEMENTADO |
 | ISS-02 | Média | Bootstrap e gráficos dependem de CDN; validar alternativa offline antes de prometer suporte offline | PLANEJADO |
-| ISS-03 | Média | Testes de componentes/proxy e fluxos reais ainda parciais; adicionar cenários de navegação, filtros, PDF e armazenamento indisponível | EM ANDAMENTO |
+| ISS-03 | Média | Testes de componentes/proxy e fluxos reais ainda parciais; adicionar cenários de navegação, filtros, PDF e armazenamento indisponível | VERIFICADO (2026-10-07: navegação e filtros em tests/fluxosInterface.test.mjs; PDF e armazenamento em tests/estudosFluxos.test.mjs; proxy HTTP em tests/proxyFluxos.test.mjs; suíte npm test aprovada) |
 | ISS-04 | Histórico | Recomposição de prefixo no proxy implementada | IMPLEMENTADO |
 | ISS-05 | Histórico | Remoção de Origin no proxy implementada | IMPLEMENTADO |
 | ISS-06 | Média | SPEC não representava o produto; revisão confrontada com código e suíte em 27/09 | VERIFICADO |
 | ISS-07 | Média | Texto de Avaliação desatualizado sobre IC e tarefas; reconciliar afirmações, mantendo notas justificadas por evidência | IMPLEMENTADO (2026-10-07; teste em tests/componentes.test.mjs impede a regressão do texto) |
-| ISS-08 | Baixa | Formação completa mistura abrangência e dificuldade; separar os atributos e rever curadoria | PLANEJADO |
+| ISS-08 | Baixa | Formação completa misturava abrangência e dificuldade; `nivel` ficou apenas como dificuldade e `escopo` passou a representar abrangência no catálogo, detalhe e filtros | IMPLEMENTADO (2026-10-07; tests/cursos.test.mjs e tests/estudosFluxos.test.mjs) |
 | ISS-09 | Média | Não há matriz PDF/página/termo/verbetes que comprove todos os termos técnicos; concluir reconciliação documental | EM ANDAMENTO |
 | ISS-10 | Média | backendConfig usa http.get e aceita HTTP 2xx–4xx como saúde; HTTPS não suportado por esse cliente e 404 pode escolher destino inadequado; verificar com servidor local controlado | VERIFICADO (2026-10-07: só 2xx com `status` UP conta; http e https; tests/backend.test.mjs com servidor local) |
 | ISS-11 | Baixa | Curso aberto e filtros não têm URL compartilhável/restauração; evolução opcional, não regressão de requisito atual | IMPLEMENTADO (2026-10-07: `#/estudos?secao=&visao=&curso=&q=&nivel=&tipo=`, validado contra o catálogo; PDF aberto não entra no link) |
@@ -240,7 +240,7 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 |---|---|---|
 | TASK-01 | Endpoint e tela de monitorados | IMPLEMENTADO |
 | TASK-02 | Vendorizar dependências de interface para uso offline | PLANEJADO |
-| TASK-03 | Ampliar testes de componentes, progresso e proxy | EM ANDAMENTO |
+| TASK-03 | Ampliar testes de componentes, progresso e proxy | VERIFICADO (2026-10-07: cenários de navegação, filtros combinados, abertura/fechamento de PDF, progresso sem armazenamento persistente e encaminhamento do proxy cobertos; npm test aprovado) |
 | TASK-04 | Serviço front-end no compose da infraestrutura | IMPLEMENTADO |
 | TASK-05 | Pausar/desativar monitoramento pela interface | PLANEJADO |
 | TASK-06 | Reescrever SPEC com cursos, PDFs, glossário, filtros e planos | VERIFICADO |
@@ -252,7 +252,7 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 
 Executado **npm test**, com sucesso: detector de padrões, nove casos de associação de comunicados, dez casos de diário, convenções de português e integridade do catálogo de cursos.
 
-Inspeção adicional por importação dos dados confirmou 29 cursos, 71 módulos, 97 aulas, seis valores atuais de nível e 118 verbetes acadêmicos. Estes números descrevem o catálogo nesta data e devem ser atualizados quando ele mudar.
+Inspeção adicional por importação dos dados confirmou 29 cursos, 71 módulos, 97 aulas, cinco valores atuais de dificuldade, dois valores de escopo e 118 verbetes acadêmicos. Estes números descrevem o catálogo nesta data e devem ser atualizados quando ele mudar.
 
 O teste de cursos verifica existência dos PDFs, IDs únicos, aulas preenchidas e limites de páginas declarados, associação ao plano progressivo, referências APIMEC, atributos dos filtros e cinco termos acadêmicos. Não verifica toda a renderização, todos os metadados contra os PDFs, número físico de páginas, operação do iframe ou exaustividade do glossário.
 
@@ -392,4 +392,3 @@ TASK-ETL-5. Única tarefa que cria uma rota nova. Requer endpoint dedicado no ge
 - `REQ-ETL-4`: ITUB4 exibe rosca ON × PN com dois setores distintos; WEGE3 exibe rosca com PN = 0 (empresa sem ações preferenciais).
 - `REQ-ETL-5`: PETRD... (call de PETR4) aparece na cadeia com `data_vencimento` e `preco_exercicio` não nulos; linha ATM destacada; recarregar a tela não duplica linhas.
 - `npm test` cobre `calcularTicketMedio` e a renderização dos novos componentes com dados mockados.
-

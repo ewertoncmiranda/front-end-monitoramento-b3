@@ -1,6 +1,6 @@
 // ISS-03: fluxos reais de Estudos que nao dependem do backend.
 import assert from 'node:assert/strict';
-import { abrirPdf, renderCatalogoCursos } from '../public/js/estudos/apresentacaoCursos.js';
+import { abrirPdf, fecharPdf, renderCatalogoCursos } from '../public/js/estudos/apresentacaoCursos.js';
 import { ProgressoEstudos } from '../public/js/estudos/progresso.js';
 import { cursos } from '../public/js/estudos/cursos.js';
 import { niveis, apimec } from '../public/js/estudos/conteudo.js';
@@ -29,6 +29,19 @@ caso('progresso: funciona em memoria quando o armazenamento falha', () => {
   assert.deepEqual(progresso.resumo(ids), { total: ids.length, concluidos: 1, percentual: 8 });
   progresso.concluir(ids[0], false);
   assert.equal(progresso.resumo(ids).concluidos, 0);
+});
+
+caso('progresso: descarta ids desconhecidos e preserva memoria se a gravacao falhar', () => {
+  const ids = [...niveis, ...apimec].map(etapa => etapa.id);
+  const armazenamento = {
+    getItem() { return JSON.stringify([ids[0], 'id-antigo']); },
+    setItem() { throw new Error('quota indisponivel'); },
+  };
+  const progresso = new ProgressoEstudos(armazenamento, ids);
+  assert.deepEqual(progresso.resumo(ids), { total: ids.length, concluidos: 1, percentual: 8 });
+  progresso.concluir(ids[1], true);
+  assert.equal(progresso.persistente, false);
+  assert.deepEqual(progresso.resumo(ids), { total: ids.length, concluidos: 2, percentual: 17 });
 });
 
 caso('catalogo: filtros de dificuldade, escopo e tipo expostos nos cards', () => {
@@ -75,6 +88,11 @@ caso('leitor PDF: abre sob demanda e limita pagina para 1..paginas', () => {
 
   abrirPdf(container, curso.id, -10);
   assert.match(container.innerHTML, new RegExp(`${curso.pdf}#page=1&view=FitH`));
+
+  fecharPdf(container);
+  assert.equal(container.innerHTML, '');
+  assert.equal(container.classList.contains('d-none'), true);
+  assert.equal(botao.classe.has('d-none'), true);
 });
 
 console.log('estudosFluxos.test.mjs ok');
