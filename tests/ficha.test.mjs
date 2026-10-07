@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   historicoDoSinal,
   indicadores,
+  leituraDaRecomendacao,
   precoDasVelas,
   reguaDeValor,
   selosDeQualidade,
@@ -20,6 +21,13 @@ function caso(nome, fn) {
 const linha = (recomendacao, direcao, inferior, superior, extra = {}) => ({
   versaoRegra: 'v', periodo: 'TESTE', horizonte: 63, recomendacao, direcao,
   amostraSuficiente: true, icExcessoCarteira: { inferior, superior }, ...extra,
+});
+
+caso('payload v3 usa rotulos de sinal quantitativo sem compra ou venda', () => {
+  assert.deepEqual(leituraDaRecomendacao('SINAL_POSITIVO_FORTE'), { rotulo: 'Sinal positivo forte', tom: 'success' });
+  assert.deepEqual(leituraDaRecomendacao('SINAL_POSITIVO'), { rotulo: 'Sinal positivo', tom: 'success' });
+  assert.deepEqual(leituraDaRecomendacao('SEM_MARGEM'), { rotulo: 'Sem margem', tom: 'secondary' });
+  assert.deepEqual(leituraDaRecomendacao('NEUTRO'), { rotulo: 'Neutro', tom: 'secondary' });
 });
 
 caso('compra so tem vantagem quando o intervalo do excesso fica todo acima de zero', () => {

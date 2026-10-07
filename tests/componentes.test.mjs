@@ -69,7 +69,7 @@ caso('grafico de proventos: ordena por periodo, descarta periodo sem valor e nao
   assert.deepEqual(pontos.map((p) => p.rotulo), ['2022', '2024']);
   const svg = svgProventos([{ tipoDoc: 'DFP', dtFimExercicio: '2024-12-31', jcp: 1134258, dividendos: 2056668 }]);
   assert.match(svg, /<svg/);
-  assert.match(svg, /role="img"/);
+  assert.match(svg, /role="list"/); // colunas focaveis (REQ-UX-11): "img" esconderia os filhos
   assert.match(svg, /2024/);
   assert.equal(svgProventos([]), '');
   assert.equal(svgProventos([{ dtFimExercicio: '2024-12-31', jcp: null, dividendos: null }]), '');
@@ -141,6 +141,68 @@ caso('inicio: blocos renderizam dados, estados vazios e escapam entrada', () => 
   assert.match(pg.htmlFavoritos([{ simbolo: 'PETR4', precoAtual: 11, precoAnterior: 10 }]), /\+10,00%/);
   assert.match(pg.htmlComunicados({ empresas: [] }), /Sem comunicados/);
   assert.match(pg.htmlComunicados({ semana: '2026-W40', totalDocumentos: 1, empresas: [{ simbolo: 'PETR4', total: 1, porCategoria: { FATO_RELEVANTE: 1 } }] }), /Fato relevante: <strong>PETR4/);
+});
+
+const { renderizar: opiniao, OPINIOES, RISCOS, justificativas: justificativasOpiniao } = await import('../public/js/components/ficha/OpiniaoHorizontes.js');
+const AVISO_OPINIAO = 'Leitura automática dos números, regra experimental. Não é recomendação de investimento.';
+const horizonteOpiniao = (extra = {}) => ({
+  dataPregao: '2026-10-06', horizontePregoes: 21, opiniao: 'SINAL_POSITIVO', risco: 'RISCO_MEDIO',
+  justificativa: [{ evidenciaId: 'sinal_momentum', leitura: 'Momentum de alta.' }],
+  oQueInvalida: ['Fechamento abaixo da MM50'], dadosAusentes: ['fator BETA_12M'],
+  evidencias: [{ id: 'sinal_momentum', rotulo: 'Sinal técnico de momentum', valor: 'COMPRA_TECNICA', direcao: 1 }],
+  modelo: 'qwen2.5:7b', origem: 'MODELO', ...extra,
+});
+
+caso('opiniao: tres horizontes, cor sempre com texto, aviso e selo sempre', () => {
+  const html = opiniao({ aviso: AVISO_OPINIAO, horizontes: [
+    horizonteOpiniao(),
+    horizonteOpiniao({ horizontePregoes: 63, opiniao: 'SINAL_NEGATIVO', risco: 'RISCO_ALTO', modelo: 'regra', origem: 'REGRA' }),
+    horizonteOpiniao({ horizontePregoes: 126, opiniao: 'SINAL_NEUTRO', risco: 'RISCO_BAIXO' }),
+  ] });
+  assert.match(html, /Experimental/);
+  assert.match(html, /Não é recomendação de investimento/);
+  assert.match(html, /Curto prazo[\s\S]*Médio prazo[\s\S]*Longo prazo/);
+  for (const [codigo, cor] of [['SINAL_POSITIVO', 'success'], ['SINAL_NEGATIVO', 'danger'], ['SINAL_NEUTRO', 'warning']]) {
+    assert.ok(html.includes(`<span class="badge text-bg-${cor}">${OPINIOES[codigo].rotulo}</span>`), `${codigo} sem cor+texto`);
+  }
+  for (const [codigo, cor] of [['RISCO_BAIXO', 'success'], ['RISCO_MEDIO', 'warning'], ['RISCO_ALTO', 'danger']]) {
+    assert.ok(html.includes(`<span class="badge text-bg-${cor}">${RISCOS[codigo].rotulo}</span>`), `${codigo} sem cor+texto`);
+  }
+  assert.match(html, /Momentum de alta\. \(Sinal técnico de momentum: COMPRA_TECNICA\)/, 'justificativa cita o dado');
+  assert.match(html, /O que invalida[\s\S]*Fechamento abaixo da MM50/);
+  assert.match(html, /1 dado ausente/);
+  assert.match(html, /Pregão 06-10-2026 · Modelo local \(qwen2\.5:7b\)/);
+  assert.match(html, /Regra \(sem modelo\)/);
+});
+
+caso('opiniao: justificativa nao repete o dado que ja cita; lista longa resume em "mais N"', () => {
+  const jaCita = horizonteOpiniao({ justificativa: [{ evidenciaId: 'sinal_momentum', leitura: 'Momentum: COMPRA_TECNICA.' }] });
+  assert.deepEqual(justificativasOpiniao(jaCita), ['Momentum: COMPRA_TECNICA.']);
+  const longa = horizonteOpiniao({ justificativa: Array.from({ length: 7 }, (_, i) => ({ evidenciaId: `e${i}`, leitura: `Leitura ${i}` })) });
+  const html = opiniao({ horizontes: [longa] });
+  assert.match(html, /mais 3/);
+  assert.match(html, /Leitura 6/, 'o resto continua acessivel');
+});
+
+caso('opiniao: horizonte faltando vira "Sem base" cinza; sem nada explica quando a geracao roda', () => {
+  const html = opiniao({ aviso: AVISO_OPINIAO, horizontes: [horizonteOpiniao()] });
+  assert.ok(html.includes(`<span class="badge text-bg-secondary">Sem base</span>`));
+  const vazio = opiniao({ aviso: AVISO_OPINIAO, horizontes: [] });
+  assert.match(vazio, /depois dos insights diários/);
+  assert.match(vazio, /Experimental/, 'aviso aparece mesmo sem dado');
+  assert.match(opiniao(null), /Não é recomendação de investimento/);
+});
+
+caso('opiniao: texto vindo da API e escapado', () => {
+  const html = opiniao({ aviso: '<script>x</script>', horizontes: [horizonteOpiniao({
+    justificativa: [{ evidenciaId: 'e', leitura: '<img src=x onerror=alert(1)>' }],
+    oQueInvalida: ['<b>x</b>'], modelo: '<i>m</i>', opiniao: '<svg onload=1>',
+  })] });
+  assert.ok(!html.includes('<script>'));
+  assert.ok(!html.includes('<img'));
+  assert.ok(!html.includes('<b>x'));
+  assert.ok(!html.includes('<i>m'));
+  assert.ok(!html.includes('<svg onload'));
 });
 
 console.log(`${casos} casos ok`);

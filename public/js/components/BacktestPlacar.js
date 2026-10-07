@@ -18,6 +18,10 @@ import './LoadingSpinner.js';
 // analise/backtest.js.
 
 const ROTULO = {
+  SINAL_POSITIVO_FORTE: 'Sinal positivo forte',
+  SINAL_POSITIVO: 'Sinal positivo',
+  SEM_MARGEM: 'Sem margem',
+  NEUTRO: 'Neutro',
   COMPRA_FORTE: 'Compra forte',
   COMPRA_MODERADA: 'Compra moderada',
   VENDA_VALUATION: 'Venda (valuation)',

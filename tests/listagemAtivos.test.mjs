@@ -75,6 +75,8 @@ caso('sparkline: menos de 2 pontos nao desenha; serie constante fica no meio', (
 
 caso('sinal sem recomendacao vira "Sem sinal"; recomendacao desconhecida aparece crua', () => {
   assert.match(htmlSinal({}), /Sem sinal/);
+  assert.match(htmlSinal({ recomendacao: 'SEM_MARGEM' }), /Sem margem/);
+  assert.doesNotMatch(htmlSinal({ recomendacao: 'SEM_MARGEM' }), /Venda/);
   assert.match(htmlSinal({ recomendacao: 'NOVA_REGRA' }), /NOVA_REGRA/);
 });
 

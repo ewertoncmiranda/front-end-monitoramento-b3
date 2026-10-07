@@ -296,11 +296,29 @@ body {
 .barra-percentil.favoravel > .preenchimento { background: var(--bs-success); opacity: .55; }
 .barra-percentil.desfavoravel > .preenchimento { background: var(--bs-warning); opacity: .7; }
 .barra-percentil.neutro > .preenchimento { background: var(--bs-secondary); opacity: .35; }
-.grafico-proventos { width: 100%; height: auto; max-height: 14rem; }
+/* Proventos contabeis: grafico anual/trimestral ligado a tabela (REQ-UX-11). */
+.grafico-proventos-caixa { position: relative; }
+.grafico-proventos { width: 100%; height: auto; max-height: 14rem; display: block; }
 .grafico-proventos .eixo { stroke: var(--bs-border-color); }
+.grafico-proventos .grade { stroke: var(--bs-border-color); stroke-dasharray: 3 3; opacity: .7; }
 .grafico-proventos text { fill: var(--bs-secondary-color); font-size: 10px; }
-.grafico-proventos .jcp { fill: var(--bs-primary); }
-.grafico-proventos .dividendos { fill: var(--bs-info); }
+.grafico-proventos .jcp, .marca-legenda.jcp { fill: var(--bs-primary); background: var(--bs-primary); }
+.grafico-proventos .dividendos, .marca-legenda.dividendos { fill: var(--bs-info); background: var(--bs-info); }
+.grafico-proventos .alvo { fill: transparent; cursor: pointer; }
+.grafico-proventos .guia { stroke: var(--bs-secondary-color); stroke-dasharray: 2 2; opacity: 0; }
+.grafico-proventos .lacuna { fill: none; stroke: var(--bs-secondary-color); stroke-dasharray: 2 2; }
+.grafico-proventos .coluna { outline: none; transition: opacity .12s; }
+.grafico-proventos.tem-ativo .coluna:not(.ativo) { opacity: .35; }
+.grafico-proventos .coluna.ativo .guia { opacity: .8; }
+.grafico-proventos .coluna:focus-visible .alvo { stroke: var(--bs-primary); stroke-width: 1.5; }
+.marca-legenda { display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-right: .3rem; vertical-align: baseline; }
+.legenda-proventos { font-size: .8rem; color: var(--bs-secondary-color); }
+.dica-grafico { position: absolute; top: 0; min-width: 11rem; max-width: 16rem; padding: .4rem .55rem; border-radius: .4rem;
+  background: var(--bs-body-bg); color: var(--bs-body-color); border: 1px solid var(--bs-border-color);
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .15); pointer-events: none; z-index: 2; line-height: 1.35; }
+.tabela-proventos { max-height: 22rem; }
+.tabela-proventos tr.ativo > td { background: var(--bs-primary-bg-subtle); }
+.tabela-proventos tbody tr { cursor: pointer; }
 .ativo-sparkline { width: 6rem; height: 1.75rem; display: block; }
 .ativo-sparkline polyline { fill: none; stroke-width: 2; }
 .ativo-sparkline.sobe polyline { stroke: var(--bs-success); }

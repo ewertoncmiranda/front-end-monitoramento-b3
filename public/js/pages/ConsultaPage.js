@@ -17,6 +17,7 @@ import '../components/ficha/IndicadoresGrid.js';
 import '../components/ficha/FatoresAtivo.js';
 import '../components/ficha/ProventosContabeis.js';
 import '../components/ficha/ComunicadosDoAtivo.js';
+import '../components/ficha/OpiniaoHorizontes.js';
 
 const CHAVE_RECENTES = 'ficha-recentes';
 const MAX_RECENTES = 6;
@@ -124,6 +125,7 @@ export class ConsultaPage extends BaseComponent {
             <div class="col-lg-6"><sinal-card></sinal-card></div>
             <div class="col-lg-6"><valor-justo-regua></valor-justo-regua></div>
           </div>
+          <opiniao-horizontes simbolo="${escaparHtml(simbolo)}"></opiniao-horizontes>
           <selos-qualidade></selos-qualidade>
           <indicadores-grid></indicadores-grid>
         </div>
