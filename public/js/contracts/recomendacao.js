@@ -1,0 +1,9 @@
+// Gerado por infra/scripts/sincronizar-contratos.mjs.
+export const Recomendacao = Object.freeze({
+  "COMPRA_FORTE": "COMPRA_FORTE",
+  "COMPRA_MODERADA": "COMPRA_MODERADA",
+  "VENDA_VALUATION": "VENDA_VALUATION",
+  "ALERTA_RISCO": "ALERTA_RISCO",
+  "MANTER": "MANTER",
+  "SEM_DADOS": "SEM_DADOS"
+});

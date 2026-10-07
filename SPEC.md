@@ -1,190 +1,274 @@
-# SPEC - painel-ativos-frontend
+# SPEC — painel-ativos-frontend
 
-> Estado mapeado diretamente da implementação em 2026-09-25. Seção 2.1 documenta o plano
-> do servidor Node (proposto e implementado no mesmo dia). Seção 2.2 documenta a aba
-> "Monitorados" (proposta e implementada no mesmo dia, mais tarde).
+| Campo | Valor |
+|---|---|
+| Versão da SPEC | 2.0.0 |
+| Data de corte | 2026-09-27 |
+| Estado da revisão documental | VERIFICADO |
+| Escopo | Código local, contratos consumidos, estudos e testes automatizados |
+| Limite da revisão | Não comprova comportamento do container publicado, renderização visual ou completude editorial dos PDFs |
+| Referências | SPECs de infra-b3-ecossytem, gestor-ativos-brutos, gerar-insights e etl-fundamentos-cvm |
 
-## 1. Visão geral
+## 1. Estados e evidências
 
-Frontend em HTML + JS puro + Bootstrap 5 (sem bundler no cliente) para o `gestor-ativos-brutos`, servido por um pequeno servidor Node/Express (`server.js`) que também atua como proxy reverso para o backend. Consome as rotas HTTP existentes para:
+Estados padronizados: **PLANEJADO**, **EM ANDAMENTO**, **IMPLEMENTADO**, **VERIFICADO** e **BLOQUEADO**.
 
-1. **Consultar** um ativo: cotação (com série histórica), decisão consolidada e histórico OHLCV.
-2. **Cadastrar** um ativo no agendador do backend — o ativo entra em monitoramento recorrente (30s) com série histórica persistida.
-3. **Listar os ativos monitorados** (aba "Monitorados"), enriquecida com a última decisão consolidada de cada um (`ISS-01`/`TASK-01` **RESOLVIDO**, ver 2.2).
+- PLANEJADO: requisito ou correção ainda não entregue.
+- EM ANDAMENTO: implementação ou cobertura parcial.
+- IMPLEMENTADO: comportamento identificado no código; aceite integral ainda não demonstrado.
+- VERIFICADO: critério específico confirmado pela evidência registrada nesta SPEC.
+- BLOQUEADO: dependência impeditiva explicitada.
 
-Não é dono de nenhuma regra de negócio: toda a decisão (Graham + sinal técnico) é calculada no lado dos dois backends (`gestor-ativos-brutos` e `gerar-insights`); este projeto só exibe.
+Uma inspeção de código não comprova teste visual, publicação ou funcionamento do backend. Descontinuação é uma resolução, mantendo-se o ID original. As notas exibidas em Avaliação são avaliações editoriais datadas, não métricas automáticas nem notas desta revisão.
 
-## 2. Decisões de arquitetura
+## 1A. Coordenação entre agentes (estado em 2026-10-04)
 
-| Decisão | Motivo |
-| --- | --- |
-| Sem bundler/build | Menos ferramenta pra manter; facilita empacotar em WebView; abrir e rodar sem `npm install`. |
-| Bootstrap 5 via CDN, zero CSS próprio | Único requisito explícito do usuário era "zero preocupação com CSS". `css/app.css` tem só 2 regras que o Bootstrap não cobre (área segura de notch). |
-| Web Components nativos, um por arquivo | SRP: cada componente renderiza uma única coisa. Sem framework, mantém a mesma capacidade de composição/reuso. |
-| Sem Shadow DOM | Deliberado: o Bootstrap carregado uma vez em `index.html` precisa valer para todos os componentes, sem reimportar CSS em cada um. |
-| Comunicação por `CustomEvent` | Componentes de captura de input (`AtivoSearchForm`) não conhecem quem consome o evento — permite reuso entre as páginas de consulta e cadastro. |
-| Roteamento por hash (`#/rota`) | Funciona em qualquer hospedagem estática e dentro de WebView sem configuração de rewrite no servidor (ao contrário de History API). |
-| Servidor Node/Express com proxy reverso (ver `2.1`) | Elimina CORS (chamadas do browser viram same-origin) e a necessidade de configurar a URL da API no cliente por ambiente. |
+**Hub:** `infra-b3-ecossytem/SPEC.md` seção 1A — fila única, contratos, handoff e diário. Leia antes de codar; atualize lá ao pegar e ao fechar tarefa. Em conflito com seções antigas abaixo, vale o hub e esta seção.
 
-### 2.1 Plano: servidor Node com proxy reverso (2026-09-25)
+- **Dono neste repo:** UI e proxy Express. Só consome HTTP do gestor (nunca banco). Se faltar campo, abrir tarefa para o gestor no hub em vez de contornar.
+- **Contrato novo disponível no gestor:** `/ativos/{s}/fatores`, `/ativos/{s}/proventos-contabeis`, `/validacao/backtest?metodo=RANKING`, `/validacao/saude-dados` (13 fontes + `coberturaProventosContabeis`). O proxy já cobre o prefixo `/validacao` e `/ativos`.
+- **Fila local:** LAC-FE-1..4 `PLANEJADO` (seção final). Sem V16 as telas mostram "sem dado ainda". Regra experimental sempre visível. Datas por `utils/dataHora.js`.
+- **Divergência conhecida:** ISS-07 (texto de Avaliação ainda diz que IC está pendente) — fechar junto com LAC-FE-1.
+- **Arquivos não commitados de outra sessão:** `public/js/utils/recomendacaoBadge.js`, `public/js/contracts/` — não editar nem commitar sem o dono.
 
-**Problema que motivou:** a primeira versão (nginx servindo só estático) exigia que o cliente soubesse o endereço exato do backend (`window.PAINEL_ATIVOS_API_BASE_URL`) e dependia de CORS habilitado no Java para qualquer origem usada — na prática, toda vez que o front rodava numa porta diferente ou apontava pra um backend diferente (container isolado, rede do `docker-compose`, host local), era preciso editar `index.html` na mão.
+## 2. Produto e responsabilidades
 
-**Desenho:**
-1. Um servidor Node/Express (`server.js`) serve os arquivos estáticos de `public/` **e** faz proxy reverso das rotas do backend (`/ativos`, `/analises`, `/api`) — o browser só vê chamadas same-origin, sem CORS.
-2. Resolução do destino do proxy com fallback validado por healthcheck (`proxy/backendConfig.js`):
-   - Tenta `BACKEND_URL` (default `http://gestor-ativos-brutos:8091` — nome do serviço, resolve quando o front roda na mesma rede Docker do backend);
-   - Se não responder, tenta `BACKEND_URL_FALLBACK` (default `http://localhost:8091` — quando o container roda solto, fora do compose);
-   - Se nenhum responder, sobe mesmo assim em modo degradado (front estático continua acessível; só as chamadas de API falham até o backend aparecer) — mesmo espírito de resiliência já usado no backend Java.
-3. `proxy/apiProxy.js` registra o `http-proxy-middleware` por rota, com `pathRewrite` pra recompor o prefixo que o Express remove ao montar o middleware em `app.use(rota, ...)` (achado durante a implementação: sem isso, `/analises/PETR4/analise` virava `/PETR4/analise` no destino).
-4. `js/config/apiConfig.js` do cliente fica trivial (`baseUrl: ''`) — todo o `fetch` do front usa caminho relativo, sem nenhuma configuração por ambiente do lado do cliente.
+Aplicação de acompanhamento e estudo do mercado, com cliente HTML/ES modules/Web Components e servidor Node/Express. Sem bundler no cliente; o servidor requer instalação das dependências do package.json.
 
-**Implementado e testado** (build da imagem + container rodando na rede `infra-b3-ecossytem_observability`, mesma do `gestor-ativos-brutos` real): resolução do backend primário por nome de serviço, proxy das 4 rotas com dados reais (cotação, análise, histórico, registro), Consulta e Cadastro validados na tela.
+O backend fornece cotações, fundamentos, decisões, monitoramento, comunicados e resultados de validação. O cliente também executa cálculos: detecta padrões de velas, calcula taxas-base, ajusta OHLC com o fator disponível, agrega resultados e intervalos do backtest e administra o progresso local dos planos. Portanto, não é apenas um visualizador sem regras.
 
-### 2.2 Aba "Monitorados" + cadastro persistente (2026-09-25)
+Bootstrap 5.3.3 e lightweight-charts 4.2.0 são carregados por CDN. Há CSS próprio para navegação, painéis, estudos e leitor PDF; a descrição anterior de “duas regras CSS” não corresponde ao código atual.
 
-**Motivação:** o backend passou a persistir o cadastro de ativos em `ativo_monitorado` e reprocessá-los a cada 30s (ver `gestor-ativos-brutos/SPEC.md`, seção 2.2 Fluxo E), fechando `ISS-01`/`TASK-01` deste front (não existia `GET` para listar o que foi cadastrado).
+### 2.1 Navegação efetiva
 
-**Desenho:**
-1. Nova página `AtivosMonitoradosPage` (rota `#/monitorados`) busca `GET /ativos/registrados` e delega a renderização a `AtivosMonitoradosTable`.
-2. **Enriquecimento:** para cada ativo listado, a página busca em paralelo `GET /analises/{simbolo}/analise` (o mesmo contrato já usado em `ConsultaPage`) e repassa pra tabela via `setAnalise(simbolo, analise)` — cada busca falha de forma independente (`.catch(() => null)`), então um ativo sem análise ainda (cadastro muito recente, ou falha na BRAPI) não trava a linha dos demais; a célula mostra um spinner até a resposta chegar, e "Sem análise ainda" se não houver dado.
-3. `badgeClassParaRecomendacao` foi extraído de `AnaliseResultCard` para `js/utils/recomendacaoBadge.js` (compartilhado com `AtivosMonitoradosTable`) — sem essa extração o mapeamento recomendação→cor de badge ficaria duplicado nos dois componentes.
-4. `CadastroPage`: o aviso fixo sobre "backend não expõe listagem" virou um link para `#/monitorados`, e a mensagem de sucesso do cadastro também linka pra lá.
+Fonte: public/js/router.js e public/js/main.js.
 
-**Implementado e testado** (rebuild da imagem, container na rede do ecossistema): `#/monitorados` lista os ativos reais cadastrados (`MGLU3`, `WEGE3`), decisão consolidada aparece pra quem já tem `insight_acao` (`MGLU3` → `VENDA_VALUATION`, 100% confiança), "Sem análise ainda" pra quem não tem; confirmado por log do `AgendadorAtivos` que o reprocessamento a cada ~30s ocorre sem ação do usuário; testado em viewport mobile (375×812) com scroll horizontal da tabela.
+| Rota | Conteúdo |
+|---|---|
+| #/gestao | Padrão. Agrupa Consulta, Cadastro e Como funciona em abas internas |
+| #/monitorados | Carteira monitorada, decisões e detalhes expansíveis |
+| #/candles | Velas, padrões, notícias e comunicados relacionados |
+| #/comunicados | Newsletter por semana e linha do tempo por ativo |
+| #/noticias | Notícias |
+| #/setores | Ativos agrupados por setor |
+| #/indices | Séries macroeconômicas |
+| #/avaliacao | Avaliação editorial, saúde de dados, backtest e diário de sinais |
+| #/estudos | Formações, Conhecimento, Orientações, Material didático e Referência |
+| #/glossario | Glossário geral, acadêmico e detalhamento de padrões |
+| #/padroes | Explicação dos padrões e limitações |
+| #/formulas | Explicação das fórmulas |
+| #/arquitetura | Arquitetura do ecossistema |
+| #/design-codigo | Organização do código |
 
-### 2.3 Linha expansível na tabela de Monitorados + aba "Como funciona" (2026-09-25)
+Rotas desconhecidas exibem Gestão. As antigas #/consulta, #/cadastro e #/metodologia não selecionam suas antigas páginas: não estão mais no mapa. As páginas correspondentes continuam usadas dentro de GestaoPage.
 
-**Motivação:** o usuário pediu (1) poder expandir uma linha da tabela de Monitorados pra ver a mesma visão estruturada da tela de Consulta, sem sair da lista, e (2) uma aba explicando a metodologia (fórmulas) e mostrando os números crus por trás da última decisão de um ativo — complementando a decisão *mediada* que já aparece em Consulta/Monitorados.
+### 2.2 Consulta e monitoramento
 
-**Linha expansível (`AtivosMonitoradosTable`):**
-- Clique em qualquer linha alterna um estado de expansão por símbolo (`Set` em `this._expandidos`); a seta (▸/▾) na primeira coluna reflete o estado. Um único listener de `click` no elemento host (não por linha) sobrevive aos re-renders, porque `this.innerHTML = ...` recria os `<tr>` mas não desliga listeners do host.
-- Ao expandir pela primeira vez, busca `GET /ativos/robusto/{simbolo}` e o histórico OHLCV (mesmas chamadas de `ConsultaPage`, mesmo efeito colateral conhecido de publicar em SQS) e guarda em cache por símbolo (`this._detalhesPorSimbolo`) — reabrir não refaz a chamada. A decisão (`AnaliseResultCard`) reaproveita o `analise` já buscado para a própria linha, sem chamada extra.
-- A linha de detalhe reaproveita os componentes existentes (`ativo-quote-card`, `analise-result-card`, `historico-table`) dentro de um `<tr><td colspan="8">` — zero duplicação de renderização.
+Consulta e detalhes de Monitorados combinam cotação, histórico, decisão e fundamentos. Falha na decisão não deve impedir exibir os demais dados. SeletorDeAtivos consulta /ativos/registrados e mantém busca manual como alternativa.
 
-**Aba "Como funciona" (`MetodologiaPage`, rota `#/metodologia`):**
-- Um `AtivoSearchForm` + `FundamentosCard` busca `GET /analises/{simbolo}/fundamentos` e mostra o retrato **de um único ciclo**, sem média — os cenários completos de preço justo Graham, classificações, contexto técnico e (quando há série histórica) o sinal técnico (média móvel, z-score, score de volume), insights e fatores de decisão que o `gerar-insights` gerou naquele ciclo.
-- Na mesma aba, um `FundamentosCvmCard` busca `GET /analises/{simbolo}/fundamentos-cvm` em paralelo e mostra os fundamentos contábeis da CVM, incluindo a seção de cobertura que explica cada métrica ausente. Na aba Consulta o mesmo componente aparece em `modo="resumo"`, com ROE, P/L e P/VP.
-- `PainelPadroes` + `analise/detectorPadroes.js` + `analise/taxaAcerto.js` adicionam deteccao de padroes sobre o grafico de candles, por clique, com marcadores via `series.setMarkers` da lightweight-charts. Deteccao no cliente, sobre os candles ja carregados. Regra de projeto: so entra padrao com definicao aplicavel por programa; OCO, topo duplo, triangulos e bandeiras ficam de fora com a razao exibida na interface. Taxa de acerto nunca e mostrada sem a taxa-base da janela, e percentual so acima de 5 ocorrencias. Cada padrao carrega `ruidoPorJanela`, medido em `npm test` sobre 20 series aleatorias.
-- A aba Velas (candles) usa preço ajustado por proventos como padrão, com o fator aplicado às quatro pontas da vela. O gráfico rola normalmente; o cabeçalho de **Padrões sobre o gráfico**, a calibragem e os controles abaixo dele usam `sticky-md-top` em telas médias ou maiores.
-- A interface declara `pt-BR`/UTF-8. Textos visíveis foram revisados quanto a concordância, sintaxe nominal e estrangeirismos; “candles” é mantido entre parênteses após “velas”. Cedilha e til são permitidos e cobertos por teste automatizado.
-- `PadroesPage` (`#/padroes`) explica leitura de candles e vieses de analise. Estatico, array declarativo. Separado do Glossario porque verbete e texto explicativo pedem formatos diferentes; os dois se referenciam.
-- `GlossarioPage` (`#/glossario`) explica o vocabulário usado nas outras telas. Conteúdo estático, sem API; espelha `infra-b3-ecossytem/GLOSSARIO.md`.
-- `SeletorDeAtivos` substitui o `AtivoSearchForm` nas abas Consulta, Como funciona e Candles: alem do campo de busca, lista os ativos de `GET /ativos/registrados` como botoes clicaveis. **Envolve** o `AtivoSearchForm` em vez de reimplementar o campo e reemite o mesmo evento `ativo-buscado`, por isso as paginas trocaram so a tag. Falha na listagem degrada para o campo de busca; carteira vazia aponta para a aba de Cadastro.
-- `CarteiraResumo` e a variante somente leitura usada no Cadastro: mostra o que ja esta registrado sem tornar clicavel, porque clicar num ativo ja cadastrado so o recadastraria. Recarregada apos um cadastro bem-sucedido.
-- `FundamentosCard` renderiza o campo `detalhes` do DTO genericamente (não assume um schema Java fixo — é o mesmo JSON que o Python grava), então novos campos que o `gerar-insights` passar a gravar aparecem automaticamente se a página for atualizada para lê-los; campos ausentes (ex.: sem sinal técnico por falta de histórico) são tratados com fallback textual, não erro.
-- A explicação estática das fórmulas foi movida pra `FormulasPage` (ver `2.4`) — esta aba ficou só com a ferramenta interativa.
+Cadastro envia POST /ativos/registrar/{ativo}. Confirmação significa registro aceito para monitoramento; não significa que o worker já produziu insight. Periodicidade e processamento pertencem ao backend e não são fixados pelo cliente em 30 segundos.
 
-### 2.4 Perfil de operação/riscos + reorganização em 3 abas (2026-09-25)
+GETs são consultas: a revisão do gestor de 2026-09-27 removeu gravação e publicação dos fallbacks de cotação, histórico e perfil. Este contrato depende da publicação dessa versão do backend; inspecionar o cliente não demonstra que o container em execução a utiliza.
 
-**Motivação:** o usuário pediu pra reaproveitar `sinal_momentum`/`sinal_reversao` (já calculados pelo `gerar-insights`, mas ignorados até então) pra derivar perfil de operação (day trade / swing-reversão / longo prazo) e riscos separados de comprar/vender agora — e, ao ver a proposta, pediu pra dividir a antiga aba única "Como funciona" (que misturava fórmulas estáticas + busca + card) em 3 abas com responsabilidade única.
+### 2.3 Velas e avaliação
 
-- **`FundamentosCard`**: nova seção "Perfil de operação e riscos" (badges de `perfisAplicaveis`, `riscoCompraAgora`/`riscoVendaAgora`, resumo de `confluenciaSinais` — todos os 4 campos novos do `FundamentosAtivoDTO`), e a seção de sinal técnico ganhou badges de `sinal_momentum`/`sinal_reversao` (já vinham na resposta, só não eram renderizados). Como esse componente já é reaproveitado tanto em `#/metodologia` quanto na linha expandida de `#/monitorados`, os dois lugares ganharam a seção nova automaticamente, sem tocar em `AtivosMonitoradosTable`.
-- **`ArquiteturaPage`** (nova, `#/arquitetura`): conteúdo estático descrevendo os 4 componentes do ecossistema (frontend, Java, Python, infra) e um diagrama textual do fluxo entre eles.
-- **`FormulasPage`** (nova, `#/formulas`): todo o texto de fórmulas que antes estava em `MetodologiaPage` (Graham, earnings yield, contexto técnico, sinal técnico, decisão consolidada), organizado em métodos de seção — mais uma seção nova explicando as regras de perfil/risco/confluência, e uma seção final documentando a limitação (não existe taxa de acerto real, exigiria acompanhar resultado futuro).
-- Navegação (`AppHeader`, `BottomNav`, `router`, `main`) ganhou as duas rotas novas. Com 6 abas, o `BottomNav` (mobile) passou a rolar horizontalmente (`flex-nowrap overflow-x-auto`, só classes Bootstrap) em vez de quebrar linha.
+Até três meses, o gráfico usa o endpoint de histórico e permite base ajustada ou bruta. O ajuste depende de adjustedClose disponível. Períodos de seis meses até desde 2016 usam /ativos/{simbolo}/pregoes, com base bruta e intervalos dia/semana/mês; o seletor de preço ajustado não é oferecido nesse ramo.
 
-**Implementado e testado**: `curl /analises/PETR4/fundamentos` confirmando os 4 campos novos (`perfisAplicaveis: ["LONGO_PRAZO"]`, riscos, confluência); `MGLU3` mostrou um caso real de sinais discordantes (momentum=compra, reversão=venda, recomendação=venda → confluência "2 de 3 sinais indicam VENDA"); as 3 abas carregando conteúdo correto; `BottomNav` com scroll horizontal testado em 375×812.
+Padrões e comparação com taxa-base são calculados no navegador. Comunicados são associados por data de entrega; associação temporal não prova causalidade nem horário intradiário.
 
-**Implementado e testado**: expansão de `PETR4` na tabela de Monitorados mostrando cotação real, decisão e 22 candles de histórico; colapso funcionando; testado em mobile (375×812, card de detalhe ocupa a largura toda abaixo da linha). Aba "Como funciona" testada buscando `PETR4` — retornou os 3 cenários Graham, earnings yield 21.53%, zona 52 semanas `PROXIMO_DA_MAXIMA`, sinal técnico com 20 amostras, 3 insights e fatores de decisão.
+Avaliação combina texto estático datado e três componentes que consultam API: SaudeDosDados, BacktestPlacar e DiarioDeSinais. O placar já renderiza intervalos de confiança. A seção editorial ainda diz que esses intervalos estão pendentes: divergência ISS-07.
 
-## 3. Estrutura de componentes
+## 3. Estudos, cursos e PDFs
 
-| Componente/módulo | Responsabilidade única | Arquivo |
-| --- | --- | --- |
-| `server` (Node) | Entrypoint: serve `public/` e registra o proxy | `server.js` |
-| `backendConfig` (Node) | Resolver a URL do backend real, com fallback validado por healthcheck | `proxy/backendConfig.js` |
-| `apiProxy` (Node) | Registrar o proxy reverso por rota (`/ativos`, `/analises`, `/api`) | `proxy/apiProxy.js` |
-| `apiConfig` | Saber a URL base da API (hoje sempre relativa, ver `2.1`) | `js/config/apiConfig.js` |
-| `httpClient` | Executar fetch e traduzir erros (HTTP e rede) | `js/api/httpClient.js` |
-| `ativosApi` | Endpoints de `/ativos` | `js/api/ativosApi.js` |
-| `ativosMonitoradosApi` | Endpoint de `/ativos/registrados` | `js/api/ativosMonitoradosApi.js` |
-| `analisesApi` | Endpoint de `/analises` | `js/api/analisesApi.js` |
-| `historicoApi` | Endpoint de histórico OHLCV | `js/api/historicoApi.js` |
-| `recomendacaoBadge` | Mapear recomendação → classe de badge Bootstrap (compartilhado) | `js/utils/recomendacaoBadge.js` |
-| `BaseComponent` | Ciclo de vida comum dos Web Components | `js/components/base/BaseComponent.js` |
-| `AtivoSearchForm` | Capturar símbolo digitado, disparar evento | `js/components/AtivoSearchForm.js` |
-| `AtivoQuoteCard` | Renderizar cotação (`Ativo`) | `js/components/AtivoQuoteCard.js` |
-| `AnaliseResultCard` | Renderizar decisão consolidada (`RespostaAnaliseIaDTO`) | `js/components/AnaliseResultCard.js` |
-| `AtivosMonitoradosTable` | Renderizar a carteira monitorada + decisão de cada ativo; linha expansível com cotação/decisão/histórico/fundamentos | `js/components/AtivosMonitoradosTable.js` |
-| `FundamentosCard` | Renderizar o retrato bruto (um único ciclo) de fundamentos, sinal técnico e perfil de operação/riscos de um ativo | `js/components/FundamentosCard.js` |
-| `HistoricoTable` | Renderizar série OHLCV | `js/components/HistoricoTable.js` |
-| `StatusAlert` | Alerta de sucesso/erro/aviso | `js/components/StatusAlert.js` |
-| `LoadingSpinner` | Indicador de carregamento | `js/components/LoadingSpinner.js` |
-| `AppHeader` | Navbar superior (telas médias+) | `js/components/AppHeader.js` |
-| `BottomNav` | Navegação inferior estilo app (celular) | `js/components/BottomNav.js` |
-| `ConsultaPage` | Orquestrar busca + renderização da consulta | `js/pages/ConsultaPage.js` |
-| `CadastroPage` | Orquestrar o registro de um ativo | `js/pages/CadastroPage.js` |
-| `AtivosMonitoradosPage` | Orquestrar a listagem da carteira monitorada + busca da decisão de cada ativo | `js/pages/AtivosMonitoradosPage.js` |
-| `MetodologiaPage` | Orquestrar a busca interativa de fundamentos de um ativo | `js/pages/MetodologiaPage.js` |
-| `FormulasPage` | Explicar as fórmulas/regras de cálculo (conteúdo estático) | `js/pages/FormulasPage.js` |
-| `ArquiteturaPage` | Descrever os 4 componentes do ecossistema (conteúdo estático) | `js/pages/ArquiteturaPage.js` |
-| `router` | Rota (hash) → página | `js/router.js` |
-| `main` | Ponto de entrada (registra componentes, inicia router) | `js/main.js` |
+### 3.1 Formações unifica planos e biblioteca
 
-> Todos os caminhos `js/...` e `index.html`/`css/...` desta tabela são relativos a `public/` (ex.: `public/js/main.js`) — é a pasta que o `server.js` serve como estático.
+EstudosPage oferece duas visões dentro de **Formações**: **Planos de estudo** e **Biblioteca de cursos**. Não existem duas rotas independentes para cursos e planos.
 
-## 4. Contratos consumidos (backend `gestor-ativos-brutos`)
+Os planos incluem formação progressiva (iniciante, essencial, básico, intermediário, avançado e especialização) e percurso APIMEC (diagnóstico, CB, CG1, CT1, conduta e simulados). São orientações pedagógicas locais, sem promessa de certificação.
 
-| Rota | Método | Usado em | Observação |
-| --- | --- | --- | --- |
-| `/ativos/robusto/{ativo}` | GET | `ConsultaPage`, `AtivosMonitoradosTable` | Traz `Ativo` + publica série histórica no backend (efeito colateral do próprio backend, não deste front). Na tabela de Monitorados é chamada só ao expandir uma linha pela primeira vez (com cache). |
-| `/analises/{simbolo}/analise` | GET | `ConsultaPage`, `AtivosMonitoradosPage` | Decisão consolidada (média de todo o histórico); se falhar, a tela continua exibindo o resto (`.catch(() => null)`). Na aba Monitorados é buscada uma vez por ativo listado, em paralelo, e reaproveitada na linha expandida. |
-| `/analises/{simbolo}/fundamentos` | GET | `MetodologiaPage` | Retrato bruto (um único ciclo, sem média) usado pela aba "Como funciona". |
-| `/analises/{simbolo}/fundamentos-cvm` | GET | `MetodologiaPage` (completo) e `ConsultaPage` (resumo) | Fundamentos contábeis da CVM, com P/L e P/VP derivados do preço atual pelo backend. Campo nulo pode ser deliberado — `cobertura` diz por quê. |
-| `/api/v2/stocks/historical` | GET | `ConsultaPage`, `AtivosMonitoradosTable` | `symbols`, `range=1mo`, `interval=1d`, `sortOrder=asc` fixos no `historicoApi.js`. |
-| `/ativos/registrar/{ativo}` | POST | `CadastroPage` | Persiste o cadastro no backend (`ativo_monitorado`) e entra em monitoramento recorrente de 30s; confirmação via link para `#/monitorados`. |
-| `/ativos/registrados` | GET | `AtivosMonitoradosPage` | Lista a carteira monitorada (`ISS-01`/`TASK-01` **RESOLVIDO**). |
-| `/comunicados/newsletter` | GET | `ComunicadosPage` | Edição semanal da carteira agrupada por ticker (`infra#CTR-10`). Sem `semana`, o backend devolve a do documento mais recente; a página guarda a semana resolvida na URL. |
-| `/empresas/{simbolo}/comunicados` | GET | `ComunicadosPage` | Linha do tempo paginada (20 por vez, "Carregar mais"). `categorias` sempre enviado na mesma ordem fixa. |
+planosCursos.js relaciona cursos às competências de cada etapa. Todos os 29 cursos estão associados ao plano progressivo. O mesmo documento pode integrar mais de uma etapa. As referências de cursos do percurso APIMEC apontam para IDs existentes.
 
-Todas as 6 rotas acima são acessadas pelo **cliente** como caminho relativo (mesma origem do front) — quem fala com o backend de verdade é o `server.js`, via proxy reverso (`proxy/apiProxy.js`). CORS habilitado no backend em `ConfigCors` (`app.cors.allowed-origins`) desde 2026-09-25 deixou de ser necessário para este front especificamente, mas continua útil pra outros clientes que queiram chamar o backend direto do browser.
+### 3.2 Catálogo e estrutura editorial
 
-## 5. Configuração
+Inventário confirmado em 2026-09-27: **29 cursos, 71 módulos e 97 aulas documentais**. O catálogo reúne nove cursos-base e vinte documentos adicionais únicos; arquivos duplicados não precisam originar cursos duplicados.
 
-| Variável | Onde | Padrão | Descrição |
-| --- | --- | --- | --- |
-| `PORT` | Ambiente do processo Node | `8080` | Porta HTTP do `server.js`. |
-| `BACKEND_URL` | Ambiente do processo Node | `http://gestor-ativos-brutos:8091` | Destino primário do proxy. Nome do serviço, resolve dentro da rede Docker do `docker-compose`. |
-| `BACKEND_URL_FALLBACK` | Ambiente do processo Node | `http://localhost:8091` | Destino usado se o primário não responder ao healthcheck no startup (container rodando fora do compose). |
+| Entidade | Campos |
+|---|---|
+| Curso | id, titulo, descricao, autoria, nivel, paginas, ano, pdf, modulos; aviso quando cadastrado |
+| Metadados opcionais | faculdade, instituto, curso, origem, instituicao |
+| Módulo | titulo, aulas |
+| Aula | titulo, paginas [início, fim], objetivo, topicos, atividade |
 
-Não existe mais configuração do lado do cliente (`window.PAINEL_ATIVOS_API_BASE_URL` foi removido) — o front sempre chama caminho relativo.
+Autoria, faculdade, instituto, curso, origem, instituição e ano são exibidos no card e no detalhe quando preenchidos. Campo ausente não autoriza inferir instituição ou autor.
 
-## 6. Requisitos
+As aulas são roteiros de leitura: objetivos, tópicos, atividades e referências ao documento. Não constituem transcrição integral, extração automática contínua ou verificação independente da correção da fonte.
 
-| ID | Requisito | Status |
-| --- | --- | --- |
-| REQ-01 | Consultar cotação, decisão e histórico de um ativo | IMPLEMENTADO |
-| REQ-02 | Cadastrar (registrar) um ativo no backend | IMPLEMENTADO |
-| REQ-03 | Layout responsivo mobile-first | IMPLEMENTADO (Bootstrap grid + `BottomNav`/`AppHeader` alternados por breakpoint) |
-| REQ-04 | Zero CSS customizado além do indispensável | IMPLEMENTADO |
-| REQ-05 | Listar os ativos monitorados, com a última decisão de cada um | IMPLEMENTADO (2026-09-25, aba `#/monitorados`, ver `2.2`) |
-| REQ-06 | Ver a visão estruturada (cotação/decisão/histórico) de um ativo monitorado sem sair da lista | IMPLEMENTADO (2026-09-25, linha expansível em `AtivosMonitoradosTable`, ver `2.3`) |
-| REQ-07 | Explicar a metodologia de cálculo e mostrar os fundamentos brutos de um único ciclo de análise | IMPLEMENTADO (2026-09-25, aba `#/metodologia`, ver `2.3`) |
-| REQ-10 | Aba Avaliação (`#/avaliacao`): avaliação datada do sistema (notas com meta e "o que falta para subir", progresso, melhorias com status) e, ao vivo, o diário de sinais — estado, placar recomendação × horizonte (acerto sempre ao lado da taxa-base, "amostra insuficiente" abaixo de 30) e linha do tempo por pregão com filtro por ativo | IMPLEMENTADO (2026-09-26). Consome `GET /validacao/diario` (`infra#CTR-11`, proxy `/validacao`). Regra de leitura em `analise/diarioDeSinais.js`, testada em `tests/diario.test.mjs`; componente `components/DiarioDeSinais.js`. Com o diário vazio, explica quando chega o primeiro sinal em vez de mostrar tabela vazia |
-| REQ-09 | Aba Velas: clicar numa vela abre, no lado oposto ao dos padrões, um painel deslizante (offcanvas do Bootstrap, sem fundo escuro e sem travar rolagem) com o resumo da vela (variação, gap de abertura) e os comunicados da CVM ligados a ela; velas com comunicado ganham marcador (vermelho = fato relevante, azul = outros) | IMPLEMENTADO (2026-09-26). Regra em `analise/comunicadosPorCandle.js`, testada em `tests/comunicados.test.mjs`: a CVM só dá a data de entrega, então cada vela mostra "entregues neste dia" e "desde o pregão anterior" (pode ter saído após o fechamento e explicar a abertura) — o painel não afirma causa. Documento de fim de semana marca a segunda. Uma chamada por gráfico (`buscarComunicadosDoPeriodo`, até 5 páginas de 100). Em tela ≥ 992 px o painel empurra a página (`padding-right` no `body`; margem no `.container` é ignorada por causa do `width: 100%`), e o `CandleChart` reenquadra as velas por `ResizeObserver` registrado depois do da lightweight-charts. `#candles-grafico` tem `min-width: 0` para encolher em vez de quebrar linha |
-| REQ-08 | Aba `#/comunicados`: edição semanal dos comunicados oficiais da CVM por ticker (navegação ‹ semana ›, filtro por categoria, fato relevante primeiro) e linha do tempo do ativo com link "Abrir documento na CVM ↗" | IMPLEMENTADO (2026-09-26). Link direto `#/comunicados?simbolo=PETR4&semana=2026-W38`; estado volta à URL por `history.replaceState` (não dispara `hashchange`). Texto da CVM sempre passa por `utils/html.js#escaparHtml`. Aviso de defasagem conta só dias úteis: dados até sexta cobrem a semana |
-| NFR-01 | Cliente sem etapa de build | ATENDIDO (o servidor Node tem `npm install`, mas o JS/CSS do browser continua sem bundler) |
-| NFR-02 | Compatível com empacotamento em WebView (Android/iOS) | ATENDIDO (ES modules + Custom Elements, sem History API; o proxy é transparente pro cliente) |
-| NFR-03 | Um arquivo = uma responsabilidade (SRP) | ATENDIDO |
-| NFR-04 | Funcionar tanto dentro da rede Docker do backend quanto local/solto, sem reconfiguração manual | ATENDIDO (`BACKEND_URL`/`BACKEND_URL_FALLBACK` com healthcheck, ver `2.1`) |
+### 3.3 Busca e filtros
 
-## 7. Issues conhecidas
+A biblioteca combina busca textual, dificuldade e tipo por interseção (AND), com normalização de caixa e acentos, contador e mensagem de nenhum resultado.
 
-| ID | Severidade | Descrição | Impacto | Status |
-| --- | --- | --- | --- | --- |
-| ISS-01 | Médio | ~~`POST /ativos/registrar/{ativo}` não tem `GET` equivalente para listar o que já foi registrado~~ | ~~Tela de cadastro não confirma o que está na fila do agendador~~ | RESOLVIDO (2026-09-25) — `GET /ativos/registrados` novo no backend, consumido pela aba `#/monitorados` (`AtivosMonitoradosPage`) |
-| ISS-02 | Baixo | Bootstrap carregado via CDN | Sem internet, a UI perde todo o estilo | ABERTO — mitigação documentada no README (vendorizar local) |
-| ISS-03 | Baixo | Cobertura automatizada ainda parcial | Detector de padrões e convenções linguísticas têm testes; componentes e proxy ainda não | PARCIAL (2026-09-26) |
-| ISS-04 | Baixo | `http-proxy-middleware` remove o prefixo da rota ao ser montado via `app.use(rota, ...)` | Sem `pathRewrite`, o backend recebia `/PETR4/analise` em vez de `/analises/PETR4/analise` (achado e corrigido durante a implementação) | RESOLVIDO — `proxy/apiProxy.js` usa `pathRewrite: (path) => rota + path` |
-| ISS-05 | Médio | O proxy repassava o header `Origin` original do browser pro backend | Browsers mandam `Origin` em requisições same-origin com método POST/PUT/DELETE (mas normalmente não em GET) — o CORS do `gestor-ativos-brutos` via esse `Origin` (ex.: `http://localhost:8082`, porta do compose), não achava na allowlist padrão (8080/5173/3000) e rejeitava com 403. `Cadastrar` (POST) quebrava; `Consultar` (GET) parecia funcionar porque o browser não mandava `Origin` nesse caso | RESOLVIDO — `proxy/apiProxy.js` remove o header `Origin` (`proxyReq.removeHeader('origin')`) antes de repassar pro backend, tornando a chamada de fato invisível pro CORS dele |
+Valores atuais de nivel: Introdutório, Básico, Intermediário, Avançado, Especialização e Formação completa. “Formação completa” descreve abrangência, não dificuldade: inconsistência editorial registrada em ISS-08.
 
-## 8. Backlog
+Tipos editoriais: Fundamentos do mercado, Análise fundamentalista, Macroeconomia e juros, Derivativos e risco, Métodos quantitativos, Microestrutura e trading. O mapeamento está em tiposCursos.js; curso não mapeado recebe fundamentos por padrão, o que exige cuidado na manutenção.
 
-| ID | Tarefa | Depende de | Status |
-| --- | --- | --- | --- |
-| TASK-01 | ~~Endpoint `GET /ativos/registrados` no `gestor-ativos-brutos`~~ + aba de listagem no front | ISS-01 | RESOLVIDO (2026-09-25) |
-| TASK-02 | Vendorizar Bootstrap localmente como opção para build offline/WebView | ISS-02 | ABERTO |
-| TASK-03 | Testes de componente (ex.: Web Test Runner) para `TechnicalSeriesAnalyzer`-like pure functions e componentes de renderização, e testes do proxy (`backendConfig`/`apiProxy`) | ISS-03 | ABERTO |
-| TASK-04 | Adicionar este front como serviço no `docker-compose.yml` do `infra-b3-ecossystem` (rede `infra-b3-ecossytem_observability`, mesma do `gestor-ativos-brutos`), pra subir junto com o resto do ecossistema | — | RESOLVIDO |
-| TASK-05 | Desativar/pausar um ativo monitorado pela UI (a coluna `ativo` já existe no schema, mas nada escreve `false` ainda) | REQ-05 | ABERTO — fora do escopo do pedido original (2026-09-25) |
+Filtros não são persistidos em URL ou armazenamento e são recriados ao voltar ao catálogo. A busca geral não filtra o conteúdo interno de um curso aberto nem a seção Referência; o glossário possui sua própria busca.
+
+### 3.4 Leitor PDF
+
+Os PDFs renomeados estão em public/assets/pdfs e são servidos estaticamente. Abrir curso exibe módulos e aulas; “Ler PDF” carrega iframe sob demanda. A aula permite abrir a página inicial do intervalo referenciado.
+
+abrirPdf limita a página à faixa 1..curso.paginas e usa #page=...&view=FitH. O reconhecimento dessa âncora depende do visualizador do navegador. Há link para nova aba e botão de fechar, que remove o iframe.
+
+Aceite: arquivo existente, URL local correspondente, páginas referenciadas dentro do documento e alternativa de abertura. A suíte verifica existência do arquivo e limites declarados; não confere o número físico de páginas, a renderização do PDF ou a fidelidade da aula ao texto original.
+
+### 3.5 Glossário
+
+GlossarioPage combina verbetes gerais, **118 verbetes acadêmicos** em glossarioAcademico.js e padrões detalhados em glossarioPadroes.js. A busca inclui termo, sigla, definição, exemplo, aplicação e ressalva quando presentes.
+
+Não há sincronização automática comprovada com infra/GLOSSARIO.md. O glossário local não deve ser descrito como simples espelho desse arquivo.
+
+O teste garante a presença de cinco termos acadêmicos de referência. Isso não demonstra que todos os termos técnicos de todos os PDFs foram extraídos e reconciliados: esse aceite permanece EM ANDAMENTO (ISS-09).
+
+### 3.6 Progresso e limites
+
+ProgressoEstudos registra conclusão de **etapas dos planos** em localStorage, chave b3.estudos.progresso.v1. Não há conta, sincronização entre dispositivos ou gravação no backend. Armazenamento indisponível mantém estado em memória enquanto o componente existe.
+
+Cursos documentais não registram conclusão de aulas ou progresso de leitura. “Continuar estudos” procura a próxima etapa não concluída do percurso, não a última página de um PDF. A interface informa essa diferença.
+
+## 4. Componentes e fontes
+
+| Área | Fonte principal |
+|---|---|
+| Servidor estático e notícias | server.js, proxy/noticiasApi.js |
+| Resolução do backend e proxy | proxy/backendConfig.js, proxy/apiProxy.js |
+| Navegação | public/js/router.js, main.js, components/AppHeader.js, BottomNav.js |
+| Área integrada de estudos | public/js/pages/EstudosPage.js |
+| Catálogo | public/js/estudos/cursos.js, cursosAvancados.js |
+| Renderização e PDF | public/js/estudos/apresentacaoCursos.js |
+| Planos e associação de cursos | public/js/estudos/conteudo.js, planosCursos.js, apresentacao.js |
+| Tipos, busca e progresso | public/js/estudos/tiposCursos.js, texto.js, progresso.js |
+| Glossário | public/js/pages/GlossarioPage.js, estudos/glossarioAcademico.js, glossarioPadroes.js |
+| Avaliação e regras de apresentação | public/js/pages/AvaliacaoPage.js, components/BacktestPlacar.js, analise/backtest.js |
+| Enum de recomendações | public/js/contracts/recomendacao.js, gerado pela infraestrutura |
+
+## 5. Contratos consumidos
+
+| Contrato | Uso e semântica |
+|---|---|
+| GET /ativos/robusto/{ativo} | Cotação em Consulta e Monitorados; sem comandar processamento |
+| GET /ativos/registrados | Carteira, seletores e resumo no Cadastro |
+| POST /ativos/registrar/{ativo} | Registro explícito para coleta; confirmação assíncrona |
+| GET /analises/{simbolo}/analise | Decisão consolidada; janela definida pelo backend, não média obrigatória de todo o histórico |
+| GET /analises/{simbolo}/fundamentos | Último ciclo e perfil de operação |
+| GET /analises/{simbolo}/fundamentos-cvm | Dados CVM; nulos podem representar ausência deliberada |
+| GET /api/v2/stocks/historical | Histórico curto; filtros enviados pelo cliente |
+| GET /ativos/{simbolo}/pregoes | Histórico longo bruto e agregações |
+| GET /empresas/{simbolo}/comunicados | Linha do tempo e documentos relacionados às velas |
+| GET /comunicados/newsletter | Edição semanal da carteira |
+| GET /validacao/diario | Diário e resultados por horizonte |
+| GET /validacao/saude-dados | Idade e cobertura das fontes |
+| GET /validacao/backtest | Placar da última execução |
+| GET /setores | Agrupamento por setor |
+| GET /indices-macro/{codigo} | Séries macroeconômicas |
+
+O proxy cobre oito prefixos: /ativos, /analises, /api, /setores, /indices-macro, /empresas, /comunicados e /validacao. Notícias têm tratamento próprio em server.js. Chamadas usam a mesma origem do front.
+
+pathRewrite recompõe o prefixo removido pelo Express e trata a raiz sem barra final adicional. O proxy remove Origin antes de encaminhar. Isso não implementa autenticação.
+
+O enum canônico de recomendação vem de infra/contracts/insight.schema.json, distribuído pelo script sincronizar-contratos.mjs. O utilitário de badges o utiliza e mantém aliases legados. O cliente ainda não valida todos os DTOs ou schemaVersion em runtime; não declarar essa garantia.
+
+## 6. Requisitos e aceite
+
+| ID | Requisito e critério | Estado |
+|---|---|---|
+| REQ-01 | Consultar cotação, decisão e histórico; tolerar ausência de análise | IMPLEMENTADO |
+| REQ-02 | Cadastro explícito via POST com confirmação | IMPLEMENTADO |
+| REQ-03 | Layout responsivo; verificação visual pendente nesta revisão | IMPLEMENTADO |
+| REQ-04 | Bootstrap com CSS complementar delimitado; substitui a antiga restrição “zero CSS” | IMPLEMENTADO |
+| REQ-05 | Listar monitorados e decisões | IMPLEMENTADO |
+| REQ-06 | Expandir detalhes reaproveitando componentes | IMPLEMENTADO |
+| REQ-07 | Exibir fundamentos de um ciclo e metodologia | IMPLEMENTADO |
+| REQ-08 | Newsletter e linha do tempo CVM com fontes | IMPLEMENTADO |
+| REQ-09 | Associar comunicados a velas sem afirmar causalidade | VERIFICADO — regras puras; interação visual não verificada |
+| REQ-10 | Avaliação editorial separada de saúde, backtest e diário consultados via API | IMPLEMENTADO — ressalva ISS-07 |
+| REQ-11 | Formações reúne planos e biblioteca | IMPLEMENTADO — inspeção do componente |
+| REQ-12 | 29 cursos com IDs únicos, módulos, aulas, PDFs e páginas declaradas válidas | VERIFICADO — tests/cursos.test.mjs |
+| REQ-13 | Exibir metadados disponíveis sem inventar ausentes | IMPLEMENTADO — renderMetadados; fidelidade às fontes não revalidada |
+| REQ-14 | Leitor PDF sob demanda, referência de página e nova aba | IMPLEMENTADO — teste visual pendente |
+| REQ-15 | Busca combinada com dificuldade e tipo | IMPLEMENTADO — teste atual verifica atributos HTML, não interação |
+| REQ-16 | Todos os cursos associados ao plano progressivo; IDs APIMEC válidos | VERIFICADO — tests/cursos.test.mjs |
+| REQ-17 | Glossário acadêmico e reconciliação integral com PDFs | EM ANDAMENTO — 118 verbetes; completude não demonstrada |
+| REQ-18 | Progresso por etapa local; cursos documentais sem progresso | IMPLEMENTADO |
+| NFR-01 | Cliente sem build; servidor com npm install | IMPLEMENTADO |
+| NFR-02 | Navegação hash adequada a hospedagem estática; WebView exige validação própria | IMPLEMENTADO |
+| NFR-03 | Separar dados editoriais, apresentação, navegação e serviços | IMPLEMENTADO |
+| NFR-04 | Backend primário/fallback e subida degradada | IMPLEMENTADO — limites ISS-10 |
+| NFR-05 | Texto pt-BR/UTF-8 e escape de conteúdo editorial na renderização | IMPLEMENTADO — teste linguístico parcial |
+| NFR-06 | Não depender do backend para ler cursos, PDFs e glossário local | IMPLEMENTADO — bibliotecas CDN ainda dependem de rede |
+
+## 7. Revisão em confronto com a SPEC anterior
+
+| Achado | Evidência | Resolução documental |
+|---|---|---|
+| Área de estudos inteira ausente | EstudosPage e estudos/*.js | Seção 3 e REQ-11..18 |
+| Navegação descrita em rotas antigas | router.js e GestaoPage | Mapa de rotas efetivas, seção 2.1 |
+| “Nenhuma regra no cliente” | detectorPadroes, taxaAcerto, backtest | Responsabilidades corrigidas |
+| “Zero CSS / duas regras” | public/css/app.css, 115 linhas não vazias medidas | Bootstrap + CSS complementar |
+| GET descrito como produtor de eventos | Alterações locais do gestor de 27/09 | Contrato de leitura; deployment não presumido |
+| Todo preço descrito como ajustado | CandlesPage.buscarVelas e pregoesApi | Bases e limites por período explicitados |
+| Glossário descrito como espelho da infra | GlossarioPage e glossarioAcademico | Composição local e ausência de sincronização |
+| Cobertura descrita como detector e idioma apenas | package.json e tests/*.mjs | Inclui comunicados, diário e cursos; limites explicitados |
+| Avaliação diz que IC está pendente | AvaliacaoPage versus BacktestPlacar | ISS-07; notas não recalculadas sem critério/evidência |
+
+## 8. Problemas e backlog
+
+| ID | Prioridade | Descrição / aceite para encerrar | Estado |
+|---|---|---|---|
+| ISS-01 | Histórico | Listagem de monitorados entregue | IMPLEMENTADO |
+| ISS-02 | Média | Bootstrap e gráficos dependem de CDN; validar alternativa offline antes de prometer suporte offline | PLANEJADO |
+| ISS-03 | Média | Testes de componentes/proxy e fluxos reais ainda parciais; adicionar cenários de navegação, filtros, PDF e armazenamento indisponível | EM ANDAMENTO |
+| ISS-04 | Histórico | Recomposição de prefixo no proxy implementada | IMPLEMENTADO |
+| ISS-05 | Histórico | Remoção de Origin no proxy implementada | IMPLEMENTADO |
+| ISS-06 | Média | SPEC não representava o produto; revisão confrontada com código e suíte em 27/09 | VERIFICADO |
+| ISS-07 | Média | Texto de Avaliação desatualizado sobre IC e tarefas; reconciliar afirmações, mantendo notas justificadas por evidência | PLANEJADO |
+| ISS-08 | Baixa | Formação completa mistura abrangência e dificuldade; separar os atributos e rever curadoria | PLANEJADO |
+| ISS-09 | Média | Não há matriz PDF/página/termo/verbetes que comprove todos os termos técnicos; concluir reconciliação documental | EM ANDAMENTO |
+| ISS-10 | Média | backendConfig usa http.get e aceita HTTP 2xx–4xx como saúde; HTTPS não suportado por esse cliente e 404 pode escolher destino inadequado; verificar com servidor local controlado | PLANEJADO |
+| ISS-11 | Baixa | Curso aberto e filtros não têm URL compartilhável/restauração; evolução opcional, não regressão de requisito atual | PLANEJADO |
+
+| ID | Tarefa preservada / adicional | Estado |
+|---|---|---|
+| TASK-01 | Endpoint e tela de monitorados | IMPLEMENTADO |
+| TASK-02 | Vendorizar dependências de interface para uso offline | PLANEJADO |
+| TASK-03 | Ampliar testes de componentes, progresso e proxy | EM ANDAMENTO |
+| TASK-04 | Serviço front-end no compose da infraestrutura | IMPLEMENTADO |
+| TASK-05 | Pausar/desativar monitoramento pela interface | PLANEJADO |
+| TASK-06 | Reescrever SPEC com cursos, PDFs, glossário, filtros e planos | VERIFICADO |
+| TASK-07 | Atualizar narrativa da Avaliação com evidências atuais | PLANEJADO |
+| TASK-08 | Auditar completude e proveniência dos termos de todos os PDFs | EM ANDAMENTO |
+| TASK-09 | Corrigir seleção/healthcheck do backend e cobrir HTTP/HTTPS e erros | PLANEJADO |
+
+## 9. Verificação de 2026-09-27
+
+Executado **npm test**, com sucesso: detector de padrões, nove casos de associação de comunicados, dez casos de diário, convenções de português e integridade do catálogo de cursos.
+
+Inspeção adicional por importação dos dados confirmou 29 cursos, 71 módulos, 97 aulas, seis valores atuais de nível e 118 verbetes acadêmicos. Estes números descrevem o catálogo nesta data e devem ser atualizados quando ele mudar.
+
+O teste de cursos verifica existência dos PDFs, IDs únicos, aulas preenchidas e limites de páginas declarados, associação ao plano progressivo, referências APIMEC, atributos dos filtros e cinco termos acadêmicos. Não verifica toda a renderização, todos os metadados contra os PDFs, número físico de páginas, operação do iframe ou exaustividade do glossário.
+
+Esta revisão atualizou a documentação. Não realizou deploy, teste visual de navegador ou alteração de notas da página Avaliação. As alterações prévias em recomendacaoBadge.js e contracts/recomendacao.js pertencem à implementação integrada iniciada antes desta revisão.
+
+## Plano LAC: 9 lacunas de assertividade (proposta de 30-09-2026, EM AVALIAÇÃO)
+
+Plano completo em `infra-b3-ecossytem/SPEC.md`, seção Plano LAC. O painel só exibe; consome os endpoints LAC-GES-1..4 do gestor.
+
+| ID | Tarefa | Endpoint |
+|---|---|---|
+| LAC-FE-1 | Aba Avaliação: placar por ranking ao lado do placar por classes. Por versão de regra, correlação de ranking com intervalo, barras por quintil e janelas sucessivas lado a lado. A hipótese registrada antes da execução aparece junto do resultado | `/validacao/backtest?metodo=RANKING` |
+| LAC-FE-2 | Ficha do ativo: cartão "Fatores" com percentil no universo e no setor, agrupado por família (preço, qualidade, valor, evento), com a data do cálculo | `/ativos/{s}/fatores` |
+| LAC-FE-3 | Ficha do ativo: proventos por período (DVA) junto dos eventos, marcando a origem de cada valor | `/ativos/{s}/proventos-contabeis` |
+| LAC-FE-4 | Saúde dos dados: novas fontes (eventos corporativos, fatores, cobertura de proventos) | `/validacao/saude-dados` |
+
+- Datas pelo `utils/dataHora.js` (Brasília, dd-MM-yyyy).
+- Toda tela de recomendação mantém o aviso de regra **experimental** até uma versão ser promovida pelos critérios de LAC-INS-9 (gerar-insights).
+- Aceite: `npm test` com os novos formatadores; telas com o banco sem a V16 mostram "sem dado ainda" em vez de erro.
