@@ -27,8 +27,8 @@ Uma inspeção de código não comprova teste visual, publicação ou funcioname
 
 - **Dono neste repo:** UI e proxy Express. Só consome HTTP do gestor (nunca banco). Se faltar campo, abrir tarefa para o gestor no hub em vez de contornar.
 - **Contrato novo disponível no gestor:** `/ativos/{s}/fatores`, `/ativos/{s}/proventos-contabeis`, `/validacao/backtest?metodo=RANKING`, `/validacao/saude-dados` (13 fontes + `coberturaProventosContabeis`). O proxy já cobre o prefixo `/validacao` e `/ativos`.
-- **Fila local:** LAC-FE-1..4 `PLANEJADO` (seção final). Sem V16 as telas mostram "sem dado ainda". Regra experimental sempre visível. Datas por `utils/dataHora.js`.
-- **Divergência conhecida:** ISS-07 (texto de Avaliação ainda diz que IC está pendente) — fechar junto com LAC-FE-1.
+- **Fila local:** LAC-FE-1..4 `IMPLEMENTADO` (2026-10-07; seção final). Sem V16 ou sem o gestor atualizado as telas mostram "sem dado ainda" (verificado: o gestor em execução ainda responde 404 em `/fatores` e `/proventos-contabeis` até ser reimplantado). Regra experimental sempre visível. Datas por `utils/dataHora.js`.
+- **ISS-07, ISS-10, ISS-11** `IMPLEMENTADO/VERIFICADO` em 2026-10-07 (ver seção 8). `npm test` roda 11 suítes.
 - **Arquivos não commitados de outra sessão:** `public/js/utils/recomendacaoBadge.js`, `public/js/contracts/` — não editar nem commitar sem o dono.
 
 ## 2. Produto e responsabilidades
@@ -195,7 +195,7 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | REQ-12 | 29 cursos com IDs únicos, módulos, aulas, PDFs e páginas declaradas válidas | VERIFICADO — tests/cursos.test.mjs |
 | REQ-13 | Exibir metadados disponíveis sem inventar ausentes | IMPLEMENTADO — renderMetadados; fidelidade às fontes não revalidada |
 | REQ-14 | Leitor PDF sob demanda, referência de página e nova aba | IMPLEMENTADO — teste visual pendente |
-| REQ-15 | Busca combinada com dificuldade e tipo | IMPLEMENTADO — teste atual verifica atributos HTML, não interação |
+| REQ-15 | Busca combinada com dificuldade e tipo | IMPLEMENTADO — testes verificam atributos HTML e o estado em URL; interação visual conferida manualmente em 2026-10-07 (restauração de busca/visão por link), sem teste automatizado de clique |
 | REQ-16 | Todos os cursos associados ao plano progressivo; IDs APIMEC válidos | VERIFICADO — tests/cursos.test.mjs |
 | REQ-17 | Glossário acadêmico e reconciliação integral com PDFs | EM ANDAMENTO — 118 verbetes; completude não demonstrada |
 | REQ-18 | Progresso por etapa local; cursos documentais sem progresso | IMPLEMENTADO |
@@ -230,11 +230,11 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | ISS-04 | Histórico | Recomposição de prefixo no proxy implementada | IMPLEMENTADO |
 | ISS-05 | Histórico | Remoção de Origin no proxy implementada | IMPLEMENTADO |
 | ISS-06 | Média | SPEC não representava o produto; revisão confrontada com código e suíte em 27/09 | VERIFICADO |
-| ISS-07 | Média | Texto de Avaliação desatualizado sobre IC e tarefas; reconciliar afirmações, mantendo notas justificadas por evidência | PLANEJADO |
+| ISS-07 | Média | Texto de Avaliação desatualizado sobre IC e tarefas; reconciliar afirmações, mantendo notas justificadas por evidência | IMPLEMENTADO (2026-10-07; teste em tests/componentes.test.mjs impede a regressão do texto) |
 | ISS-08 | Baixa | Formação completa mistura abrangência e dificuldade; separar os atributos e rever curadoria | PLANEJADO |
 | ISS-09 | Média | Não há matriz PDF/página/termo/verbetes que comprove todos os termos técnicos; concluir reconciliação documental | EM ANDAMENTO |
-| ISS-10 | Média | backendConfig usa http.get e aceita HTTP 2xx–4xx como saúde; HTTPS não suportado por esse cliente e 404 pode escolher destino inadequado; verificar com servidor local controlado | PLANEJADO |
-| ISS-11 | Baixa | Curso aberto e filtros não têm URL compartilhável/restauração; evolução opcional, não regressão de requisito atual | PLANEJADO |
+| ISS-10 | Média | backendConfig usa http.get e aceita HTTP 2xx–4xx como saúde; HTTPS não suportado por esse cliente e 404 pode escolher destino inadequado; verificar com servidor local controlado | VERIFICADO (2026-10-07: só 2xx com `status` UP conta; http e https; tests/backend.test.mjs com servidor local) |
+| ISS-11 | Baixa | Curso aberto e filtros não têm URL compartilhável/restauração; evolução opcional, não regressão de requisito atual | IMPLEMENTADO (2026-10-07: `#/estudos?secao=&visao=&curso=&q=&nivel=&tipo=`, validado contra o catálogo; PDF aberto não entra no link) |
 
 | ID | Tarefa preservada / adicional | Estado |
 |---|---|---|
@@ -244,9 +244,9 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | TASK-04 | Serviço front-end no compose da infraestrutura | IMPLEMENTADO |
 | TASK-05 | Pausar/desativar monitoramento pela interface | PLANEJADO |
 | TASK-06 | Reescrever SPEC com cursos, PDFs, glossário, filtros e planos | VERIFICADO |
-| TASK-07 | Atualizar narrativa da Avaliação com evidências atuais | PLANEJADO |
+| TASK-07 | Atualizar narrativa da Avaliação com evidências atuais | IMPLEMENTADO (2026-10-07) |
 | TASK-08 | Auditar completude e proveniência dos termos de todos os PDFs | EM ANDAMENTO |
-| TASK-09 | Corrigir seleção/healthcheck do backend e cobrir HTTP/HTTPS e erros | PLANEJADO |
+| TASK-09 | Corrigir seleção/healthcheck do backend e cobrir HTTP/HTTPS e erros | VERIFICADO (2026-10-07) |
 
 ## 9. Verificação de 2026-09-27
 
@@ -272,3 +272,63 @@ Plano completo em `infra-b3-ecossytem/SPEC.md`, seção Plano LAC. O painel só 
 - Datas pelo `utils/dataHora.js` (Brasília, dd-MM-yyyy).
 - Toda tela de recomendação mantém o aviso de regra **experimental** até uma versão ser promovida pelos critérios de LAC-INS-9 (gerar-insights).
 - Aceite: `npm test` com os novos formatadores; telas com o banco sem a V16 mostram "sem dado ainda" em vez de erro.
+
+### Estado das tarefas LAC-FE (2026-10-07)
+
+| ID | Estado | Onde |
+|---|---|---|
+| LAC-FE-1 | IMPLEMENTADO | `components/PlacarRanking.js` na aba Avaliação: hipótese, IC da correlação, quintis, versão da regra |
+| LAC-FE-2 | IMPLEMENTADO | `components/ficha/FatoresAtivo.js`: percentil no universo e no setor por família, com data |
+| LAC-FE-3 | IMPLEMENTADO | `components/ficha/ProventosContabeis.js`: JCP/dividendos por período, origem marcada, ausente = "—" |
+| LAC-FE-4 | IMPLEMENTADO | `SaudeDosDados.js`: cartão de cobertura de proventos; as fontes novas aparecem na tabela de fontes |
+
+Regras puras em `analise/lacunas.js` (testes em `tests/lacunas.test.mjs`, renderização em `tests/componentes.test.mjs`). Falta: validar com dados reais depois do backfill (LAC-INFRA-3) e reimplantar o gestor com LAC-GES.
+
+## Melhorias de experiência e listagem (proposta de 2026-10-07)
+
+Origem: revisão visual do painel em 2026-10-07. Princípio: **juntar o que é coeso** (tudo que descreve "o ativo" ou "a saúde dos dados" na mesma superfície) e **explicar o estado** (vazio, lento, atrasado) em vez de deixar spinner ou tela em branco. Nada aqui muda regra de negócio; todo rótulo de sinal segue com o aviso de regra **experimental**.
+
+### Diagnóstico (2026-10-07)
+
+- Menu superior com 10 itens e `BottomNav` com os mesmos 10. Quatro listas do mesmo universo de ativos (Base, Favoritos, Setores e a rota antiga Monitorados).
+- Monitorados afirma "reprocessado a cada 30 segundos", o que não vale desde o monitoramento em camadas (V13): favorito atualiza no ciclo intradiário (mínimo 900 s, 10:05–17:35); o restante vem do COTAHIST.
+- Telas ficam em spinner sem tempo limite quando o gestor não responde.
+- Fatores e proventos aparecem só como números; tabelas largas rolam na horizontal no celular e perdem o cabeçalho ao rolar.
+- A abertura do painel é uma busca (Gestão), não um resumo do que mudou.
+
+### Requisitos de experiência
+
+| ID | Requisito | Fase | Estado |
+|---|---|---|---|
+| REQ-UX-1 | Estados que explicam: tempo limite nas chamadas HTTP, spinner que avisa quando demora e estado vazio com causa e próximo passo | 1 | IMPLEMENTADO (2026-10-07) |
+| REQ-UX-2 | Selos de estado únicos (Em dia, Atrasada, Erro, Experimental, Sem dado) e formatadores numéricos pt-BR compartilhados | 1 | IMPLEMENTADO (2026-10-07) |
+| REQ-UX-3 | Corrigir textos de periodicidade desatualizados (Monitorados, Favoritos) | 1 | IMPLEMENTADO (2026-10-07) |
+| REQ-UX-4 | Fatores com barra de percentil (cor + texto, nunca só cor); proventos com gráfico de colunas empilhadas JCP/dividendos | 2 | IMPLEMENTADO (2026-10-07) |
+| REQ-UX-5 | Tabelas com cabeçalho fixo ao rolar e modo cartão em tela estreita (`data-label`) | 2 | IMPLEMENTADO (2026-10-07), aplicado em Base, Saúde dos dados, Fatores, Proventos, Favoritos e Monitorados (verificado em 375 px) |
+| REQ-UX-6 | Menu em 5 grupos (Início, Ativos, Mercado, Avaliação, Estudos) a partir de uma única definição, no topo e na barra inferior | 5 | IMPLEMENTADO (2026-10-07) |
+| REQ-UX-7 | Página Início: saúde dos dados, comunicados da semana, favoritos com variação e fontes fora do prazo; cada bloco falha sozinho | 5 | IMPLEMENTADO (2026-10-07) |
+| REQ-UX-8 | Tabela única de ativos (Base + Favoritos + Setores + Monitorados) com chips de filtro, sparkline, sinal e último comunicado | 3 | EM ANDAMENTO: filtros da Base (busca, setor, página) já viajam no link `#/base?q=&setor=&pagina=` e o símbolo abre a ficha; a fusão das listas, sparkline, sinal e último comunicado dependem do endpoint de listagem no gestor (TASK-UX-5, um GET para não fazer 3 chamadas por linha) |
+| REQ-UX-9 | Ficha do ativo em abas (Resumo, Fundamentos, Fatores e proventos, Comunicados), aba no link (`?aba=`), teclado (setas/Home/End) e barra de abas fixa | 4 | IMPLEMENTADO (2026-10-07). O gráfico de preço fica no cabeçalho da ficha, com link para Velas e padrões; comunicados marcados no gráfico seguem só na tela de Velas (embutir a tela de Velas na ficha fica PLANEJADO) |
+| REQ-UX-10 | Tema escuro (Bootstrap 5.3 `data-bs-theme`) | — | PLANEJADO, opcional |
+
+### Tarefas
+
+| ID | Tarefa | Depende | Estado |
+|---|---|---|---|
+| TASK-UX-1 | `httpClient` com tempo limite; `<loading-spinner>` com aviso; `<estado-vazio>`; `<selo-estado>`; `utils/numero.js` | — | IMPLEMENTADO |
+| TASK-UX-2 | Barras de percentil, gráfico de proventos (`analise/graficoProventos.js`), CSS de tabela fixa/cartões | TASK-UX-1 | IMPLEMENTADO |
+| TASK-UX-3 | `navegacao.js` (definição única) + `AppHeader`/`BottomNav` em grupos | — | IMPLEMENTADO |
+| TASK-UX-4 | `InicioPage` (`#/inicio`, nova rota padrão) | TASK-UX-1, TASK-UX-3 | IMPLEMENTADO |
+| TASK-UX-5 | Endpoint de listagem de ativos no gestor (preço, variação, sinal, último comunicado, favorito, setor, selos) | — | PLANEJADO (gestor; registrar no hub) |
+| TASK-UX-6 | Tabela única de ativos e remoção das listas redundantes | TASK-UX-5 | PLANEJADO |
+| TASK-UX-7 | Ficha em abas (`analise/abasFicha.js`, `ComunicadosDoAtivo`, painéis lazy) | — | IMPLEMENTADO |
+| TASK-UX-8 | Filtros da Base no link (`analise/filtrosBase.js`) | — | IMPLEMENTADO |
+
+### Aceite
+
+- Gestor fora do ar: nenhuma tela fica em spinner indefinido; em até 12 s aparece a causa provável e o caminho para Saúde dos dados.
+- Cada cor de estado tem texto equivalente; datas por `utils/dataHora.js`, números por `utils/numero.js`.
+- Menu: nenhuma página deixa de ser alcançável; as rotas antigas (`#/base`, `#/favoritos` etc.) continuam válidas.
+- Em largura de 375 px nenhuma tabela das fases 1–2 exige rolagem horizontal.
+- `npm test` cobre os formatadores, o gráfico de proventos, a definição de navegação e a renderização dos blocos do Início.
+
