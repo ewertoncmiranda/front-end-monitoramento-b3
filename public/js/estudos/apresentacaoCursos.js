@@ -36,10 +36,11 @@ export function renderCatalogoCursos() {
 export function renderCurso(id) {
   const curso = obterCurso(id);
   if (!curso) return renderCatalogoCursos();
+  const escopo = escopoDoCurso(curso);
   return `<article data-curso-aberto="${curso.id}">
     <button class="btn btn-sm btn-outline-secondary mb-3" data-voltar-cursos>← Voltar às formações</button>
     <header class="card border-0 bg-dark text-white mb-4"><div class="card-body p-4 p-md-5">
-      <div class="d-flex flex-wrap gap-2 mb-3"><span class="badge text-bg-light">${escapar(curso.nivel)}</span><span class="badge text-bg-light">${curso.paginas} páginas</span><span class="badge text-bg-light">${escapar(curso.ano)}</span></div>
+      <div class="d-flex flex-wrap gap-2 mb-3"><span class="badge text-bg-light">${escapar(curso.nivel)}</span><span class="badge text-bg-light">${escapar(escopo)}</span><span class="badge text-bg-light">${curso.paginas} páginas</span><span class="badge text-bg-light">${escapar(curso.ano)}</span></div>
       <h2 class="display-6 fw-semibold">${escapar(curso.titulo)}</h2><p class="lead text-white-50">${escapar(curso.descricao)}</p>
       <div class="curso-metadados text-white-50">${renderMetadados(curso, true)}</div>
       <div class="d-flex flex-wrap gap-2"><button class="btn btn-light" data-abrir-pdf="${curso.id}" data-pagina="1">Ler PDF</button><a class="btn btn-outline-light" href="${curso.pdf}" target="_blank" rel="noopener">Abrir em nova aba ↗</a></div>
@@ -66,4 +67,11 @@ export function abrirPdf(container, cursoId, pagina = 1) {
   container.innerHTML = `<div class="ratio curso-pdf-ratio border rounded bg-secondary-subtle"><iframe title="PDF: ${escapar(curso.titulo)}" src="${curso.pdf}#page=${paginaSegura}&view=FitH" loading="lazy"></iframe></div><p class="small text-secondary mt-2">Se o navegador não exibir o documento, <a href="${curso.pdf}#page=${paginaSegura}" target="_blank" rel="noopener">abra o PDF em uma nova aba</a>.</p>`;
   container.closest('section').querySelector('[data-fechar-pdf]').classList.remove('d-none');
   container.closest('section').scrollIntoView({ block: 'start' });
+}
+
+export function fecharPdf(container) {
+  if (!container) return;
+  container.innerHTML = '';
+  container.classList.add('d-none');
+  container.closest('section')?.querySelector('[data-fechar-pdf]')?.classList.add('d-none');
 }

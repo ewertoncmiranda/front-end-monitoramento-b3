@@ -4,7 +4,7 @@ import { niveis, apimec } from '../estudos/conteudo.js';
 import { ProgressoEstudos } from '../estudos/progresso.js';
 import { normalizar } from '../estudos/texto.js';
 import { renderTrilhas, renderConhecimentoHub } from '../estudos/apresentacao.js';
-import { renderCatalogoCursos, renderCurso, abrirPdf } from '../estudos/apresentacaoCursos.js';
+import { renderCatalogoCursos, renderCurso, abrirPdf, fecharPdf } from '../estudos/apresentacaoCursos.js';
 import { cursos } from '../estudos/cursos.js';
 import { lerEstado, montarHash } from '../estudos/urlEstado.js';
 import '../pages/FormulasPage.js';
@@ -79,12 +79,7 @@ export class EstudosPage extends BaseComponent {
       }
       const pdf = evento.target.closest('[data-abrir-pdf]');
       if (pdf) abrirPdf(this.querySelector('[data-pdf-container]'), pdf.dataset.abrirPdf, pdf.dataset.pagina);
-      if (evento.target.closest('[data-fechar-pdf]')) {
-        const container = this.querySelector('[data-pdf-container]');
-        container.innerHTML = '';
-        container.classList.add('d-none');
-        evento.target.closest('[data-fechar-pdf]').classList.add('d-none');
-      }
+      if (evento.target.closest('[data-fechar-pdf]')) fecharPdf(this.querySelector('[data-pdf-container]'));
       const percurso = evento.target.closest('[data-percurso]');
       if (percurso) { this.percurso = percurso.dataset.percurso; this.renderConteudo(); }
       const subref = evento.target.closest('[data-subref]');

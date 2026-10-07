@@ -6,7 +6,7 @@ import { cursos, obterCurso } from '../public/js/estudos/cursos.js';
 import { glossarioAcademico } from '../public/js/estudos/glossarioAcademico.js';
 import { cursosPorEtapa, cursosPorEtapaApimec } from '../public/js/estudos/planosCursos.js';
 import { TIPOS_CURSOS, escopoDoCurso, tipoDoCurso } from '../public/js/estudos/tiposCursos.js';
-import { renderCatalogoCursos } from '../public/js/estudos/apresentacaoCursos.js';
+import { renderCatalogoCursos, renderCurso } from '../public/js/estudos/apresentacaoCursos.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ids = new Set(cursos.map(curso => curso.id));
@@ -47,6 +47,11 @@ assert.match(catalogo, /data-curso-card/, 'Os cards devem expor atributos para f
 assert.ok(!dificuldades.has('Formação completa'), 'Formação completa deve sair das dificuldades.');
 assert.ok(escopos.has('Formação completa'), 'Formação completa deve ser escopo/abrangência.');
 assert.match(catalogo, /data-curso-escopo="formacao completa"/, 'Cards devem expor escopo para filtragem.');
+
+const cursoCompleto = obterCurso('mercados-financeiros-ufba');
+assert.equal(cursoCompleto.nivel, 'Intermediário');
+assert.equal(escopoDoCurso(cursoCompleto), 'Formação completa');
+assert.match(renderCurso(cursoCompleto.id), /<span class="badge text-bg-light">Intermediário<\/span><span class="badge text-bg-light">Formação completa<\/span>/, 'Detalhe do curso deve mostrar dificuldade e escopo separados.');
 
 const termos = new Set(glossarioAcademico.flatMap(grupo => grupo.termos.map(item => item.termo)));
 for (const termo of ['ETTJ — Estrutura a Termo da Taxa de Juros', 'Contrato futuro', 'VaR — Value at Risk', 'MQO — Mínimos Quadrados Ordinários', 'Microestrutura de mercado']) {
