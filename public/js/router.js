@@ -7,9 +7,11 @@
 const rotas = {
   '#/inicio': 'inicio-page',
   '#/gestao': 'gestao-page',
-  '#/base': 'base-page',
-  '#/favoritos': 'favoritos-page',
-  '#/monitorados': 'ativos-monitorados-page',
+  '#/ativos': 'ativos-page',
+  // Rotas antigas das listas abrem a tabela unica na visao correspondente (REQ-UX-8).
+  '#/base': 'ativos-page',
+  '#/favoritos': 'ativos-page',
+  '#/monitorados': 'ativos-page',
   '#/candles': 'candles-page',
   '#/comunicados': 'comunicados-page',
   '#/noticias': 'noticias-page',
@@ -20,7 +22,7 @@ const rotas = {
   '#/padroes': 'padroes-page',
   '#/glossario': 'glossario-page',
   '#/estudos': 'estudos-page',
-  '#/setores': 'setores-page',
+  '#/setores': 'ativos-page',
   '#/indices': 'indices-macro-page',
 };
 

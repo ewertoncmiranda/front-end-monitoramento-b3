@@ -5,9 +5,7 @@ import './components/BottomNav.js';
 import './pages/InicioPage.js';
 import './pages/InicioPage.js';
 import './pages/GestaoPage.js';
-import './pages/BasePage.js';
-import './pages/FavoritosPage.js';
-import './pages/AtivosMonitoradosPage.js';
+import './pages/AtivosPage.js';
 import './pages/CandlesPage.js';
 import './pages/ComunicadosPage.js';
 import './pages/NoticiasPage.js';
@@ -18,7 +16,6 @@ import './pages/AvaliacaoPage.js';
 import './pages/PadroesPage.js';
 import './pages/GlossarioPage.js';
 import './pages/EstudosPage.js';
-import './pages/SetoresPage.js';
 import './pages/IndicesMacroPage.js';
 import { iniciarRouter } from './router.js';
 
