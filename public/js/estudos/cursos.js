@@ -165,7 +165,7 @@ const cursosBase = [
     id: 'mercados-financeiros-ufba',
     titulo: 'Mercados financeiros e Sistema Financeiro Nacional',
     autoria: 'Ronaldo Pesente / UFBA',
-    nivel: 'Formação completa', paginas: 119, ano: '2019',
+    nivel: 'Intermediário', escopo: 'Formação completa', paginas: 119, ano: '2019',
     descricao: 'Curso abrangente sobre intermediação, estrutura institucional, produtos financeiros, mercado de capitais e derivativos.',
     pdf: 'assets/pdfs/08-mercados-financeiros-sfn.pdf',
     aviso: 'Obra de 2019. Estruturas institucionais, tributação, limites e características de produtos podem ter mudado.',

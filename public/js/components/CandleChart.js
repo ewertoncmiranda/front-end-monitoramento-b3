@@ -2,8 +2,8 @@ import { BaseComponent } from './base/BaseComponent.js';
 
 // Unica responsabilidade: desenhar um grafico de candlestick a partir de uma
 // lista de candles OHLC ja normalizada (ver historicoApi.extrairCandles).
-// Usa a lib lightweight-charts (TradingView), carregada globalmente via CDN
-// no index.html - mesmo padrao do Bootstrap, sem bundler.
+// Usa a lib lightweight-charts (TradingView), carregada globalmente a partir
+// de public/vendor no index.html - mesmo padrao do Bootstrap, sem bundler.
 //
 // Com poucos candles um grafico de velas nao diz nada (viraria um traco reto
 // ou um unico retangulo) - por isso, abaixo de MIN_CANDLES, o componente

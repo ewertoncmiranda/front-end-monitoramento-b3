@@ -18,7 +18,7 @@ const PECAS = [
     numero: 1,
     nome: 'painel-ativos-frontend',
     papel: 'Frontend',
-    stack: 'HTML + JS puro, Web Components nativos, Bootstrap 5 via CDN',
+    stack: 'HTML + JS puro, Web Components nativos, Bootstrap 5 local',
     repo: 'front-end-monitoramento-b3',
     imagem: 'front-end-monitoramento-b3',
     porta: '8082',

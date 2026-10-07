@@ -144,8 +144,10 @@ export class EstudosPage extends BaseComponent {
   restaurarFiltros(estado = {}) {
     if (estado.q) this.querySelector('#estudos-busca').value = estado.q;
     const nivel = this.querySelector('[data-curso-filtro="nivel"]');
+    const escopo = this.querySelector('[data-curso-filtro="escopo"]');
     const tipo = this.querySelector('[data-curso-filtro="tipo"]');
     if (estado.nivel && nivel) nivel.value = estado.nivel;
+    if (estado.escopo && escopo) escopo.value = estado.escopo;
     if (estado.tipo && tipo) tipo.value = estado.tipo;
     this._estadoInicial = {};
     this.filtrar();
@@ -159,6 +161,7 @@ export class EstudosPage extends BaseComponent {
       curso: this.secao === 'formacoes' ? this.cursoAberto : null,
       q: this.querySelector('#estudos-busca')?.value.trim(),
       nivel: this.querySelector('[data-curso-filtro="nivel"]')?.value,
+      escopo: this.querySelector('[data-curso-filtro="escopo"]')?.value,
       tipo: this.querySelector('[data-curso-filtro="tipo"]')?.value,
     });
     try { window.history.replaceState(null, '', hash); } catch { /* sem History API: o link so nao acompanha */ }
@@ -200,13 +203,15 @@ export class EstudosPage extends BaseComponent {
 
     const termo = normalizar(this.querySelector('#estudos-busca').value.trim());
     const nivel = this.querySelector('[data-curso-filtro="nivel"]')?.value || '';
+    const escopo = this.querySelector('[data-curso-filtro="escopo"]')?.value || '';
     const tipo = this.querySelector('[data-curso-filtro="tipo"]')?.value || '';
     let visiveis = 0;
     this.querySelectorAll('[data-estudo-busca]').forEach(el => {
       const combinaTexto = !termo || el.dataset.estudoBusca.includes(termo);
       const combinaNivel = !nivel || !el.matches('[data-curso-card]') || el.dataset.cursoNivel === nivel;
+      const combinaEscopo = !escopo || !el.matches('[data-curso-card]') || el.dataset.cursoEscopo === escopo;
       const combinaTipo = !tipo || !el.matches('[data-curso-card]') || el.dataset.cursoTipo === tipo;
-      const combina = combinaTexto && combinaNivel && combinaTipo;
+      const combina = combinaTexto && combinaNivel && combinaEscopo && combinaTipo;
       el.classList.toggle('d-none', !combina);
       if (combina) visiveis++;
     });

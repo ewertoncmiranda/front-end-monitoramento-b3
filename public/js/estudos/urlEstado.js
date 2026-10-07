@@ -18,7 +18,7 @@ export function lerEstado(hash, idsCursos = []) {
     estado.curso = p.get('curso');
     estado.secao = 'formacoes';
   }
-  for (const campo of ['q', 'nivel', 'tipo']) {
+  for (const campo of ['q', 'nivel', 'escopo', 'tipo']) {
     const valor = (p.get(campo) || '').slice(0, 80);
     if (valor) estado[campo] = valor;
   }
@@ -26,13 +26,14 @@ export function lerEstado(hash, idsCursos = []) {
 }
 
 /** Hash para o estado atual; so inclui o que foge do padrao. */
-export function montarHash({ secao, visao, curso, q, nivel, tipo } = {}) {
+export function montarHash({ secao, visao, curso, q, nivel, escopo, tipo } = {}) {
   const p = new URLSearchParams();
   if (secao && secao !== 'formacoes') p.set('secao', secao);
   if (visao && visao !== 'planos') p.set('visao', visao);
   if (curso) p.set('curso', curso);
   if (q) p.set('q', q);
   if (nivel) p.set('nivel', nivel);
+  if (escopo) p.set('escopo', escopo);
   if (tipo) p.set('tipo', tipo);
   const consulta = p.toString();
   return consulta ? `${ROTA}?${consulta}` : ROTA;

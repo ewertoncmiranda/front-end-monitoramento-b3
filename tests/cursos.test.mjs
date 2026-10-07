@@ -5,11 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { cursos, obterCurso } from '../public/js/estudos/cursos.js';
 import { glossarioAcademico } from '../public/js/estudos/glossarioAcademico.js';
 import { cursosPorEtapa, cursosPorEtapaApimec } from '../public/js/estudos/planosCursos.js';
-import { TIPOS_CURSOS, tipoDoCurso } from '../public/js/estudos/tiposCursos.js';
+import { TIPOS_CURSOS, escopoDoCurso, tipoDoCurso } from '../public/js/estudos/tiposCursos.js';
 import { renderCatalogoCursos } from '../public/js/estudos/apresentacaoCursos.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ids = new Set(cursos.map(curso => curso.id));
+const dificuldades = new Set(cursos.map(curso => curso.nivel));
+const escopos = new Set(cursos.map(escopoDoCurso));
 
 assert.equal(cursos.length, 29, 'Os nove cursos anteriores e os vinte novos documentos únicos devem estar no catálogo.');
 assert.equal(ids.size, cursos.length, 'Os IDs dos cursos devem ser únicos.');
@@ -20,6 +22,7 @@ for (const curso of cursos) {
   assert.ok(curso.modulos.length > 0, `${curso.id} deve ter módulos.`);
   assert.ok(fs.existsSync(path.join(raiz, 'public', curso.pdf)), `PDF ausente: ${curso.pdf}`);
   assert.ok(TIPOS_CURSOS[tipoDoCurso(curso)], `${curso.id} deve possuir um tipo editorial válido.`);
+  assert.ok(curso.nivel !== 'Formação completa', `${curso.id} mistura escopo com dificuldade.`);
 
   for (const modulo of curso.modulos) {
     assert.ok(modulo.titulo && modulo.aulas.length > 0, `${curso.id} contém módulo incompleto.`);
@@ -38,8 +41,12 @@ for (const id of Object.values(cursosPorEtapaApimec).flat()) assert.ok(ids.has(i
 
 const catalogo = renderCatalogoCursos();
 assert.match(catalogo, /data-curso-filtro="nivel"/, 'O catálogo deve filtrar por dificuldade.');
+assert.match(catalogo, /data-curso-filtro="escopo"/, 'O catálogo deve filtrar por escopo.');
 assert.match(catalogo, /data-curso-filtro="tipo"/, 'O catálogo deve filtrar por tipo.');
 assert.match(catalogo, /data-curso-card/, 'Os cards devem expor atributos para filtragem combinada.');
+assert.ok(!dificuldades.has('Formação completa'), 'Formação completa deve sair das dificuldades.');
+assert.ok(escopos.has('Formação completa'), 'Formação completa deve ser escopo/abrangência.');
+assert.match(catalogo, /data-curso-escopo="formacao completa"/, 'Cards devem expor escopo para filtragem.');
 
 const termos = new Set(glossarioAcademico.flatMap(grupo => grupo.termos.map(item => item.termo)));
 for (const termo of ['ETTJ — Estrutura a Termo da Taxa de Juros', 'Contrato futuro', 'VaR — Value at Risk', 'MQO — Mínimos Quadrados Ordinários', 'Microestrutura de mercado']) {

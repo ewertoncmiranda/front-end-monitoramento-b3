@@ -10,7 +10,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 const SERVICOS = [
   {
     nome: 'painel-ativos-frontend',
-    stack: 'HTML + JS puro (ES modules), Web Components nativos (sem framework, sem bundler), Bootstrap 5 via CDN, servidor Node/Express',
+    stack: 'HTML + JS puro (ES modules), Web Components nativos (sem framework, sem bundler), Bootstrap 5 local, servidor Node/Express',
     decisoes: [
       'Sem build/bundler: <code>public/</code> e servido exatamente como esta - mais facil de empacotar num WebView.',
       'Zero CSS proprio: todo o visual vem de classes do Bootstrap; <code>app.css</code> so tem os 2 ajustes que o Bootstrap nao cobre.',

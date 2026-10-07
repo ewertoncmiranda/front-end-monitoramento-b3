@@ -7,7 +7,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/dataHora.test.mjs && node tests/detector.test.mjs && node tests/comunicados.test.mjs && node tests/diario.test.mjs && node tests/portugues.test.mjs && node tests/cursos.test.mjs && node tests/ficha.test.mjs && node tests/backend.test.mjs && node tests/lacunas.test.mjs && node tests/componentes.test.mjs && node tests/urlEstado.test.mjs && node tests/abas.test.mjs && node tests/filtrosBase.test.mjs"
+    "test": "node tests/dataHora.test.mjs && node tests/detector.test.mjs && node tests/comunicados.test.mjs && node tests/diario.test.mjs && node tests/portugues.test.mjs && node tests/cursos.test.mjs && node tests/estudosFluxos.test.mjs && node tests/ficha.test.mjs && node tests/backend.test.mjs && node tests/lacunas.test.mjs && node tests/componentes.test.mjs && node tests/urlEstado.test.mjs && node tests/abas.test.mjs && node tests/filtrosBase.test.mjs && node tests/dependenciasLocais.test.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",
