@@ -322,6 +322,7 @@ Origem: revisão visual do painel em 2026-10-07. Princípio: **juntar o que é c
 | TASK-UX-6 | Tabela única de ativos e remoção das listas redundantes | TASK-UX-5 | IMPLEMENTADO (2026-10-07; ver REQ-UX-8) |
 | TASK-UX-7 | Ficha em abas (`analise/abasFicha.js`, `ComunicadosDoAtivo`, painéis lazy) | — | IMPLEMENTADO |
 | TASK-UX-8 | Filtros da Base no link (`analise/filtrosBase.js`) | — | IMPLEMENTADO |
+| TASK-OPI-1 | Cartão "Opinião por horizonte" na aba Resumo da ficha (`components/ficha/OpiniaoHorizontes.js`, `GET /ativos/{s}/opiniao`): curto/médio/longo lado a lado; rótulos neutros com cor e texto sempre juntos (positivo verde, negativo vermelho, neutro âmbar, sem base cinza; risco verde/âmbar/vermelho); selo Experimental e aviso sempre; justificativa cita o dado, "o que invalida", dados ausentes, pregão e origem (modelo local x regra); estado vazio explica que a geração roda após os insights diários; tests/componentes.test.mjs | gestor TASK-OPI-1 | IMPLEMENTADO (2026-10-07) |
 
 ### Aceite
 
