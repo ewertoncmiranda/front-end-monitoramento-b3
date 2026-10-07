@@ -20,7 +20,7 @@ export class FavoritosPage extends BaseComponent {
         <h4 class="mb-0">Favoritos</h4>
         <button type="button" class="btn btn-outline-primary btn-sm" id="btn-atualizar">Atualizar</button>
       </div>
-      <p class="text-muted small">Cotação intradiária via BRAPI a cada 15 min, só em dia útil das 10h às 18h30. Adicione favoritos na aba <a href="#/base">Base</a>.</p>
+      <p class="text-muted small">Cotação intradiária via BRAPI a cada 15 min no mínimo, só em dia útil das 10h05 às 17h35; fora do pregão vale o último preço oficial da B3. Adicione favoritos na aba <a href="#/base">Base</a>.</p>
       <div id="favoritos-resultado"></div>
     `;
   }

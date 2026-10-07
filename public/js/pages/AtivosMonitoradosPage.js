@@ -16,7 +16,7 @@ export class AtivosMonitoradosPage extends BaseComponent {
         <h4 class="mb-0">Ativos monitorados</h4>
         <button type="button" class="btn btn-outline-primary btn-sm" id="btn-atualizar">Atualizar</button>
       </div>
-      <p class="text-muted small">Cada ativo cadastrado é reprocessado automaticamente pelo serviço a cada 30 segundos.</p>
+      <p class="text-muted small">Cada ativo cadastrado é reprocessado automaticamente pelo serviço no ciclo da sua camada: favoritos pela BRAPI no pregão (mínimo 15 min, 10h05 às 17h35) e os demais pelo preço oficial da B3 (COTAHIST), atualizado todo dia útil.</p>
       <div id="monitorados-resultado"></div>
     `;
   }

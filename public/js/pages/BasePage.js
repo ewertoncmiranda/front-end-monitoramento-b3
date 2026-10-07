@@ -2,6 +2,10 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { listarAtivosBase, listarSetoresBase } from '../api/baseAtivosApi.js';
 import { favoritar } from '../api/favoritosApi.js';
 import { formatarData } from '../utils/dataHora.js';
+import { hashDaBase, lerFiltrosBase } from '../analise/filtrosBase.js';
+import { escaparHtml } from '../utils/html.js';
+import { htmlSelo } from '../utils/selos.js';
+import { htmlEstadoVazio } from '../components/EstadoVazio.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -14,8 +18,10 @@ export class BasePage extends BaseComponent {
     super();
     this.pagina = 0;
     this.tamanho = 30;
-    this.q = '';
-    this.setor = '';
+    const filtros = lerFiltrosBase(window.location.hash);
+    this.q = filtros.q;
+    this.setor = filtros.setor;
+    this.pagina = filtros.pagina;
     this.pagePayload = null;
   }
 
@@ -42,6 +48,7 @@ export class BasePage extends BaseComponent {
   }
 
   async afterRender() {
+    this.querySelector('#base-busca').value = this.q;
     this.querySelector('#base-filtrar').addEventListener('click', () => {
       this.q = this.querySelector('#base-busca').value.trim();
       this.setor = this.querySelector('#base-setor').value;
@@ -72,6 +79,7 @@ export class BasePage extends BaseComponent {
         opcao.textContent = setor;
         select.appendChild(opcao);
       });
+      select.value = this.setor;
     } catch {
       // Filtro de setor e um extra; a busca funciona sem ele.
     }
@@ -80,6 +88,9 @@ export class BasePage extends BaseComponent {
   async carregar() {
     const resultado = this.querySelector('#base-resultado');
     resultado.innerHTML = '<loading-spinner></loading-spinner>';
+    try {
+      history.replaceState(null, '', hashDaBase({ q: this.q, setor: this.setor, pagina: this.pagina }));
+    } catch { /* sem History API: o link so nao acompanha */ }
     try {
       this.pagePayload = await listarAtivosBase({ q: this.q, setor: this.setor, pagina: this.pagina, tamanho: this.tamanho });
       resultado.innerHTML = this.tabela(this.pagePayload.content || []);
@@ -92,26 +103,26 @@ export class BasePage extends BaseComponent {
 
   tabela(itens) {
     if (itens.length === 0) {
-      return '<p class="text-muted">Nenhum ativo encontrado com esses filtros.</p>';
+      return htmlEstadoVazio({ titulo: 'Nenhum ativo encontrado', causa: 'Nenhum ativo bate com esses filtros. Limpe a busca ou escolha outro setor.' });
     }
     const linhas = itens.map((item) => `
       <tr>
-        <td class="fw-semibold">${item.simbolo}</td>
-        <td>${item.nome ?? '-'}</td>
-        <td>${item.setor ?? '-'}</td>
-        <td class="text-end">${this.formatarPreco(item.ultimoFechamento)}</td>
-        <td class="text-muted small">${formatarData(item.dataUltimoFechamento)}</td>
-        <td class="text-center">${item.temFundamento ? '<span class="badge bg-success">Sim</span>' : '<span class="badge bg-secondary">Não</span>'}</td>
-        <td class="text-center">
+        <td data-label="Símbolo" class="fw-semibold"><a class="link-body-emphasis" href="#/gestao/${encodeURIComponent(item.simbolo)}">${escaparHtml(item.simbolo)}</a></td>
+        <td data-label="Empresa">${escaparHtml(item.nome ?? '-')}</td>
+        <td data-label="Setor">${escaparHtml(item.setor ?? '-')}</td>
+        <td data-label="Fechamento" class="text-end">${this.formatarPreco(item.ultimoFechamento)}</td>
+        <td data-label="Data" class="text-muted small">${formatarData(item.dataUltimoFechamento)}</td>
+        <td data-label="Balanço" class="text-center">${item.temFundamento ? htmlSelo('OK', 'Sim') : htmlSelo('SEM_DADO', 'Não')}</td>
+        <td data-label="Favoritos" class="text-center">
           ${item.favorito
-            ? '<span class="badge bg-primary">Favorito</span>'
-            : `<button type="button" class="btn btn-sm btn-outline-primary" data-favoritar="${item.simbolo}">+ Favoritos</button>`}
+            ? htmlSelo('FAVORITO')
+            : `<button type="button" class="btn btn-sm btn-outline-primary" data-favoritar="${escaparHtml(item.simbolo)}">+ Favoritos</button>`}
         </td>
       </tr>`).join('');
 
     return `
-      <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle">
+      <div class="table-responsive tabela-rolavel">
+        <table class="table table-sm table-hover align-middle tabela-cartoes">
           <thead>
             <tr>
               <th>Símbolo</th><th>Empresa</th><th>Setor</th>
