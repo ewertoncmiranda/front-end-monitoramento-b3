@@ -159,6 +159,74 @@ const FONTES_EXTERNAS = [
   },
 ];
 
+const FLUXOS_NEGOCIO = [
+  {
+    titulo: '1. Decisão consolidada do ativo',
+    dono: 'gestor-ativos-brutos',
+    resumo: 'Transforma várias análises gravadas no MySQL em uma leitura única para a tela.',
+    passos: [
+      'Lê o histórico de <code>insight_acao</code> gerado pelo worker Python.',
+      'Conta a família da recomendação: compra, venda, manter, sem margem ou sem dados. Valores nulos são ignorados.',
+      'Calcula a margem de segurança média a partir de <code>margem_seguranca_percent</code>.',
+      'Monta sentimento, força do sinal, risco e confiança por regra determinística — sem IA, sem prompt, sem arquivo externo.',
+      'Expõe a decisão em <code>GET /analises/{simbolo}/analise</code> e mantém o retrato bruto do último ciclo em <code>/fundamentos</code>.',
+    ],
+    referencias: 'Base: tabela <code>insight_acao</code>. Origem dos números: <code>gerar-insights</code>.',
+  },
+  {
+    titulo: '2. Valuation fundamentalista',
+    dono: 'gerar-insights',
+    resumo: 'Calcula se o preço atual tem folga ou aperto contra um preço justo estimado.',
+    passos: [
+      'Recebe preço, lucro por ação, P/L e faixa de 52 semanas do snapshot de mercado.',
+      'Normaliza o LPA com histórico de 3 a 5 anos quando disponível, para reduzir o efeito de lucro excepcional.',
+      'Calcula Graham em três cenários e ajusta por juros usando Selic; também calcula o Graham Number quando há VPA.',
+      'Deriva margem de segurança: quanto o preço está abaixo ou acima do valor estimado.',
+      'Classifica earnings yield, P/L, risco e confiança; a versão da regra fica registrada para comparação futura.',
+    ],
+    referencias: 'Base: BRAPI/B3 para preço, CVM para LPA/VPA quando carregado, Banco Central para Selic.',
+  },
+  {
+    titulo: '3. Sinais técnicos medidos separadamente',
+    dono: 'gerar-insights',
+    resumo: 'Usa série histórica para medir momentum e reversão à média sem misturar no valuation.',
+    passos: [
+      'Com pelo menos 20 candles, calcula média móvel, z-score do fechamento e score de volume.',
+      'Momentum compra quando preço supera a média com volume relativo forte; vende quando preço fica abaixo com volume fraco.',
+      'Reversão à média observa extremos estatísticos e proximidade da mínima/máxima de 52 semanas.',
+      'No backtest, momentum e reversão entram como versões próprias: <code>TECNICO_MOMENTUM_2026.10.07-1</code> e <code>TECNICO_REVERSAO_2026.10.07-1</code>.',
+      'A recomendação principal só será combinada com esses sinais depois de placar real e decisão registrada.',
+    ],
+    referencias: 'Base: <code>serie_historica</code>, COTAHIST ajustado por eventos corporativos e volume negociado.',
+  },
+  {
+    titulo: '4. Fundamentos contábeis da CVM',
+    dono: 'etl-fundamentos-cvm',
+    resumo: 'Converte documentos públicos da CVM em indicadores comparáveis por ativo.',
+    passos: [
+      'Baixa DFP/ITR/FCA/FRE dos Dados Abertos da CVM e ignora arquivo cujo ETag não mudou.',
+      'Liga ticker, CNPJ e classe de ação pela FCA/FRE; desconta ações em tesouraria quando calcula indicadores por ação.',
+      'Lê contas da DRE, balanço, DFC e DVA para montar receita, lucro, patrimônio, dívida, fluxo de caixa e proventos contábeis.',
+      'Calcula LPA, VPA, ROE, ROIC, margens, dívida líquida, FCO, FCL e cobertura de cada métrica.',
+      'Quando a métrica não faz sentido para o setor ou não existe na CVM, grava nulo com motivo em vez de inventar número.',
+    ],
+    referencias: 'Base: CVM Dados Abertos; tabelas <code>fato_contabil</code>, <code>indicador_fundamentalista</code>, <code>provento_contabil</code>.',
+  },
+  {
+    titulo: '5. Retorno, backtest e validação',
+    dono: 'gerar-insights + gestor-ativos-brutos',
+    resumo: 'Mede se a regra ganhou do acaso, do CDI e da média da carteira.',
+    passos: [
+      'O sinal é registrado no fechamento, mas a entrada simulada ocorre na abertura do pregão seguinte para evitar viés de futuro.',
+      'A saída é o fechamento no horizonte de 21, 63 ou 126 pregões.',
+      'O retorno soma proventos na janela e desconta custo de ida e volta; saltos suspeitos sem evento corporativo ficam fora do placar.',
+      'A régua é a média simples dos ativos elegíveis no mesmo período, além do CDI acumulado.',
+      'O gestor lê o placar, mostra taxa-base, intervalo de confiança e alerta de amostra pequena.',
+    ],
+    referencias: 'Base: <code>backtest_placar</code>, <code>sinal_diario</code>, <code>sinal_resultado</code>, CDI/SGS e proventos B3/CVM.',
+  },
+];
+
 export class ArquiteturaPage extends BaseComponent {
   template() {
     return `
@@ -172,6 +240,7 @@ export class ArquiteturaPage extends BaseComponent {
 
       ${diagrama()}
       ${caminhoDoDado()}
+      ${renderFluxosNegocio()}
 
       <h5 class="mt-4 mb-3">As cinco pecas</h5>
       ${PECAS.map((p) => renderPeca(p)).join('')}
@@ -223,6 +292,35 @@ function caminhoDoDado() {
           ${passos.map((p) => `<li class="mb-1">${p}</li>`).join('')}
         </ol>
       </div>
+    </div>
+  `;
+}
+
+function renderFluxosNegocio() {
+  return `
+    <h5 class="mt-4 mb-3">Fluxos de decisão, cálculos e fundamentos</h5>
+    <p class="small text-muted">
+      Esta camada traduz os comentários, docstrings e Javadocs dos três motores de negócio
+      em linguagem de usuário: o que entra, qual decisão é tomada e que base sustenta o número.
+    </p>
+    <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
+      ${FLUXOS_NEGOCIO.map((fluxo) => `
+        <article class="col">
+          <div class="card h-100 shadow-sm">
+            <div class="card-header">
+              <strong>${fluxo.titulo}</strong>
+              <div class="small text-muted">${fluxo.dono}</div>
+            </div>
+            <div class="card-body small">
+              <p>${fluxo.resumo}</p>
+              <ol class="ps-3">
+                ${fluxo.passos.map((p) => `<li class="mb-1">${p}</li>`).join('')}
+              </ol>
+              <p class="text-muted mb-0"><strong>Base de referência:</strong> ${fluxo.referencias}</p>
+            </div>
+          </div>
+        </article>
+      `).join('')}
     </div>
   `;
 }
