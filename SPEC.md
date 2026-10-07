@@ -332,3 +332,64 @@ Origem: revisão visual do painel em 2026-10-07. Princípio: **juntar o que é c
 - Em largura de 375 px nenhuma tabela das fases 1–2 exige rolagem horizontal.
 - `npm test` cobre os formatadores, o gráfico de proventos, a definição de navegação e a renderização dos blocos do Início.
 
+---
+
+## Melhorias com dados do ETL (proposta de 2026-10-07)
+
+Origem: tasks E10–E17 do `etl-fundamentos-cvm` entregaram campos e tabelas que ainda não aparecem no painel. As melhorias abaixo consomem esses dados via gestor. **Regra de coordenação:** nenhuma feature deste bloco vai ao ar antes de o gestor expor o campo/endpoint correspondente; se o campo não aparecer na resposta, o componente renderiza "—" sem erro.
+
+### Dependências no gestor
+
+Algumas destas melhorias exigem que o gestor exponha campos ainda não declarados nos contratos atuais. As tarefas correspondentes devem ser abertas no hub (`infra-b3-ecossytem/SPEC.md` seção 1A) antes de começar a implementação do front.
+
+| Campo ETL novo | Tabela de origem | Endpoint gestor sugerido | Situação |
+|---|---|---|---|
+| `situacao_registro`, `uf_municipio` | `cvm_empresa` | Existente: `/analises/{s}/fundamentos-cvm` (ampliar DTO) | PLANEJADO no gestor |
+| `numero_negocios` | `cotacao_b3_diaria` | Existente: `/ativos/{s}/pregoes` (verificar se já exposto) | A verificar |
+| `fco_bruto` | `indicador_fundamentalista` | Existente: `/analises/{s}/fundamentos-cvm` (verificar se já exposto) | A verificar |
+| `qt_acao_ordinaria`, `qt_acao_preferencial` | `cvm_composicao_capital` | Existente ou novo: `/ativos/{s}/composicao-capital` | PLANEJADO no gestor |
+| BDI, `data_vencimento`, `preco_exercicio` | `opcao_b3_diaria` | Novo: `/ativos/{s}/opcoes?vencimento=YYYYMM` | PLANEJADO no gestor |
+
+### Requisitos
+
+| ID | Requisito | Fase | Estado |
+|---|---|---|---|
+| REQ-ETL-1 | Exibir badge de status CVM (`situacao_registro`) no card e na ficha do ativo; empresa com registro cancelado ou suspenso recebe alerta visual; `uf_municipio` alimenta filtro de estado em Base | 1 | PLANEJADO |
+| REQ-ETL-2 | Exibir ticket médio diário (= `volume_financeiro ÷ numero_negocios`) na série histórica e no resumo da ficha; valor ausente quando `numero_negocios = 0`; tooltip explica a métrica | 1 | PLANEJADO |
+| REQ-ETL-3 | Exibir FCO bruto × FCO líquido lado a lado na aba Fundamentos da ficha; disponível apenas para empresas com DFC método direto; campo ausente mostra "—" sem ocultar o FCO líquido | 2 | PLANEJADO |
+| REQ-ETL-4 | Exibir composição ON × PN na ficha do ativo (gráfico de rosca ou barras empilhadas); zero aceitável para empresa sem PN; fonte e competência exibidas abaixo do gráfico | 2 | PLANEJADO |
+| REQ-ETL-5 | Tela de opções por ativo (`#/candles` ou nova rota `#/opcoes`): cadeia calls × puts agrupada por data de vencimento, último preço, volume e strike; linha ATM destacada; filtro por série de vencimento; reprocessar o mesmo arquivo não duplica registros | 3 | PLANEJADO |
+
+### Tarefas
+
+| ID | Tarefa | Depende | Estado |
+|---|---|---|---|
+| TASK-ETL-1 | **Badge status CVM:** `<selo-status-cvm>` que lê `situacao_registro` do DTO de fundamentos-cvm; variantes ATIVO (verde), SUSPENSO (amarelo), CANCELADO (vermelho) e desconhecido (neutro); CSS via variáveis de `<selo-estado>` já existente; filtro de `uf_municipio` em Base | Gestor expor campo no DTO | PLANEJADO |
+| TASK-ETL-2 | **Ticket médio:** `calcularTicketMedio(vf, nn)` em `analise/pregoes.js` (retorna null quando nn ≤ 0); coluna `Ticket médio` na tabela de pregões; sparkline no resumo da ficha; teste unitário puro | Gestor expor `numero_negocios` em `/pregoes` | PLANEJADO |
+| TASK-ETL-3 | **FCO bruto × líquido:** par de barras horizontais em `components/ficha/FluxoCaixa.js`; `fco_bruto` e `fluxo_caixa_operacional` do DTO fundamentos-cvm; barra laranja (bruto) + verde (líquido); delta em R$ e % da receita líquida abaixo; exibido só quando ao menos um dos dois for não nulo | Gestor expor `fco_bruto` no DTO | PLANEJADO |
+| TASK-ETL-4 | **Composição ON × PN:** gráfico de rosca em `components/ficha/ComposicaoCapital.js` (Canvas API ou SVG inline); legenda com `qt_acao_ordinaria`, `qt_acao_preferencial` e total ex-tesouraria; competência da referência exibida; teste de renderização com dados mockados | Gestor expor campos em `/composicao-capital` ou fundamentos-cvm | PLANEJADO |
+| TASK-ETL-5 | **Painel de opções:** nova rota `#/opcoes?simbolo=PETR4&vencimento=202512`; `components/OpcoesPainel.js` com tabela calls/puts pela chain do vencimento selecionado; células coloridas por moneyness (ITM/ATM/OTM); seletor de série de vencimento disponível; modo cartão em 375 px; `<estado-vazio>` quando o ativo não tem opções | Gestor novo endpoint `/ativos/{s}/opcoes` | PLANEJADO |
+
+### Plano de execução
+
+**Fase 1 — Enriquecer o que já está na tela (baixo risco)**
+
+TASK-ETL-1 e TASK-ETL-2. Nenhuma nova rota no frontend. O badge entra no card de Monitorados e na ficha; o ticket médio entra na tabela de pregões existente. Custo estimado: 1 dia cada, após o gestor expor os campos.
+
+**Fase 2 — Novas seções na ficha do ativo**
+
+TASK-ETL-3 e TASK-ETL-4. Dois componentes novos adicionados à aba Fundamentos da ficha. Dependem de dois campos que o gestor precisa ampliar no DTO. Custo estimado: 1–2 dias cada.
+
+**Fase 3 — Nova superfície de dados**
+
+TASK-ETL-5. Única tarefa que cria uma rota nova. Requer endpoint dedicado no gestor. Custo estimado: 2–3 dias (frontend) + gestor.
+
+### Aceite
+
+- `REQ-ETL-1`: empresa com `situacao_registro = 'CANCELADO'` exibe badge vermelho na ficha; empresa sem o campo não exibe badge.
+- `REQ-ETL-2`: PETR4 com `numero_negocios > 0` exibe ticket médio formatado em R$; linha com `numero_negocios = 0` exibe "—".
+- `REQ-ETL-3`: empresa com DFC direta exibe as duas barras; empresa com DFC indireta exibe apenas FCO líquido.
+- `REQ-ETL-4`: ITUB4 exibe rosca ON × PN com dois setores distintos; WEGE3 exibe rosca com PN = 0 (empresa sem ações preferenciais).
+- `REQ-ETL-5`: PETRD... (call de PETR4) aparece na cadeia com `data_vencimento` e `preco_exercicio` não nulos; linha ATM destacada; recarregar a tela não duplica linhas.
+- `npm test` cobre `calcularTicketMedio` e a renderização dos novos componentes com dados mockados.
+
