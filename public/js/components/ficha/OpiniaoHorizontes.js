@@ -73,17 +73,20 @@ function lista(itens, vazio) {
 const VISIVEIS = 4;
 
 /**
- * Leitura da justificativa com o dado que ela cita (rotulo e valor da
- * evidencia). Se a leitura ja traz o valor, nao repete.
+ * Leitura da justificativa com o dado que ela cita: rotulo e valor da
+ * evidencia do dia ou, para item do servico de IA, a fonte (`trechoId`,
+ * DEC-IA-03). Se a leitura ja traz o valor, nao repete. Item sem
+ * `evidenciaId` (ou sem nada alem da leitura) nunca derruba a renderizacao.
  */
 export function justificativas(h) {
-  const evidencias = new Map((h.evidencias || []).map((e) => [e.id, e]));
+  const evidencias = new Map((h.evidencias || []).map((e) => [e && e.id, e]));
   return (h.justificativa || []).map((j) => {
-    const leitura = (j.leitura || '').trim();
-    const e = evidencias.get(j.evidenciaId);
+    if (!j) return '';
+    const leitura = String(j.leitura || '').trim();
+    const e = j.evidenciaId ? evidencias.get(j.evidenciaId) : undefined;
     const valor = e && e.valor !== null && e.valor !== undefined ? String(e.valor) : '';
-    const jaCita = !valor || leitura.includes(valor);
-    return jaCita ? leitura : `${leitura} (${e.rotulo || e.id}: ${valor})`.trim();
+    const comDado = !valor || leitura.includes(valor) ? leitura : `${leitura} (${e.rotulo || e.id}: ${valor})`.trim();
+    return j.trechoId ? `${comDado} — fonte: ${j.trechoId}`.trim() : comDado;
   }).filter(Boolean);
 }
 

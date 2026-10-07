@@ -184,6 +184,22 @@ caso('opiniao: justificativa nao repete o dado que ja cita; lista longa resume e
   assert.match(html, /Leitura 6/, 'o resto continua acessivel');
 });
 
+caso('opiniao: item com trechoId e sem evidenciaId (servico de IA) mostra a fonte e nao quebra', () => {
+  const h = horizonteOpiniao({ justificativa: [
+    { trechoId: 'evidencia/momentum#2016-2026', leitura: 'Momentum bateu o mercado em 49% das semanas.' },
+    { evidenciaId: 'inexistente', leitura: 'Evidência que não veio na lista.' },
+    null,
+    {},
+  ] });
+  assert.deepEqual(justificativasOpiniao(h), [
+    'Momentum bateu o mercado em 49% das semanas. — fonte: evidencia/momentum#2016-2026',
+    'Evidência que não veio na lista.',
+  ]);
+  const html = opiniao({ horizontes: [h] });
+  assert.match(html, /fonte: evidencia\/momentum#2016-2026/);
+  assert.ok(!html.includes('undefined'));
+});
+
 caso('opiniao: horizonte faltando vira "Sem base" cinza; sem nada explica quando a geracao roda', () => {
   const html = opiniao({ aviso: AVISO_OPINIAO, horizontes: [horizonteOpiniao()] });
   assert.ok(html.includes(`<span class="badge text-bg-secondary">Sem base</span>`));
