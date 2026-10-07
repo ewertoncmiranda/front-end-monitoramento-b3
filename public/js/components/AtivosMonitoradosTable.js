@@ -191,7 +191,7 @@ export class AtivosMonitoradosTable extends BaseComponent {
         ${celulaValorAnterior(a)}
         ${celulaValorAtual(a)}
         ${this.celulaDecisao(a.simbolo)}
-        ${this._mostrarRemover ? `<td><button type="button" class="btn btn-sm btn-outline-danger" data-remover="${a.simbolo}" title="Remover dos favoritos">✕</button></td>` : ''}
+        ${this._mostrarRemover ? `<td data-label="Monitoramento"><button type="button" class="btn btn-sm btn-outline-danger" data-remover="${a.simbolo}" title="Pausar monitoramento intradiário de ${a.simbolo}">Pausar</button></td>` : ''}
       </tr>
     `;
 
