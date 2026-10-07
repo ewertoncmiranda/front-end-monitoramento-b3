@@ -10,25 +10,35 @@ export class ApiError extends Error {
 }
 
 export async function httpGet(path) {
-  const response = await executarFetch(() => fetch(`${apiConfig.baseUrl}${path}`));
+  const response = await executarFetch((signal) => fetch(`${apiConfig.baseUrl}${path}`, { signal }));
   return handleResponse(response);
 }
 
 export async function httpPost(path) {
-  const response = await executarFetch(() => fetch(`${apiConfig.baseUrl}${path}`, { method: 'POST' }));
+  const response = await executarFetch((signal) => fetch(`${apiConfig.baseUrl}${path}`, { method: 'POST', signal }));
   return handleResponse(response);
 }
 
 export async function httpDelete(path) {
-  const response = await executarFetch(() => fetch(`${apiConfig.baseUrl}${path}`, { method: 'DELETE' }));
+  const response = await executarFetch((signal) => fetch(`${apiConfig.baseUrl}${path}`, { method: 'DELETE', signal }));
   return handleResponse(response);
 }
 
+// Tempo limite por chamada: sem ele, gestor parado deixa a tela em spinner para sempre.
+export const TEMPO_LIMITE_MS = 20000;
+
 async function executarFetch(fazerRequisicao) {
+  const controle = new AbortController();
+  const timer = setTimeout(() => controle.abort(), TEMPO_LIMITE_MS);
   try {
-    return await fazerRequisicao();
-  } catch {
+    return await fazerRequisicao(controle.signal);
+  } catch (erro) {
+    if (erro && erro.name === 'AbortError') {
+      throw new ApiError(`A API não respondeu em ${TEMPO_LIMITE_MS / 1000} s. Veja a saúde dos dados em Avaliação.`, 0);
+    }
     throw new ApiError('Não foi possível conectar à API. Verifique se o serviço está em execução.', 0);
+  } finally {
+    clearTimeout(timer);
   }
 }
 

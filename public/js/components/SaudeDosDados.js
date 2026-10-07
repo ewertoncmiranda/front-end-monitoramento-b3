@@ -46,7 +46,7 @@ function renderizar(dados) {
         · ${dados.precos.divergencias.length} divergência(s) de preço acima de ${formatarPercentual(dados.precos.limite, 0).replace('+', '')}</span>
     </div>
     ${renderAliases(dados.aliases)}
-    ${renderCobertura(dados.cobertura)}
+    ${renderCobertura(dados.cobertura, dados.coberturaProventosContabeis || 0)}
     <h6 class="mt-3">Fontes</h6>
     ${renderFontes(dados.fontes)}
     <h6 class="mt-3">Preço: BRAPI x fechamento oficial da B3</h6>
@@ -64,7 +64,7 @@ function renderAliases(aliases) {
   </div>`;
 }
 
-function renderCobertura(c) {
+function renderCobertura(c, proventos) {
   const cartao = (valor, rotulo, ruim) => `
     <div class="col"><div class="border rounded p-2 h-100 ${ruim ? 'border-warning' : ''}">
       <div class="fs-5 fw-semibold">${valor}</div><div class="small text-muted">${rotulo}</div>
@@ -75,24 +75,25 @@ function renderCobertura(c) {
       ${cartao(deTotal(c.comEntregaConhecida, c.ativos), 'balanço com data de entrega (point-in-time)', c.comEntregaConhecida < c.ativos)}
       ${cartao(deTotal(c.comTtm, c.ativos), 'com lucro dos últimos 12 meses', c.comTtm < c.ativos)}
       ${cartao(c.semCnpj, 'sem CNPJ (não ligam ao balanço)', c.semCnpj > 0)}
+      ${cartao(proventos, 'empresas com proventos contábeis (DVA)', !proventos)}
     </div>`;
 }
 
 function renderFontes(fontes) {
   return `
-    <div class="table-responsive">
-      <table class="table table-sm align-middle small mb-0">
+    <div class="table-responsive tabela-rolavel">
+      <table class="table table-sm align-middle small mb-0 tabela-cartoes">
         <thead><tr><th>Fonte</th><th>Última atualização</th><th>Prazo</th><th>Estado</th><th>Se atrasar</th></tr></thead>
         <tbody>
           ${fontes.map((f) => {
             const estado = ESTADO_FONTE[f.estado] || ESTADO_FONTE.SEM_DADO;
             return `<tr>
-              <td class="fw-semibold">${escaparHtml(f.nome)}</td>
-              <td title="${escaparHtml(formatarDataHora(f.atualizadoEm, ''))}">${formatarIdade(f.idadeHoras)}</td>
-              <td class="text-muted">${formatarPrazo(f.prazoHoras)}</td>
-              <td><span class="badge ${estado.classe}">${estado.rotulo}</span>
+              <td data-label="Fonte" class="fw-semibold">${escaparHtml(f.nome)}</td>
+              <td data-label="Atualização" title="${escaparHtml(formatarDataHora(f.atualizadoEm, ''))}">${formatarIdade(f.idadeHoras)}</td>
+              <td data-label="Prazo" class="text-muted">${formatarPrazo(f.prazoHoras)}</td>
+              <td data-label="Estado"><span class="badge ${estado.classe}">${estado.rotulo}</span>
                 ${f.ultimoErro ? `<div class="text-danger">${escaparHtml(f.ultimoErro)}</div>` : ''}</td>
-              <td class="text-muted">${escaparHtml(f.comoResolver)}</td>
+              <td data-label="Se atrasar" class="text-muted">${escaparHtml(f.comoResolver)}</td>
             </tr>`;
           }).join('')}
         </tbody>

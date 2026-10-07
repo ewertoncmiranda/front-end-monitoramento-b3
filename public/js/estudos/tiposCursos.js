@@ -7,6 +7,8 @@ export const TIPOS_CURSOS = {
   microestrutura: 'Microestrutura e trading',
 };
 
+export const escopoDoCurso = curso => curso.escopo || 'Curso focal';
+
 const POR_CURSO = {
   'historia-mercado-capitais': 'fundamentos',
   'atualidades-mercado-financeiro': 'fundamentos',

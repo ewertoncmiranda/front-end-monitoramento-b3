@@ -2,6 +2,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import '../components/DiarioDeSinais.js';
 import '../components/SaudeDosDados.js';
 import '../components/BacktestPlacar.js';
+import '../components/PlacarRanking.js';
 
 // Unica responsabilidade: mostrar a avaliacao do ecossistema - o quanto ele
 // serve hoje, o que falta para ser confiavel e o que da para melhorar sem
@@ -18,7 +19,7 @@ import '../components/BacktestPlacar.js';
 // Estrutura declarativa, mesmo padrao de ArquiteturaPage e FormulasPage.
 
 const AVALIADO_EM = '26-09-2026';
-const ATUALIZADO_EM = '27-09-2026, com proventos somados ao retorno (sinal e régua da carteira), backtest rerodado com a regra corrigida, e a Fase 3 (TASK-50 a 58: intervalo de confiança, universo amplo, recalibração) registrada e em andamento em outra sessão';
+const ATUALIZADO_EM = '07-10-2026, com o intervalo de confiança já no placar (Wilson 95% no acerto, média ± 1,96×erro-padrão no excesso) e o backtest por ranking do Plano LAC como próxima evidência';
 
 const NOTAS = [
   {
@@ -61,9 +62,9 @@ const NOTAS = [
     nota: 4,
     meta: 6,
     porque:
-      'Continua em 4, mas por um motivo mais preciso agora: o backtest já roda com a regra corrigida e com proventos (execução mais recente confirmada ao vivo), mas o placar ainda não tem intervalo de confiança — "58% de acerto" pode ser 46% ou 69%, e não dá pra saber qual sem o IC. Está EM ANDAMENTO em outra sessão (TASK-50, Wilson 95% pro acerto, média ± 1,96×erro-padrão pro excesso) — nota não sobe até isso ser medido e commitado.',
+      'Continua em 4, mas por um motivo mais preciso agora: o backtest já roda com a regra corrigida e com proventos (execução mais recente confirmada ao vivo), e o placar já traz intervalo de confiança (Wilson 95% no acerto, média ± 1,96×erro-padrão no excesso). Com o IC, "vantagem" e "ruído" se distinguem — e nenhuma regra mostrou vantagem distinguível do ruído. A nota não sobe até uma regra se separar do acaso fora da amostra.',
     paraSubir: [
-      'Intervalo de confiança no placar (TASK-50, em andamento) — sem ele, "vantagem" e "ruído" são indistinguíveis.',
+      'Uma regra com limite inferior do IC acima da taxa-base, fora da amostra (o placar já mostra o IC).',
       'Universo amplo point-in-time, com deslistadas (TASK-51) — hoje o backtest usa quem sobreviveu até hoje.',
       'Recalibrar pelo limite inferior do IC, não pelo ponto médio (TASK-57).',
       'Decidir v1 × v2 com número, não com preferência (TASK-58).',
@@ -146,9 +147,9 @@ const BLOQUEADORES = [
       'O backtest existe e o resultado é modesto: as compras batem a taxa-base por poucos pontos no teste e não na calibração. Vantagem que aparece num período e some no outro ainda não é vantagem.',
   },
   {
-    titulo: 'Acerto sem intervalo de confiança',
+    titulo: 'Acerto sem ler o intervalo de confiança',
     texto:
-      '"58% de acerto" sem saber a margem pode ser 46% ou 69% — indistinguível de ruído com poucas janelas. Em andamento (TASK-50): Wilson 95% pro acerto, média ± 1,96×erro-padrão pro excesso, direto em backtest_placar.',
+      '"58% de acerto" sem saber a margem pode ser 46% ou 69%. O placar agora mostra o intervalo (Wilson 95% no acerto, média ± 1,96×erro-padrão no excesso, em backtest_placar); leia sempre o intervalo, não só o ponto. Com poucas janelas ele continua largo.',
   },
   {
     titulo: 'Proventos só a partir de 27-09-2026',
@@ -180,7 +181,7 @@ const MELHORIAS = [
   { item: 'Teste para valuation e recomendação', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Não existia nenhum antes de 27-09-2026. tests/test_valuation.py e tests/test_recommendation.py, 74 testes verdes na suíte completa.' },
   { item: 'Rerodar backtest com a regra corrigida', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'Rodado duas vezes (id=8 e id=9) com a regra 2026.09.27-2 e proventos.' },
   { item: 'Retorno total com proventos', impacto: 'Alto', classe: 'text-bg-warning', status: 'feito', porque: 'ClienteB3Proventos (gestor) + avaliador.py somam data-com ao retorno do sinal e da régua da carteira. Cobertura só a partir de 27-09-2026 (TASK-46 pro backfill).' },
-  { item: 'Intervalo de confiança no placar (Wilson 95%)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'andamento', porque: 'TASK-50, outra sessão: acerto com Wilson 95%, excesso com média ± 1,96×erro-padrão em backtest_placar.' },
+  { item: 'Intervalo de confiança no placar (Wilson 95%)', impacto: 'Crítico', classe: 'text-bg-danger', status: 'feito', porque: 'Acerto com Wilson 95%, excesso com média ± 1,96×erro-padrão em backtest_placar, exibido no placar.' },
   { item: 'Universo amplo point-in-time (viés de sobrevivência)', impacto: 'Alto', classe: 'text-bg-warning', status: 'pendente', porque: 'TASK-51: backtest passa a incluir empresas deslistadas, não só as monitoradas hoje.' },
   { item: 'Placar separando janelas com/sem provento', impacto: 'Médio', classe: 'text-bg-info', status: 'pendente', porque: 'TASK-56: hoje o placar mistura janela ajustada e não-ajustada por proventos sem distinguir.' },
   { item: 'Janela temporal na consolidação', impacto: 'Médio', classe: 'text-bg-info', status: 'feito', porque: 'Só as análises dos últimos 30 dias; sem nenhuma, a mais recente.' },
@@ -206,7 +207,7 @@ const CAMADAS = [
     itens: [
       'Backtest com período fora da amostra: calibrar até 2022 e avaliar de 2023 em diante.',
       'Comparar sempre com a média da carteira (pegar todos por igual) e com o CDI; sem vencer o CDI após custos, a regra não serve.',
-      'Intervalo de confiança no acerto e no excesso (TASK-50, em andamento) — sem ele, "vantagem" e "ruído" são indistinguíveis.',
+      'Intervalo de confiança no acerto e no excesso (feito; já no placar) — sem ele, "vantagem" e "ruído" são indistinguíveis.',
       'Versão em cada regra, para comparar uma com a outra (já em uso).',
     ],
   },
@@ -238,7 +239,7 @@ const NEGOCIO = [
 
 const ROTEIRO = [
   { periodo: 'Dias 1–30', foco: 'Base confiável', itens: 'Feito: identidade dos ativos, data de entrega, COTAHIST, checagem de preço e de ações, backup, rotinas e aviso legal. Falta: Telegram e cópia do backup fora da máquina.' },
-  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Proventos no retorno (feito, 27-09-2026); intervalo de confiança no placar (TASK-50, em andamento); universo amplo point-in-time (TASK-51); recalibrar pelo limite inferior do IC (TASK-57).' },
+  { periodo: 'Dias 31–60', foco: 'Evidência', itens: 'Proventos no retorno (feito, 27-09-2026); intervalo de confiança no placar (feito); universo amplo point-in-time (TASK-51); recalibrar pelo limite inferior do IC (TASK-57).' },
   { periodo: 'Dias 61–90', foco: 'Prova em tempo real', itens: 'Placares do diário com amostra mínima (v1 x v2) e decisão pelos números: manter, promover a v2 ou descartar cada regra.' },
 ];
 
@@ -266,11 +267,9 @@ export class AvaliacaoPage extends BaseComponent {
       </div>
 
       <div class="alert alert-info small">
-        <strong>Em andamento agora (outra sessão, "Projeto para hoje").</strong> Fase 3 completa registrada no
-        SPEC (<code>TASK-50</code> a <code>TASK-58</code>): intervalo de confiança de Wilson no placar,
-        universo amplo point-in-time (corrige o viés de sobrevivência), curva de calibração do score de
-        confiança, placar separando janelas com/sem provento, e a decisão final v1×v2 pelo limite inferior do
-        IC. Nada disso está commitado ainda — as notas abaixo não antecipam esse resultado.
+        <strong>Intervalo de confiança já está no placar.</strong> Acerto com Wilson 95% e excesso com
+        média ± 1,96×erro-padrão. Seguem pendentes o universo amplo point-in-time, o placar separando janelas
+        com/sem provento e a decisão v1×v2 pelo limite inferior do IC. As notas abaixo só mudam com evidência medida.
       </div>
 
       ${secao('Nota por dimensão — e o que falta para subir', renderNotas())}
@@ -285,6 +284,13 @@ export class AvaliacaoPage extends BaseComponent {
         <p class="small text-muted">
           Um sinal por ativo no primeiro pregão de cada mês, só com o que se sabia no dia (balanço pela data
           de entrega na CVM), medido pelo mesmo motor do diário. A v1 é a regra da tela; a v2 roda em sombra.
+        </p>`)}
+      ${secao('Ao vivo: backtest por ranking (Plano LAC)', `
+        <div class="card shadow-sm"><div class="card-body"><placar-ranking></placar-ranking></div></div>`, `
+        <p class="small text-muted">
+          Em vez de acertar uma classe, mede se a regra ordena os ativos melhor do que pior: correlação de
+          Spearman mensal com intervalo de confiança e retorno por quintil. A hipótese é registrada antes da execução.
+          Toda recomendação segue como regra <strong>experimental</strong> até uma versão passar pelos critérios de promoção.
         </p>`)}
       ${secao('Ao vivo: diário de sinais', `
         <div class="card shadow-sm"><div class="card-body"><diario-de-sinais></diario-de-sinais></div></div>`, `

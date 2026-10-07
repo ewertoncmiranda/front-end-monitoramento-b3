@@ -145,8 +145,8 @@ export class AtivosMonitoradosTable extends BaseComponent {
     const linhas = this.ativosOrdenados().map((a) => this.linhas(a)).join('');
 
     return `
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle">
+      <div class="table-responsive tabela-rolavel">
+        <table class="table table-sm table-striped align-middle tabela-cartoes">
           <thead>
             <tr>
               <th></th>
@@ -179,19 +179,19 @@ export class AtivosMonitoradosTable extends BaseComponent {
     const linhaPrincipal = `
       <tr data-simbolo="${a.simbolo}" style="cursor: pointer;" class="${expandido ? 'table-active' : ''}">
         <td class="text-muted">${expandido ? '▾' : '▸'}</td>
-        <td>${a.simbolo}</td>
-        <td>
+        <td data-label="Símbolo" class="fw-semibold">${a.simbolo}</td>
+        <td data-label="Status">
           <span class="badge ${a.ativo ? 'bg-success' : 'bg-secondary'}">
             ${a.ativo ? 'Ativo' : 'Pausado'}
           </span>
         </td>
-        <td>${formatarTipoColeta(a.tipoColeta)}</td>
-        <td>${a.intervaloSegundos}s</td>
-        <td>${formatarData(a.atualizadoEm)}</td>
+        <td data-label="Coleta">${formatarTipoColeta(a.tipoColeta)}</td>
+        <td data-label="Intervalo">${a.intervaloSegundos}s</td>
+        <td data-label="Última atualização">${formatarData(a.atualizadoEm)}</td>
         ${celulaValorAnterior(a)}
         ${celulaValorAtual(a)}
         ${this.celulaDecisao(a.simbolo)}
-        ${this._mostrarRemover ? `<td><button type="button" class="btn btn-sm btn-outline-danger" data-remover="${a.simbolo}" title="Remover dos favoritos">✕</button></td>` : ''}
+        ${this._mostrarRemover ? `<td data-label="Monitoramento"><button type="button" class="btn btn-sm btn-outline-danger" data-remover="${a.simbolo}" title="Pausar monitoramento intradiário de ${a.simbolo}">Pausar</button></td>` : ''}
       </tr>
     `;
 
@@ -225,17 +225,17 @@ export class AtivosMonitoradosTable extends BaseComponent {
     const analise = this._analisesPorSimbolo[simbolo];
 
     if (analise === undefined) {
-      return '<td colspan="2"><span class="spinner-border spinner-border-sm text-secondary" role="status"></span></td>';
+      return '<td colspan="2" data-label="Decisão"><span class="spinner-border spinner-border-sm text-secondary" role="status"></span></td>';
     }
 
     if (!analise || !analise.recomendacao) {
-      return '<td colspan="2" class="text-muted small">Sem análise até o momento</td>';
+      return '<td colspan="2" data-label="Decisão" class="text-muted small">Sem análise até o momento</td>';
     }
 
     const badge = badgeClassParaRecomendacao(analise.recomendacao);
     return `
-      <td><span class="badge ${badge}">${analise.recomendacao}</span></td>
-      <td>${formatarConfianca(analise.confianca_analise)}</td>
+      <td data-label="Decisão"><span class="badge ${badge}">${analise.recomendacao}</span></td>
+      <td data-label="Confiança">${formatarConfianca(analise.confianca_analise)}</td>
     `;
   }
 
@@ -290,19 +290,19 @@ function formatarData(valor) {
 // "Sem mudança registrada" em vez de repetir o mesmo preco duas vezes.
 function celulaValorAnterior(a) {
   if (a.precoAnterior == null) {
-    return '<td class="text-muted small">Sem mudança registrada</td>';
+    return '<td data-label="Valor anterior" class="text-muted small">Sem mudança registrada</td>';
   }
-  return `<td>${formatarMoeda(a.precoAnterior)}<br><span class="text-muted small">${formatarData(a.precoAnteriorEm)}</span></td>`;
+  return `<td data-label="Valor anterior">${formatarMoeda(a.precoAnterior)}<br><span class="text-muted small">${formatarData(a.precoAnteriorEm)}</span></td>`;
 }
 
 function celulaValorAtual(a) {
   if (a.precoAtual == null) {
-    return '<td class="text-muted small">-</td>';
+    return '<td data-label="Valor atual" class="text-muted small">-</td>';
   }
   if (a.precoAnterior == null) {
-    return `<td>${formatarMoeda(a.precoAtual)}<br><span class="text-muted small">Sem mudança registrada</span></td>`;
+    return `<td data-label="Valor atual">${formatarMoeda(a.precoAtual)}<br><span class="text-muted small">Sem mudança registrada</span></td>`;
   }
-  return `<td>${formatarMoeda(a.precoAtual)}<br><span class="text-muted small">${formatarData(a.precoAtualDesde)}</span></td>`;
+  return `<td data-label="Valor atual">${formatarMoeda(a.precoAtual)}<br><span class="text-muted small">${formatarData(a.precoAtualDesde)}</span></td>`;
 }
 
 function formatarMoeda(valor) {

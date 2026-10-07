@@ -3,6 +3,7 @@ import { buscarFundamentos, buscarFundamentosCvm } from '../api/analisesApi.js';
 import { buscarPregoes, velasDoBanco } from '../api/pregoesApi.js';
 import { buscarBacktest } from '../api/validacaoApi.js';
 import { indicadores, precoDasVelas, selosDeQualidade } from '../analise/fichaDoAtivo.js';
+import { ABAS, abaDoHash, abaValida, hashDaFicha, proximaAba } from '../analise/abasFicha.js';
 import { escaparHtml } from '../utils/html.js';
 import '../components/SeletorDeAtivos.js';
 import '../components/FundamentosCard.js';
@@ -13,6 +14,9 @@ import '../components/ficha/SinalCard.js';
 import '../components/ficha/ValorJustoRegua.js';
 import '../components/ficha/SelosQualidade.js';
 import '../components/ficha/IndicadoresGrid.js';
+import '../components/ficha/FatoresAtivo.js';
+import '../components/ficha/ProventosContabeis.js';
+import '../components/ficha/ComunicadosDoAtivo.js';
 
 const CHAVE_RECENTES = 'ficha-recentes';
 const MAX_RECENTES = 6;
@@ -103,24 +107,33 @@ export class ConsultaPage extends BaseComponent {
     const input = this.querySelector('seletor-de-ativos input');
     if (input) input.value = simbolo;
     // Link compartilhavel sem recarregar a pagina (hashchange remontaria tudo).
-    history.replaceState(null, '', `#/gestao/${encodeURIComponent(simbolo)}`);
+    this._aba = abaDoHash(window.location.hash);
+    history.replaceState(null, '', hashDaFicha(simbolo, this._aba));
     this.desenharRecentes(guardarRecente(simbolo));
 
     resultado.innerHTML = `
       <div class="ficha d-flex flex-column gap-3">
         <ativo-hero></ativo-hero>
-        <div class="row g-3">
-          <div class="col-lg-6"><sinal-card></sinal-card></div>
-          <div class="col-lg-6"><valor-justo-regua></valor-justo-regua></div>
+        <nav class="ficha-abas-nav" role="tablist" aria-label="Seções da ficha de ${escaparHtml(simbolo)}">
+          ${ABAS.map((a) => `<button type="button" class="btn btn-sm" role="tab" id="aba-${a.id}" data-aba="${a.id}"
+            aria-controls="painel-${a.id}" aria-selected="false" tabindex="-1">${a.rotulo}</button>`).join('')}
+          <a class="btn btn-sm btn-link ms-auto" href="#/candles">Velas e padrões ›</a>
+        </nav>
+        <div id="painel-resumo" role="tabpanel" aria-labelledby="aba-resumo" class="d-flex flex-column gap-3">
+          <div class="row g-3">
+            <div class="col-lg-6"><sinal-card></sinal-card></div>
+            <div class="col-lg-6"><valor-justo-regua></valor-justo-regua></div>
+          </div>
+          <selos-qualidade></selos-qualidade>
+          <indicadores-grid></indicadores-grid>
         </div>
-        <selos-qualidade></selos-qualidade>
-        <indicadores-grid></indicadores-grid>
-        <details class="ficha-cartao ficha-detalhes">
-          <summary>Números completos da análise e do balanço</summary>
-          <div class="mt-3" data-detalhes></div>
-        </details>
+        <div id="painel-fundamentos" role="tabpanel" aria-labelledby="aba-fundamentos" class="d-none" data-lazy></div>
+        <div id="painel-fatores" role="tabpanel" aria-labelledby="aba-fatores" class="d-none" data-lazy></div>
+        <div id="painel-comunicados" role="tabpanel" aria-labelledby="aba-comunicados" class="d-none ficha-cartao" data-lazy></div>
       </div>
     `;
+    this._dados = { fundamentos: null, cvm: null };
+    this.ligarAbas(resultado, simbolo);
     const $ = (tag) => resultado.querySelector(tag);
     $('ativo-hero').setAtivo({ simbolo });
 
@@ -151,18 +164,61 @@ export class ConsultaPage extends BaseComponent {
     $('ativo-hero').setAtivo({ simbolo, setor: perfil.sector, industria: perfil.industry, cnpj: cvm?.cnpj });
     $('selos-qualidade').setSelos(selosDeQualidade({ fundamentos, cvm, ultimaVela: precoDasVelas(velas) }));
     $('indicadores-grid').setIndicadores(indicadores(fundamentos, cvm));
-    this.prepararDetalhes($('.ficha-detalhes'), fundamentos, cvm);
+    this._dados = { fundamentos, cvm };
+    // Link direto para a aba Fundamentos: o painel so pode ser montado quando os dados chegam.
+    if (this._aba === 'fundamentos') this.montarPainel(resultado, 'fundamentos', simbolo);
   }
 
-  /** Os cartoes completos (antigo "Como funciona") so sao montados ao abrir. */
-  prepararDetalhes(detalhes, fundamentos, cvm) {
-    detalhes.addEventListener('toggle', () => {
-      const alvo = detalhes.querySelector('[data-detalhes]');
-      if (!detalhes.open || alvo.childElementCount) return;
-      alvo.innerHTML = '<fundamentos-cvm-card></fundamentos-cvm-card><fundamentos-card></fundamentos-card>';
-      alvo.querySelector('fundamentos-cvm-card').setFundamentos(cvm);
-      alvo.querySelector('fundamentos-card').setFundamentos(fundamentos);
+  /** Abas da ficha (REQ-UX-9): troca sem recarregar, painel lazy, aba no link e teclado (setas/Home/End). */
+  ligarAbas(resultado, simbolo) {
+    const nav = resultado.querySelector('.ficha-abas-nav');
+    const ativar = (id, { foco = false } = {}) => {
+      this._aba = abaValida(id);
+      nav.querySelectorAll('[data-aba]').forEach((b) => {
+        const ativa = b.dataset.aba === this._aba;
+        b.classList.toggle('btn-primary', ativa);
+        b.classList.toggle('btn-outline-secondary', !ativa);
+        b.setAttribute('aria-selected', String(ativa));
+        b.tabIndex = ativa ? 0 : -1;
+        if (ativa && foco) b.focus();
+      });
+      ABAS.forEach((a) => resultado.querySelector(`#painel-${a.id}`).classList.toggle('d-none', a.id !== this._aba));
+      history.replaceState(null, '', hashDaFicha(simbolo, this._aba));
+      // Fundamentos espera os dados da analise; as demais abas buscam sozinhas.
+      if (this._aba !== 'fundamentos' || this._dados.fundamentos || this._dados.cvm) {
+        this.montarPainel(resultado, this._aba, simbolo);
+      }
+    };
+    nav.addEventListener('click', (e) => {
+      const botao = e.target.closest('[data-aba]');
+      if (botao) ativar(botao.dataset.aba);
     });
+    nav.addEventListener('keydown', (e) => {
+      const proxima = proximaAba(this._aba, e.key);
+      if (proxima) {
+        e.preventDefault();
+        ativar(proxima, { foco: true });
+      }
+    });
+    ativar(this._aba);
+  }
+
+  /** Monta o conteudo de uma aba so na primeira vez que ela aparece. */
+  montarPainel(resultado, aba, simbolo) {
+    const painel = resultado.querySelector(`#painel-${aba}`);
+    if (!painel || !painel.hasAttribute('data-lazy') || painel.childElementCount) return;
+    const seguro = escaparHtml(simbolo);
+    if (aba === 'fundamentos') {
+      painel.innerHTML = '<fundamentos-cvm-card></fundamentos-cvm-card><fundamentos-card></fundamentos-card>';
+      painel.querySelector('fundamentos-cvm-card').setFundamentos(this._dados.cvm);
+      painel.querySelector('fundamentos-card').setFundamentos(this._dados.fundamentos);
+    } else if (aba === 'fatores') {
+      painel.innerHTML = `<div class="row g-3">
+        <div class="col-lg-6"><fatores-ativo simbolo="${seguro}"></fatores-ativo></div>
+        <div class="col-lg-6"><proventos-contabeis simbolo="${seguro}"></proventos-contabeis></div></div>`;
+    } else if (aba === 'comunicados') {
+      painel.innerHTML = `<p class="ficha-rotulo">Comunicados oficiais (CVM)</p><comunicados-do-ativo simbolo="${seguro}"></comunicados-do-ativo>`;
+    }
   }
 }
 
