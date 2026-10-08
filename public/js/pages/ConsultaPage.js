@@ -20,6 +20,7 @@ import '../components/ficha/FatoresAtivo.js';
 import '../components/ficha/ProventosContabeis.js';
 import '../components/ficha/ComunicadosDoAtivo.js';
 import '../components/ficha/OpiniaoHorizontes.js';
+import '../components/ficha/AtivoIa.js';
 import '../components/ficha/ComposicaoCapital.js';
 import '../components/ficha/UltimosPregoes.js';
 
@@ -130,6 +131,7 @@ export class ConsultaPage extends BaseComponent {
             <div class="col-lg-6"><valor-justo-regua></valor-justo-regua></div>
           </div>
           <opiniao-horizontes simbolo="${escaparHtml(simbolo)}"></opiniao-horizontes>
+          <ativo-ia simbolo="${escaparHtml(simbolo)}"></ativo-ia>
           <selos-qualidade></selos-qualidade>
           <indicadores-grid></indicadores-grid>
           <ultimos-pregoes></ultimos-pregoes>

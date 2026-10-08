@@ -18,6 +18,7 @@ import './pages/GlossarioPage.js';
 import './pages/EstudosPage.js';
 import './pages/IndicesMacroPage.js';
 import './pages/OpcaoPage.js';
+import './pages/AssistentePage.js';
 import { iniciarRouter } from './router.js';
 import { inicializarTema } from './utils/tema.js';
 

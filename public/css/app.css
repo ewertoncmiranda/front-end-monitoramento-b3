@@ -388,3 +388,12 @@ tema-toggle[modo="bottom"] {
 .chat-ia-form textarea {
   resize: vertical;
 }
+/* --- CHAT-4/5: tela Assistente e card IA da ficha ------------------------- */
+.assistente-sobre ul { line-height: 1.45; }
+.ativo-ia .ia-horizontes { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-bottom: .5rem; }
+.ativo-ia .ia-horizonte { display: flex; align-items: center; gap: .35rem; }
+.ativo-ia .ia-numeros { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: .35rem .75rem; }
+.ativo-ia .ia-numeros dt { font-weight: 400; color: var(--bs-secondary-color); font-size: .75rem; }
+.ativo-ia .ia-numeros dd { margin: 0; font-weight: 600; }
+.ativo-ia .ia-leitura-texto { white-space: pre-line; }
+.ativo-ia details > summary { cursor: pointer; color: var(--bs-link-color); }
