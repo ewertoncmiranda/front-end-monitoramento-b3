@@ -13,11 +13,20 @@ function normalizarTema(tema) {
   return tema === 'dark' ? 'dark' : 'light';
 }
 
+function temaDoSistema() {
+  try {
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
 export function temaAtual() {
   const declarado = document.documentElement.getAttribute('data-bs-theme');
   if (TEMAS_VALIDOS.has(declarado)) return declarado;
   const salvo = armazenamento()?.getItem(CHAVE_TEMA);
-  return normalizarTema(salvo);
+  if (TEMAS_VALIDOS.has(salvo)) return salvo;
+  return temaDoSistema();
 }
 
 export function aplicarTema(tema, { persistir = true, emitirEvento = true } = {}) {
@@ -35,9 +44,12 @@ export function alternarTema() {
   return aplicarTema(temaAtual() === 'dark' ? 'light' : 'dark');
 }
 
+export function inicializarTema() {
+  return aplicarTema(temaAtual(), { persistir: false, emitirEvento: false });
+}
+
 export function rotuloTema(tema = temaAtual()) {
   return normalizarTema(tema) === 'dark'
     ? { acao: 'Usar tema claro', estado: 'Tema escuro ativo', icone: '☀️' }
     : { acao: 'Usar tema escuro', estado: 'Tema claro ativo', icone: '🌙' };
 }
-

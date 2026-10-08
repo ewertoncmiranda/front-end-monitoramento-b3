@@ -15,7 +15,8 @@
     (() => {
       try {
         const tema = localStorage.getItem('b3.tema.v1');
-        document.documentElement.setAttribute('data-bs-theme', tema === 'dark' ? 'dark' : 'light');
+        const sistema = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-bs-theme', tema === 'dark' || tema === 'light' ? tema : sistema);
       } catch {
         document.documentElement.setAttribute('data-bs-theme', 'light');
       }
