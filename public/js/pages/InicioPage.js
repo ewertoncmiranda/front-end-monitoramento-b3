@@ -2,7 +2,8 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarSaudeDosDados } from '../api/validacaoApi.js';
 import { listarFavoritos } from '../api/favoritosApi.js';
 import { buscarNewsletter } from '../api/comunicadosApi.js';
-import { fontesForaDoPrazo, maioresMovimentos, resumoDaSemana } from '../analise/inicio.js';
+import { buscarManchetesFavoritos } from '../api/noticiasApi.js';
+import { fontesForaDoPrazo, maioresMovimentos, resumoDaSemana, comunicadoDestaqueDosFavoritos } from '../analise/inicio.js';
 import { ESTADO_GERAL, formatarIdade } from '../analise/saudeDosDados.js';
 import { formatarMoeda, formatarPercentual } from '../utils/numero.js';
 import { formatarData } from '../utils/dataHora.js';
@@ -34,6 +35,8 @@ export class InicioPage extends BaseComponent {
           <h6 id="ini-fav">Favoritos em movimento</h6><div data-favoritos>${carregando}</div></div></div></section>
         <section class="col-12" aria-labelledby="ini-com"><div class="card shadow-sm"><div class="card-body">
           <h6 id="ini-com">Comunicados da semana</h6><div data-comunicados>${carregando}</div></div></div></section>
+        <section class="col-12" aria-labelledby="ini-not"><div class="card shadow-sm"><div class="card-body">
+          <h6 id="ini-not">Notícias dos favoritos</h6><div data-noticias>${carregando}</div></div></div></section>
       </div>
       <p class="small text-muted mt-3 mb-0">Resumo informativo; nenhum sinal aqui é recomendação de investimento (regra experimental).</p>
     `;
@@ -45,9 +48,27 @@ export class InicioPage extends BaseComponent {
       const simbolo = this.querySelector('#inicio-ativo').value.trim().toUpperCase();
       if (/^[A-Z0-9]{4,8}$/.test(simbolo)) window.location.hash = `#/gestao/${encodeURIComponent(simbolo)}`;
     });
+
+    const favoritosP = listarFavoritos();
+    const newsletterP = buscarNewsletter();
+
+    // Manchetes: busca so quando ha favoritos; erros viram null (card lida com isso).
+    const manchetesP = favoritosP
+      .then((favs) => (favs?.length ? buscarManchetesFavoritos(favs.map((f) => f.simbolo)) : null))
+      .catch(() => null);
+
+    // Card de noticias precisa de manchetes + newsletter + lista de favoritos.
+    const noticiasP = Promise.all([
+      manchetesP,
+      newsletterP.catch(() => null),
+      favoritosP.catch(() => []),
+    ]);
+
     this.bloco('[data-saude]', buscarSaudeDosDados(), htmlSaude, 'Saúde dos dados indisponível');
-    this.bloco('[data-favoritos]', listarFavoritos(), htmlFavoritos, 'Favoritos indisponíveis');
-    this.bloco('[data-comunicados]', buscarNewsletter(), htmlComunicados, 'Comunicados indisponíveis');
+    this.bloco('[data-favoritos]', favoritosP, htmlFavoritos, 'Favoritos indisponíveis');
+    this.bloco('[data-comunicados]', newsletterP, htmlComunicados, 'Comunicados indisponíveis');
+    this.bloco('[data-noticias]', noticiasP, ([manchetes, newsletter, favs]) =>
+      htmlNoticiasFavoritos(manchetes, newsletter, favs), 'Notícias indisponíveis');
   }
 
   /** Cada bloco resolve sozinho; erro vira estado vazio com a causa. */
@@ -107,6 +128,86 @@ export function htmlComunicados(edicao) {
       <a class="btn btn-sm btn-outline-secondary" href="#/comunicados?simbolo=${encodeURIComponent(d.simbolo)}${r.semana ? `&semana=${encodeURIComponent(r.semana)}` : ''}">
         ${escaparHtml(d.simbolo)} <span class="badge ${d.fatoRelevante ? 'text-bg-danger' : 'text-bg-secondary'}">${d.total}</span></a>`).join('')}</div>
     <a class="small" href="#/comunicados">Ver a edição completa</a>`;
+}
+
+/** Tempo relativo simples, sem dependencia externa. */
+function tempoAtras(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 0) return 'agora';
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `${m}min atrás`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h atrás`;
+  return `${Math.floor(h / 24)}d atrás`;
+}
+
+/**
+ * TASK-NOT-3 + TASK-NOT-4: card de noticias e comunicado em destaque.
+ * manchetes: resultado de /noticias/favoritos (ou null se sem favoritos / erro).
+ * newsletter: edicao atual (ou null).
+ * favs: array de AtivoMonitoradoDTO.
+ */
+export function htmlNoticiasFavoritos(manchetes, newsletter, favs) {
+  const simbolosFavs = (favs || []).map((f) => f.simbolo);
+
+  if (!simbolosFavs.length) {
+    return htmlEstadoVazio({
+      titulo: 'Nenhum favorito ainda',
+      causa: 'Adicione ativos aos favoritos para ver as notícias.',
+      acaoHref: '#/ativos',
+      acaoRotulo: 'Escolher na tabela de ativos',
+    });
+  }
+
+  const partes = [];
+
+  // --- NOT-4: comunicado em destaque ---
+  const destaque = comunicadoDestaqueDosFavoritos(newsletter, simbolosFavs);
+  if (destaque) {
+    const href = `#/comunicados?simbolo=${encodeURIComponent(destaque.simbolo)}${destaque.semana ? `&semana=${encodeURIComponent(destaque.semana)}` : ''}`;
+    partes.push(`
+      <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2 small" role="alert">
+        <span class="badge text-bg-danger flex-shrink-0">FATO RELEVANTE</span>
+        <span><strong>${escaparHtml(destaque.simbolo)}</strong> publicou
+          ${destaque.total > 1 ? `${destaque.total} fatos relevantes` : 'um fato relevante'} esta semana.</span>
+        <a class="ms-auto text-nowrap" href="${href}">Ver comunicado</a>
+      </div>`);
+  }
+
+  // --- NOT-3: lista de manchetes ---
+  if (!manchetes) {
+    partes.push('<p class="small text-muted">Manchetes indisponíveis no momento.</p>');
+  } else {
+    const lista = manchetes.manchetes || [];
+    if (!lista.length) {
+      partes.push('<p class="small text-muted">Nenhuma manchete recente para os favoritos.</p>');
+    } else {
+      const desatBadge = manchetes.desatualizado
+        ? '<span class="badge text-bg-secondary ms-1" title="Cache vencido; dados podem estar desatualizados">desatualizado</span>'
+        : '';
+      partes.push(`
+        <ul class="list-unstyled mb-2 noticias-lista">
+          ${lista.map((m) => {
+            const badges = (m.simbolos || [])
+              .map((s) => `<span class="badge text-bg-secondary me-1">${escaparHtml(s)}</span>`)
+              .join('');
+            return `<li class="mb-2">
+              <a class="d-block text-body text-decoration-none small fw-semibold manchete-titulo" href="${escaparHtml(m.link)}" target="_blank" rel="noopener noreferrer">${escaparHtml(m.titulo)}</a>
+              <span class="text-muted" style="font-size:.75rem">${escaparHtml(m.fonte || '')} · ${tempoAtras(m.publicadoEm)}</span>
+              <div class="mt-1">${badges}</div>
+            </li>`;
+          }).join('')}
+        </ul>
+        <span class="small text-muted">${desatBadge}</span>`);
+    }
+    if (manchetes.falhas?.length) {
+      partes.push(`<p class="small text-warning mb-1">Sem dados para: ${manchetes.falhas.map(escaparHtml).join(', ')}.</p>`);
+    }
+  }
+
+  partes.push('<a class="small d-block mt-2" href="#/comunicados">Ver comunicados oficiais</a>');
+  return partes.join('');
 }
 
 customElements.define('inicio-page', InicioPage);
