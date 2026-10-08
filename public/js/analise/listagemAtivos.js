@@ -53,7 +53,11 @@ export function htmlLinhaAtivo(item, { permitirRemoverFavorito = false } = {}) {
       <td data-label="Símbolo" class="fw-semibold">
         <a class="link-body-emphasis" href="#/gestao/${encodeURIComponent(item.simbolo)}">${escaparHtml(item.simbolo)}</a>
       </td>
-      <td data-label="Empresa">${escaparHtml(item.nome ?? '-')}<div class="small text-muted">${escaparHtml(item.setor ?? 'Setor não informado')}</div></td>
+      <td data-label="Empresa">
+        ${escaparHtml(item.nome ?? '-')}
+        ${htmlBadgeStatusCvm(item.situacaoRegistro)}
+        <div class="small text-muted">${escaparHtml(item.setor ?? 'Setor não informado')}</div>
+      </td>
       <td data-label="Fechamento" class="text-end">
         <div>${formatarMoeda(item.ultimoFechamento)}</div>
         <div class="small text-muted">${formatarData(item.dataUltimoFechamento, 'sem pregão')}</div>
@@ -140,4 +144,20 @@ function htmlAcaoFavorito(simbolo, favorito, permitirRemoverFavorito) {
   }
   if (favorito) return '';
   return `<button type="button" class="btn btn-sm btn-outline-primary" data-favoritar="${s}">+ Favoritos</button>`;
+}
+
+
+// Variantes de situacao_registro da CVM (V18). Null/unknown = sem badge.
+const STATUS_CVM = {
+  ATIVO: { tom: 'success', rotulo: 'CVM Ativo' },
+  SUSPENS: { tom: 'warning', rotulo: 'CVM Suspenso' },
+  CANCELAD: { tom: 'danger', rotulo: 'CVM Cancelado' },
+};
+
+export function htmlBadgeStatusCvm(situacao) {
+  if (!situacao) return '';
+  const chave = Object.keys(STATUS_CVM).find((k) => situacao.toUpperCase().startsWith(k));
+  if (!chave) return '';
+  const { tom, rotulo } = STATUS_CVM[chave];
+  return `<span class="badge text-bg-${tom} ms-1 small" title="Situação de registro CVM: ${escaparHtml(situacao)}">${rotulo}</span>`;
 }

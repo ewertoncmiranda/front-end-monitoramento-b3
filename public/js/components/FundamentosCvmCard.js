@@ -143,6 +143,29 @@ function secaoCapital(f) {
         ? '<p class="text-success small mb-3">Dívida líquida negativa: a empresa tem mais caixa do que dívida.</p>'
         : ''
     }
+    ${secaoFluxoCaixa(f)}
+  `;
+}
+
+function secaoFluxoCaixa(f) {
+  const bruto = f.fco_bruto != null ? Number(f.fco_bruto) : null;
+  const liquido = f.fluxo_caixa_operacional != null ? Number(f.fluxo_caixa_operacional) : null;
+  if (bruto === null && liquido === null) return '';
+  const max = Math.max(Math.abs(bruto ?? 0), Math.abs(liquido ?? 0)) || 1;
+  const barra = (valor, cor) => {
+    if (valor === null) return '';
+    const pct = Math.round((Math.abs(valor) / max) * 100);
+    const classe = valor < 0 ? 'bg-danger' : cor;
+    return `<div class="progress mb-1" style="height:14px" title="${formatarBilhoes(valor)}">
+              <div class="progress-bar ${classe}" style="width:${pct}%"></div>
+            </div>`;
+  };
+  return `
+    <h6 class="mt-2">Fluxo de caixa operacional</h6>
+    <div class="small mb-3">
+      ${bruto !== null ? `<div class="text-muted mb-1">FCO bruto: <strong>${formatarBilhoes(bruto)}</strong></div>${barra(bruto, 'bg-warning')}` : ''}
+      ${liquido !== null ? `<div class="text-muted mb-1">FCO líquido: <strong>${formatarBilhoes(liquido)}</strong></div>${barra(liquido, 'bg-success')}` : ''}
+    </div>
   `;
 }
 

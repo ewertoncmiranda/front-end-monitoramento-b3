@@ -17,7 +17,7 @@ const VISAO_DA_ROTA = {
   '#/monitorados': 'monitorados',
 };
 
-const VAZIO = Object.freeze({ visao: 'todos', q: '', setor: '', pagina: 0 });
+const VAZIO = Object.freeze({ visao: 'todos', q: '', setor: '', uf: '', pagina: 0 });
 
 export function lerFiltrosBase(hash) {
   const [rota, consulta = ''] = String(hash || '').split('?');
@@ -29,16 +29,18 @@ export function lerFiltrosBase(hash) {
     visao: VISAO_DA_ROTA[rota] || (VISOES.includes(visaoDoLink) ? visaoDoLink : 'todos'),
     q: (p.get('q') || '').slice(0, 60),
     setor: (p.get('setor') || '').slice(0, 80),
+    uf: (p.get('uf') || '').slice(0, 2).toUpperCase(),
     pagina: Number.isInteger(pagina) && pagina > 0 && pagina < 10000 ? pagina : 0,
   };
 }
 
 /** So o que foge do padrao entra no link; o link gerado e sempre o canonico #/ativos. */
-export function hashDaBase({ visao, q, setor, pagina } = {}) {
+export function hashDaBase({ visao, q, setor, uf, pagina } = {}) {
   const p = new URLSearchParams();
   if (visao && visao !== 'todos' && VISOES.includes(visao)) p.set('visao', visao);
   if (q) p.set('q', q);
   if (setor) p.set('setor', setor);
+  if (uf) p.set('uf', uf);
   if (pagina > 0) p.set('pagina', String(pagina));
   const consulta = p.toString();
   return consulta ? `${ROTA}?${consulta}` : ROTA;

@@ -1,5 +1,6 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarFundamentos, buscarFundamentosCvm } from '../api/analisesApi.js';
+import { buscarComposicaoCapital } from '../api/composicaoCapitalApi.js';
 import { buscarPregoes, velasDoBanco } from '../api/pregoesApi.js';
 import { buscarBacktest } from '../api/validacaoApi.js';
 import { indicadores, precoDasVelas, selosDeQualidade } from '../analise/fichaDoAtivo.js';
@@ -18,6 +19,7 @@ import '../components/ficha/FatoresAtivo.js';
 import '../components/ficha/ProventosContabeis.js';
 import '../components/ficha/ComunicadosDoAtivo.js';
 import '../components/ficha/OpiniaoHorizontes.js';
+import '../components/ficha/ComposicaoCapital.js';
 
 const CHAVE_RECENTES = 'ficha-recentes';
 const MAX_RECENTES = 6;
@@ -134,7 +136,7 @@ export class ConsultaPage extends BaseComponent {
         <div id="painel-comunicados" role="tabpanel" aria-labelledby="aba-comunicados" class="d-none ficha-cartao" data-lazy></div>
       </div>
     `;
-    this._dados = { fundamentos: null, cvm: null };
+    this._dados = { fundamentos: null, cvm: null, composicao: null };
     this.ligarAbas(resultado, simbolo);
     const $ = (tag) => resultado.querySelector(tag);
     $('ativo-hero').setAtivo({ simbolo });
@@ -142,6 +144,7 @@ export class ConsultaPage extends BaseComponent {
     // Cada fonte falha sozinha: sem balanco ainda ha preco e analise, e vice-versa.
     const fundamentosP = buscarFundamentos(simbolo).catch(() => null);
     const cvmP = buscarFundamentosCvm(simbolo).catch(() => null);
+    const composicaoP = buscarComposicaoCapital(simbolo).catch(() => null);
     const velasP = buscarPregoes(simbolo, { de: umMesAtras() }).then(velasDoBanco).catch(() => []);
     const aindaAqui = () => this._simbolo === simbolo && resultado.isConnected;
 
@@ -153,7 +156,7 @@ export class ConsultaPage extends BaseComponent {
       backtest().then((bt) => aindaAqui() && $('sinal-card').setDados({ fundamentos, backtest: bt }));
     });
 
-    const [fundamentos, cvm, velas] = await Promise.all([fundamentosP, cvmP, velasP]);
+    const [fundamentos, cvm, composicao, velas] = await Promise.all([fundamentosP, cvmP, composicaoP, velasP]);
     if (!aindaAqui()) return;
 
     if (!fundamentos && !cvm && velas.length === 0) {
@@ -166,7 +169,7 @@ export class ConsultaPage extends BaseComponent {
     $('ativo-hero').setAtivo({ simbolo, setor: perfil.sector, industria: perfil.industry, cnpj: cvm?.cnpj });
     $('selos-qualidade').setSelos(selosDeQualidade({ fundamentos, cvm, ultimaVela: precoDasVelas(velas) }));
     $('indicadores-grid').setIndicadores(indicadores(fundamentos, cvm));
-    this._dados = { fundamentos, cvm };
+    this._dados = { fundamentos, cvm, composicao };
     // Link direto para a aba Fundamentos: o painel so pode ser montado quando os dados chegam.
     if (this._aba === 'fundamentos') this.montarPainel(resultado, 'fundamentos', simbolo);
   }
@@ -211,8 +214,9 @@ export class ConsultaPage extends BaseComponent {
     if (!painel || !painel.hasAttribute('data-lazy') || painel.childElementCount) return;
     const seguro = escaparHtml(simbolo);
     if (aba === 'fundamentos') {
-      painel.innerHTML = '<fundamentos-cvm-card></fundamentos-cvm-card><fundamentos-card></fundamentos-card>';
+      painel.innerHTML = '<fundamentos-cvm-card></fundamentos-cvm-card><composicao-capital></composicao-capital><fundamentos-card></fundamentos-card>';
       painel.querySelector('fundamentos-cvm-card').setFundamentos(this._dados.cvm);
+      painel.querySelector('composicao-capital').setDados(this._dados.composicao);
       painel.querySelector('fundamentos-card').setFundamentos(this._dados.fundamentos);
     } else if (aba === 'fatores') {
       painel.innerHTML = `<div class="row g-3">

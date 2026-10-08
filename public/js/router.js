@@ -24,6 +24,7 @@ const rotas = {
   '#/estudos': 'estudos-page',
   '#/setores': 'ativos-page',
   '#/indices': 'indices-macro-page',
+  '#/opcoes': 'opcao-page',
 };
 
 const ROTA_PADRAO = '#/inicio';
@@ -38,7 +39,10 @@ export function iniciarRouter(outletSelector) {
     // `#/gestao/PETR4`: o simbolo e parametro de rota (a propria GestaoPage
     // le de window.location.hash), nao uma rota nova - so o prefixo importa
     // pra escolher a pagina.
-    const tagName = rotas[hash] || (hash.startsWith('#/gestao/') ? rotas['#/gestao'] : null) || rotas[ROTA_PADRAO];
+    const tagName = rotas[hash]
+      || (hash.startsWith('#/gestao/') ? rotas['#/gestao'] : null)
+      || (hash.startsWith('#/opcoes/') ? rotas['#/opcoes'] : null)
+      || rotas[ROTA_PADRAO];
     outlet.innerHTML = `<${tagName}></${tagName}>`;
   }
 
