@@ -86,6 +86,8 @@ EstudosPage oferece duas visões dentro de **Formações**: **Planos de estudo**
 
 Os planos incluem formação progressiva (iniciante, essencial, básico, intermediário, avançado e especialização) e percurso APIMEC (diagnóstico, CB, CG1, CT1, conduta e simulados). São orientações pedagógicas locais, sem promessa de certificação.
 
+O material didático também inclui uma trilha operacional de opções inspirada nos conceitos reconhecidos no playbook visual analisado: fundamentos acadêmicos, execução, payoff, liquidez, custos, bloqueios de uso e laboratório de assertividade. As imagens foram tratadas como insumo de conteúdo, não como fonte normativa nem instrução de produto.
+
 planosCursos.js relaciona cursos às competências de cada etapa. Todos os 29 cursos estão associados ao plano progressivo. O mesmo documento pode integrar mais de uma etapa. As referências de cursos do percurso APIMEC apontam para IDs existentes.
 
 ### 3.2 Catálogo e estrutura editorial
@@ -123,7 +125,7 @@ Aceite: arquivo existente, URL local correspondente, páginas referenciadas dent
 
 ### 3.5 Glossário
 
-GlossarioPage combina verbetes gerais, **118 verbetes acadêmicos** em glossarioAcademico.js e padrões detalhados em glossarioPadroes.js. A busca inclui termo, sigla, definição, exemplo, aplicação e ressalva quando presentes.
+GlossarioPage combina verbetes gerais, **149 verbetes acadêmicos** em glossarioAcademico.js e padrões detalhados em glossarioPadroes.js. A busca inclui termo, sigla, definição, exemplo, aplicação e ressalva quando presentes. O grupo de derivativos contextualiza opções com call, put, titular, lançador, prêmio, strike, vencimento, estilo de exercício, moneyness, payoff, breakeven, travas, lançamento coberto, estruturas de volatilidade, gregas, liquidez e métricas de assertividade.
 
 Não há sincronização automática comprovada com infra/GLOSSARIO.md. O glossário local não deve ser descrito como simples espelho desse arquivo.
 
@@ -205,7 +207,7 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | REQ-14 | Leitor PDF sob demanda, referência de página e nova aba | IMPLEMENTADO — teste visual pendente |
 | REQ-15 | Busca combinada com dificuldade, escopo e tipo | IMPLEMENTADO — testes verificam atributos HTML e o estado em URL; interação visual conferida manualmente em 2026-10-07 (restauração de busca/visão por link), sem teste automatizado de clique |
 | REQ-16 | Todos os cursos associados ao plano progressivo; IDs APIMEC válidos | VERIFICADO — tests/cursos.test.mjs |
-| REQ-17 | Glossário acadêmico e reconciliação integral com PDFs | EM ANDAMENTO — 118 verbetes; completude não demonstrada |
+| REQ-17 | Glossário acadêmico e reconciliação integral com PDFs | EM ANDAMENTO — 149 verbetes; completude não demonstrada |
 | REQ-18 | Progresso por etapa local; cursos documentais sem progresso | IMPLEMENTADO |
 | NFR-01 | Cliente sem build; servidor com npm install | IMPLEMENTADO |
 | NFR-02 | Navegação hash adequada a hospedagem estática; WebView exige validação própria | IMPLEMENTADO |
@@ -260,7 +262,9 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 
 Executado **npm test**, com sucesso: detector de padrões, nove casos de associação de comunicados, dez casos de diário, convenções de português e integridade do catálogo de cursos.
 
-Inspeção adicional por importação dos dados confirmou 29 cursos, 71 módulos, 97 aulas, cinco valores atuais de dificuldade, dois valores de escopo e 118 verbetes acadêmicos. Estes números descrevem o catálogo nesta data e devem ser atualizados quando ele mudar.
+Em 2026-10-08, após a inclusão da trilha e do glossário de opções, nova execução de **npm test** passou integralmente.
+
+Inspeção adicional por importação dos dados confirmou 29 cursos, 71 módulos, 97 aulas, cinco valores atuais de dificuldade, dois valores de escopo e 149 verbetes acadêmicos. Estes números descrevem o catálogo atual e devem ser atualizados quando ele mudar.
 
 O teste de cursos verifica existência dos PDFs, IDs únicos, aulas preenchidas e limites de páginas declarados, associação ao plano progressivo, referências APIMEC, atributos dos filtros e cinco termos acadêmicos. Não verifica toda a renderização, todos os metadados contra os PDFs, número físico de páginas, operação do iframe ou exaustividade do glossário.
 
