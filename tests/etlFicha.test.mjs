@@ -99,4 +99,27 @@ caso('FCO: bruto e liquido, delta em R$ e % da receita; ausente nao vira zero ne
   assert.equal(compararFco({ fco_bruto: 5, fluxo_caixa_operacional: 3, receita_liquida: 0 }).deltaPercentualDaReceita, null);
 });
 
+const { renderizar: renderizarCapital, normalizarComposicao } = await import('../public/js/components/ficha/ComposicaoCapital.js');
+
+caso('composicao ON x PN: dois setores, fonte e competencia abaixo, aceita camelCase', () => {
+  const html = renderizarCapital({ tipo_doc: 'DFP', dt_refer: '2025-12-31', qt_acao_ordinaria: 4_500_000_000, qt_acao_preferencial: 5_000_000_000, qt_acao_total: 9_500_000_000, qt_acao_ex_tesouraria: 9_400_000_000 });
+  assert.match(html, /data-fatia="ON"/);
+  assert.match(html, /data-fatia="PN"/);
+  assert.match(html, /47,4%/);
+  assert.match(html, /52,6%|52\.6%/);
+  assert.match(html, /Fonte: CVM \(DFP\) · competência 12\/2025/);
+  assert.equal((html.match(/<circle/g) || []).length, 2);
+  const camel = normalizarComposicao({ qtAcaoOrdinaria: 3, qtAcaoPreferencial: 1 });
+  assert.deepEqual(camel, { on: 3, pn: 1, tesouraria: null, total: 4 });
+});
+
+caso('composicao ON x PN: empresa sem PN mostra rosca com um setor e aviso; sem dado nao renderiza', () => {
+  const html = renderizarCapital({ tipo_doc: 'ITR', dt_refer: '2026-06-30', qt_acao_ordinaria: 4_196_000_000, qt_acao_preferencial: 0, qt_acao_total: 4_196_000_000 });
+  assert.match(html, /PN = 0/);
+  assert.match(html, /data-fatia="PN"/);
+  assert.equal((html.match(/<circle/g) || []).length, 1);
+  assert.equal(renderizarCapital({}), '');
+  assert.equal(renderizarCapital({ qt_acao_ordinaria: 0, qt_acao_preferencial: 0 }), '');
+});
+
 console.log(`${casos} casos ok`);
