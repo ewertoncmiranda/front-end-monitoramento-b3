@@ -34,7 +34,8 @@ export function horaDeBrasilia(iso) {
 export function textoDoErro(dados) {
   const base = MENSAGENS_DE_ERRO[dados && dados.codigo] || (dados && dados.mensagem) || MENSAGENS_DE_ERRO.INDISPONIVEL;
   const hora = horaDeBrasilia(dados && dados.tentar_apos);
-  return hora ? `${base.replace(/\.$/, '')} até ${hora}.` : base;
+  if (!hora) return base;
+  return `${base.replace(/ agora\.$/, '.').replace(/\.$/, '')} até ${hora}.`;
 }
 
 function novoId() {
