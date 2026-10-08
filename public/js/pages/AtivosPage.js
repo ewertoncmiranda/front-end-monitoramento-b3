@@ -46,15 +46,19 @@ export class AtivosPage extends BaseComponent {
       <p class="text-muted small" id="ativos-descricao">${DESCRICAO[this.visao]}</p>
       <div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrar por lista">${chips}</div>
       <div class="row g-2 align-items-end mb-3">
-        <div class="col-md-5">
+        <div class="col-md-4">
           <label for="ativos-busca" class="form-label small mb-1">Buscar</label>
           <input type="search" class="form-control" id="ativos-busca" placeholder="Símbolo ou nome da empresa">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label for="ativos-setor" class="form-label small mb-1">Setor</label>
           <select class="form-select" id="ativos-setor"><option value="">Todos os setores</option></select>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-2">
+          <label for="ativos-uf" class="form-label small mb-1">UF</label>
+          <input type="text" class="form-control" id="ativos-uf" placeholder="Ex.: SP" maxlength="2" style="text-transform:uppercase">
+        </div>
+        <div class="col-6 col-md-3">
           <button type="button" class="btn btn-primary w-100" id="ativos-filtrar">Filtrar</button>
         </div>
       </div>
@@ -66,10 +70,12 @@ export class AtivosPage extends BaseComponent {
 
   async afterRender() {
     this.querySelector('#ativos-busca').value = this.q;
+    this.querySelector('#ativos-uf').value = this.uf || '';
     this.querySelector('#btn-atualizar').addEventListener('click', () => this.carregar());
     this.querySelector('#ativos-filtrar').addEventListener('click', () => {
       this.q = this.querySelector('#ativos-busca').value.trim();
       this.setor = this.querySelector('#ativos-setor').value;
+      this.uf = this.querySelector('#ativos-uf').value.trim().slice(0, 2).toUpperCase();
       this.pagina = 0;
       this.carregar();
     });
@@ -124,12 +130,13 @@ export class AtivosPage extends BaseComponent {
     const resultado = this.querySelector('#ativos-resultado');
     resultado.innerHTML = '<loading-spinner></loading-spinner>';
     try {
-      history.replaceState(null, '', hashDaBase({ visao: this.visao, q: this.q, setor: this.setor, pagina: this.pagina }));
+      history.replaceState(null, '', hashDaBase({ visao: this.visao, q: this.q, setor: this.setor, uf: this.uf, pagina: this.pagina }));
     } catch { /* sem History API: o link so nao acompanha */ }
     try {
       this.pagePayload = await listarAtivosPainel({
         q: this.q,
         setor: this.setor,
+        uf: this.uf,
         pagina: this.pagina,
         tamanho: this.tamanho,
         ...filtrosDaVisao(this.visao),

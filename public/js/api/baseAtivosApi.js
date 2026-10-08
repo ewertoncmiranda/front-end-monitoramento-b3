@@ -2,10 +2,11 @@
 // de ativos (cvm_ticker/cvm_empresa/cotacao_b3_diaria), nao so os favoritos.
 import { httpGet } from './httpClient.js';
 
-export function listarAtivosBase({ q, setor, pagina = 0, tamanho = 30 } = {}) {
+export function listarAtivosBase({ q, setor, uf, pagina = 0, tamanho = 30 } = {}) {
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (setor) params.set('setor', setor);
+  if (uf) params.set('uf', uf);
   params.set('pagina', pagina);
   params.set('tamanho', tamanho);
   return httpGet(`/base/ativos?${params.toString()}`);
@@ -18,6 +19,7 @@ export function listarSetoresBase() {
 export function listarAtivosPainel({
   q,
   setor,
+  uf,
   favoritos = false,
   monitorados = false,
   pagina = 0,
@@ -26,6 +28,7 @@ export function listarAtivosPainel({
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (setor) params.set('setor', setor);
+  if (uf) params.set('uf', uf);
   if (favoritos) params.set('favoritos', 'true');
   if (monitorados) params.set('monitorados', 'true');
   params.set('pagina', pagina);

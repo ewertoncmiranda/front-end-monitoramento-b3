@@ -16,6 +16,7 @@ export const GRUPOS = [
     id: 'mercado', rotulo: 'Mercado', icone: '📈',
     itens: [
       { rotulo: 'Velas', rota: '#/candles' },
+      { rotulo: 'Opções', rota: '#/opcoes' },
       { rotulo: 'Comunicados', rota: '#/comunicados' },
       { rotulo: 'Notícias', rota: '#/noticias' },
       { rotulo: 'Índices', rota: '#/indices' },
@@ -32,6 +33,7 @@ const EXTRAS = {
   '#/favoritos': 'ativos',
   '#/monitorados': 'ativos',
   '#/setores': 'ativos',
+  '#/opcoes': 'mercado',
   '#/formulas': 'estudos',
   '#/glossario': 'estudos',
   '#/padroes': 'estudos',

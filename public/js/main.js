@@ -17,8 +17,11 @@ import './pages/PadroesPage.js';
 import './pages/GlossarioPage.js';
 import './pages/EstudosPage.js';
 import './pages/IndicesMacroPage.js';
+import './pages/OpcaoPage.js';
 import { iniciarRouter } from './router.js';
+import { inicializarTema } from './utils/tema.js';
 
+inicializarTema();
 document.querySelector('#app-header-outlet').innerHTML = '<app-header></app-header>';
 document.querySelector('#app-bottom-nav-outlet').innerHTML = '<bottom-nav></bottom-nav>';
 

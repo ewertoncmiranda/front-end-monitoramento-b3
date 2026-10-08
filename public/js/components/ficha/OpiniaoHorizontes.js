@@ -63,9 +63,20 @@ function origemLegivel(h) {
   return escaparHtml(h.origem || 'origem não informada');
 }
 
+/** Item de lista: texto simples ou {texto, trecho}; o trecho citado vai num expansivel. */
+function htmlItem(item) {
+  if (item && typeof item === 'object') {
+    const trecho = item.trecho
+      ? `<details class="mt-1"><summary class="text-muted">trecho citado</summary><blockquote class="border-start ps-2 mb-0 text-muted">${escaparHtml(item.trecho)}</blockquote></details>`
+      : '';
+    return `<li>${escaparHtml(item.texto)}${trecho}</li>`;
+  }
+  return `<li>${escaparHtml(item)}</li>`;
+}
+
 function lista(itens, vazio) {
   if (!itens || itens.length === 0) return `<p class="small text-muted mb-0">${escaparHtml(vazio)}</p>`;
-  return `<ul class="small mb-0 ps-3">${itens.map((t) => `<li>${escaparHtml(t)}</li>`).join('')}</ul>`;
+  return `<ul class="small mb-0 ps-3">${itens.map(htmlItem).join('')}</ul>`;
 }
 
 // Justificativas visiveis antes do "mais N": o modelo as vezes cita todas as
@@ -73,18 +84,30 @@ function lista(itens, vazio) {
 const VISIVEIS = 4;
 
 /**
- * Leitura da justificativa com o dado que ela cita (rotulo e valor da
- * evidencia). Se a leitura ja traz o valor, nao repete.
+ * Itens da justificativa: {texto, trecho}. O texto e a leitura com o dado que
+ * ela cita (rotulo e valor da evidencia do dia) ou, para item do servico de IA,
+ * "— fonte: <caminho da ficha>" (`fonte`, ou o `trechoId` se a fonte nao vier;
+ * DEC-IA-03). O `trecho` citado, congelado na geracao, vai num expansivel. Se a
+ * leitura ja traz o valor, nao repete. Item sem `evidenciaId` (ou sem nada alem
+ * da leitura) nunca derruba a renderizacao.
  */
-export function justificativas(h) {
-  const evidencias = new Map((h.evidencias || []).map((e) => [e.id, e]));
+export function itensDaJustificativa(h) {
+  const evidencias = new Map((h.evidencias || []).map((e) => [e && e.id, e]));
   return (h.justificativa || []).map((j) => {
-    const leitura = (j.leitura || '').trim();
-    const e = evidencias.get(j.evidenciaId);
+    if (!j) return null;
+    const leitura = String(j.leitura || '').trim();
+    const e = j.evidenciaId ? evidencias.get(j.evidenciaId) : undefined;
     const valor = e && e.valor !== null && e.valor !== undefined ? String(e.valor) : '';
-    const jaCita = !valor || leitura.includes(valor);
-    return jaCita ? leitura : `${leitura} (${e.rotulo || e.id}: ${valor})`.trim();
+    const comDado = !valor || leitura.includes(valor) ? leitura : `${leitura} (${e.rotulo || e.id}: ${valor})`.trim();
+    const fonte = j.fonte || j.trechoId;
+    const texto = fonte ? `${comDado} — fonte: ${fonte}`.trim() : comDado;
+    return texto ? { texto, trecho: j.trecho ? String(j.trecho) : '' } : null;
   }).filter(Boolean);
+}
+
+/** Texto de cada justificativa (sem o trecho), para quem so precisa da leitura. */
+export function justificativas(h) {
+  return itensDaJustificativa(h).map((i) => i.texto);
 }
 
 function listaCurta(itens, vazio) {
@@ -107,7 +130,7 @@ function coluna(definicao, h) {
   return `<div class="col-md-4"><div class="border rounded p-2 h-100 d-flex flex-column gap-2">
       ${titulo}
       <div class="d-flex flex-wrap gap-1">${badge(OPINIOES, h.opiniao)} ${badge(RISCOS, h.risco)}</div>
-      <div><p class="small fw-semibold mb-1">Por quê</p>${listaCurta(justificativas(h), 'Sem justificativa registrada.')}</div>
+      <div><p class="small fw-semibold mb-1">Por quê</p>${listaCurta(itensDaJustificativa(h), 'Sem justificativa registrada.')}</div>
       <div><p class="small fw-semibold mb-1">O que invalida</p>${listaCurta(h.oQueInvalida, 'Nada registrado.')}</div>
       ${ausentes.length ? `<details class="small"><summary class="text-muted">${ausentes.length} dado${ausentes.length === 1 ? '' : 's'} ausente${ausentes.length === 1 ? '' : 's'}</summary>${lista(ausentes, '')}</details>` : ''}
       <p class="small text-muted mt-auto mb-0">Pregão ${escaparHtml(formatarData(h.dataPregao))} · ${origemLegivel(h)}</p>

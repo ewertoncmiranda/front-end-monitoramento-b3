@@ -51,6 +51,7 @@ export function velasDoBanco(resposta) {
       low: Number(v.minima),
       close: Number(v.fechamento),
       volume: v.volume,
+      numeroNegocios: v.numeroNegocios ?? null,
       dataIso: v.data,
       dataFim: v.dataFim,
       dataFormatada: `${dia}/${mes}/${ano}`,
