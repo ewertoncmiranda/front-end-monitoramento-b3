@@ -1,4 +1,5 @@
 import { BaseComponent } from './base/BaseComponent.js';
+import { compararFco } from '../analise/fluxoCaixa.js';
 import {
   formatarData as formatarDataBrasilia,
   formatarDataHora as formatarDataHoraBrasilia,
@@ -148,23 +149,24 @@ function secaoCapital(f) {
 }
 
 function secaoFluxoCaixa(f) {
-  const bruto = f.fco_bruto != null ? Number(f.fco_bruto) : null;
-  const liquido = f.fluxo_caixa_operacional != null ? Number(f.fluxo_caixa_operacional) : null;
-  if (bruto === null && liquido === null) return '';
-  const max = Math.max(Math.abs(bruto ?? 0), Math.abs(liquido ?? 0)) || 1;
+  const c = compararFco(f);
+  if (c === null) return '';
   const barra = (valor, cor) => {
-    if (valor === null) return '';
-    const pct = Math.round((Math.abs(valor) / max) * 100);
-    const classe = valor < 0 ? 'bg-danger' : cor;
+    if (valor === null) return '<div class="text-muted small mb-1">—</div>';
+    const pct = Math.round((Math.abs(valor) / c.maxAbs) * 100);
     return `<div class="progress mb-1" style="height:14px" title="${formatarBilhoes(valor)}">
-              <div class="progress-bar ${classe}" style="width:${pct}%"></div>
+              <div class="progress-bar ${valor < 0 ? 'bg-danger' : cor}" style="width:${pct}%"></div>
             </div>`;
   };
+  const delta = c.delta === null ? ''
+    : `<div class="text-muted mt-1">Diferença bruto − líquido: <strong>${formatarBilhoes(c.delta)}</strong>${c.deltaPercentualDaReceita === null ? '' : ` (${c.deltaPercentualDaReceita.toFixed(1).replace('.', ',')}% da receita líquida)`}</div>`;
+  const nota = c.bruto === null ? '<div class="text-muted mt-1">FCO bruto só existe para empresas com DFC pelo método direto.</div>' : '';
   return `
     <h6 class="mt-2">Fluxo de caixa operacional</h6>
     <div class="small mb-3">
-      ${bruto !== null ? `<div class="text-muted mb-1">FCO bruto: <strong>${formatarBilhoes(bruto)}</strong></div>${barra(bruto, 'bg-warning')}` : ''}
-      ${liquido !== null ? `<div class="text-muted mb-1">FCO líquido: <strong>${formatarBilhoes(liquido)}</strong></div>${barra(liquido, 'bg-success')}` : ''}
+      <div class="text-muted mb-1">FCO bruto (DFC direto): <strong>${c.bruto === null ? '—' : formatarBilhoes(c.bruto)}</strong></div>${barra(c.bruto, 'bg-warning')}
+      <div class="text-muted mb-1">FCO líquido: <strong>${c.liquido === null ? '—' : formatarBilhoes(c.liquido)}</strong></div>${barra(c.liquido, 'bg-success')}
+      ${delta}${nota}
     </div>
   `;
 }

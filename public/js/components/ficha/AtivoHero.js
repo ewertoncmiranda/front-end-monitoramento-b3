@@ -2,6 +2,7 @@ import { BaseComponent } from '../base/BaseComponent.js';
 import { buscarPregoes, velasDoBanco } from '../../api/pregoesApi.js';
 import { dataBr, moeda, pontos, pontosDaLinha, precoDasVelas, rotuloDaFonte } from '../../analise/fichaDoAtivo.js';
 import { escaparHtml } from '../../utils/html.js';
+import { htmlAlertaStatusCvm, htmlSeloStatusCvm } from '../../analise/statusCvm.js';
 import { esqueleto } from './esqueleto.js';
 import '../FavoritoToggle.js';
 
@@ -53,14 +54,16 @@ export class AtivoHero extends BaseComponent {
     const tomVar = p?.variacao === null || p?.variacao === undefined ? 'secondary' : p.variacao >= 0 ? 'success' : 'danger';
     return `
       <section class="ficha-cartao ficha-hero">
+        ${htmlAlertaStatusCvm(a.situacaoRegistro)}
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
           <div class="min-w-0">
             <div class="d-flex align-items-center gap-2 flex-wrap">
               <h2 class="h3 mb-0 ficha-simbolo">${escaparHtml(a.simbolo)}</h2>
               <favorito-toggle simbolo="${escaparHtml(a.simbolo)}"></favorito-toggle>
+              ${htmlSeloStatusCvm(a.situacaoRegistro)}
             </div>
             <p class="text-body-secondary small mb-0 text-truncate">
-              ${[a.setor, a.industria].filter(Boolean).map(escaparHtml).join(' · ') || '&nbsp;'}
+              ${[a.setor, a.industria, a.uf ? `sede em ${a.uf}` : null].filter(Boolean).map(escaparHtml).join(' · ') || '&nbsp;'}
             </p>
             ${a.cnpj ? `<p class="text-body-secondary small mb-0">CNPJ ${escaparHtml(a.cnpj)}</p>` : ''}
           </div>

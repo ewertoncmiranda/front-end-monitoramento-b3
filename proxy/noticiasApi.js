@@ -11,8 +11,14 @@
 const TIMEOUT_MS = 5000;
 const LIMITE_ITENS = 8;
 
-export async function buscarNoticias(ticker) {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(ticker)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+/**
+ * Busca manchetes de mercado por ticker no Google News RSS.
+ * @param {string} ticker  - simbolo (ex.: PETR4)
+ * @param {{ nome?: string }} [opcoes] - nome da empresa para refinar a busca (ex.: "Petrobras")
+ */
+export async function buscarNoticias(ticker, { nome } = {}) {
+  const query = nome ? `"${ticker}" OR "${nome}"` : `"${ticker}"`;
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -44,7 +50,7 @@ function extrairItens(xml) {
         titulo: decodificarEntidades(titulo),
         link,
         fonte: decodificarEntidades(extrairTag(bloco, 'source') || ''),
-        publicadoEm: extrairTag(bloco, 'pubDate'),
+        publicadoEm: pubDateParaIso(extrairTag(bloco, 'pubDate')),
       };
     })
     .filter(Boolean);
@@ -56,6 +62,12 @@ function extrairTag(bloco, tag) {
     return null;
   }
   return casamento[1].replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim();
+}
+
+function pubDateParaIso(pubDate) {
+  if (!pubDate) return null;
+  const d = new Date(pubDate);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 function decodificarEntidades(texto) {

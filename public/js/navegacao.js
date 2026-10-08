@@ -23,6 +23,8 @@ export const GRUPOS = [
     ],
   },
   { id: 'avaliacao', rotulo: 'Avaliação', icone: '🩺', rota: '#/avaliacao' },
+  // TASK-CHAT-4: conversa geral com o servico de IA.
+  { id: 'assistente', rotulo: 'Assistente', icone: '💬', rota: '#/assistente' },
   { id: 'estudos', rotulo: 'Estudos', icone: '🎓', rota: '#/estudos' },
 ];
 

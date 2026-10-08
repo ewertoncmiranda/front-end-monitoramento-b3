@@ -107,8 +107,8 @@ const nav = await import('../public/js/navegacao.js');
 const ini = await import('../public/js/analise/inicio.js');
 const pg = await import('../public/js/pages/InicioPage.js');
 
-caso('navegacao: 5 grupos, toda rota do roteador alcancavel e rotas antigas mapeadas', () => {
-  assert.equal(nav.GRUPOS.length, 5);
+caso('navegacao: grupos corretos, toda rota do roteador alcancavel e rotas antigas mapeadas', () => {
+  assert.equal(nav.GRUPOS.length, 6);
   const roteador = readFileSync(new URL('../public/js/router.js', import.meta.url), 'utf8');
   const rotas = [...roteador.matchAll(/'(#\/[a-z-]+)':/g)].map((m) => m[1]);
   assert.ok(rotas.length >= 15);

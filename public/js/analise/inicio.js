@@ -21,6 +21,20 @@ export function maioresMovimentos(favoritos, limite = 6) {
     .slice(0, limite);
 }
 
+/**
+ * Comunicado de destaque: primeiro FATO_RELEVANTE dos favoritos na edicao atual.
+ * Retorna { simbolo, total, semana } ou null.
+ */
+export function comunicadoDestaqueDosFavoritos(edicao, simbolosFavoritos) {
+  if (!edicao?.empresas || !simbolosFavoritos?.length) return null;
+  const favSet = new Set(simbolosFavoritos);
+  const candidato = edicao.empresas.find(
+    (e) => favSet.has(e.simbolo) && (e.porCategoria?.FATO_RELEVANTE || 0) > 0,
+  );
+  if (!candidato) return null;
+  return { simbolo: candidato.simbolo, total: candidato.porCategoria.FATO_RELEVANTE, semana: edicao.semana };
+}
+
 /** Numeros da edicao da semana e as empresas com fato relevante (a edicao ja vem com elas primeiro). */
 export function resumoDaSemana(edicao) {
   const empresas = (edicao && edicao.empresas) || [];

@@ -52,6 +52,7 @@ export function velasDoBanco(resposta) {
       close: Number(v.fechamento),
       volume: v.volume,
       numeroNegocios: v.numeroNegocios ?? null,
+      volumeFinanceiro: v.volumeFinanceiro ?? null, // o gestor ainda nao expoe (pedido a Sessao 01); sem ele o ticket e estimado
       dataIso: v.data,
       dataFim: v.dataFim,
       dataFormatada: `${dia}/${mes}/${ano}`,

@@ -340,3 +340,60 @@ tema-toggle[modo="bottom"] {
 /* --- Abas da ficha (REQ-UX-9) ------------------------------------------ */
 .ficha-abas-nav { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; position: sticky; top: 0; z-index: 5; background: var(--bs-body-bg); padding: .4rem 0; border-bottom: 1px solid var(--bs-border-color); }
 @media (max-width: 767.98px) { .ficha-abas-nav { flex-wrap: nowrap; overflow-x: auto; } .ficha-abas-nav .btn { white-space: nowrap; } }
+
+/* CHAT-3: baloes do <chat-ia> (claro e escuro pelas variaveis do Bootstrap) */
+.chat-ia-lista {
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.chat-ia-balao {
+  max-width: 85%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-ia-usuario {
+  align-self: flex-end;
+  background-color: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
+  border-bottom-right-radius: 0.2rem;
+}
+.chat-ia-ia {
+  align-self: flex-start;
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+  border: 1px solid var(--bs-border-color);
+  border-bottom-left-radius: 0.2rem;
+}
+.chat-ia-erro {
+  background-color: var(--bs-danger-bg-subtle);
+  color: var(--bs-danger-text-emphasis);
+  border-color: var(--bs-danger-border-subtle);
+}
+.chat-ia-digitando .chat-ia-texto:empty::after,
+.chat-ia-digitando .chat-ia-texto::after {
+  content: " …";
+  animation: chat-ia-pulsar 1s infinite;
+}
+@keyframes chat-ia-pulsar {
+  50% { opacity: 0.3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-ia-digitando .chat-ia-texto::after { animation: none; }
+}
+.chat-ia-form textarea {
+  resize: vertical;
+}
+/* --- CHAT-4/5: tela Assistente e card IA da ficha ------------------------- */
+.assistente-sobre ul { line-height: 1.45; }
+.ativo-ia .ia-horizontes { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-bottom: .5rem; }
+.ativo-ia .ia-horizonte { display: flex; align-items: center; gap: .35rem; }
+.ativo-ia .ia-numeros { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: .35rem .75rem; }
+.ativo-ia .ia-numeros dt { font-weight: 400; color: var(--bs-secondary-color); font-size: .75rem; }
+.ativo-ia .ia-numeros dd { margin: 0; font-weight: 600; }
+.ativo-ia .ia-leitura-texto { white-space: pre-line; }
+.ativo-ia details > summary { cursor: pointer; color: var(--bs-link-color); }
