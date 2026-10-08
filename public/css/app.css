@@ -22,6 +22,10 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
+tema-toggle[modo="bottom"] {
+  flex: 1 1 0;
+}
+
 /* Aba de Candles.
    Telas grandes: o painel de padroes e um menu lateral a esquerda, preso na
    tela com a altura da janela. O cabecalho (controles + caixa de calibragem)

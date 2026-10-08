@@ -6,15 +6,14 @@ class TemaToggle extends HTMLElement {
     this.render();
     this._aoClicar = () => {
       alternarTema();
-      this.render();
     };
     this._aoTema = () => this.render();
-    this.querySelector('button')?.addEventListener('click', this._aoClicar);
+    this.addEventListener('click', this._aoClicar);
     window.addEventListener('tema:alterado', this._aoTema);
   }
 
   disconnectedCallback() {
-    this.querySelector('button')?.removeEventListener('click', this._aoClicar);
+    this.removeEventListener('click', this._aoClicar);
     window.removeEventListener('tema:alterado', this._aoTema);
   }
 
@@ -34,4 +33,3 @@ class TemaToggle extends HTMLElement {
 }
 
 customElements.define('tema-toggle', TemaToggle);
-
