@@ -417,3 +417,57 @@ TASK-ETL-5. Única tarefa que cria uma rota nova. Requer endpoint dedicado no ge
 - Trimestral mostra exatamente 12 colunas (2023-09 a 2026-06); passar o mouse na linha de 03/2026 destaca a coluna 2026-03-31 e a dica mostra "Por ação: R$ 0,2896 · Entregue em 07-05-2026".
 - Com o foco na coluna mais recente, a seta ← leva o foco ao período anterior.
 - `npm test` verde.
+
+---
+
+## Plano GEM: manchetes dos favoritos, assistente e card IA (2026-10-08)
+
+**Status:** PLANEJADO · **Contexto e decisões:** `insider-ia-b3-ecossytem/SPEC.md` seção 13 (DEC-IA-06..09) · **Coordenação:** hub, linhas `GEM-*`.
+
+**Escopo deste repositório (grupo C).** Só `server.js`, `proxy/**`, `public/**`, `tests/**`, `package.json` (lista do `npm test`) e este SPEC. Não editar `insider-ia`, gestor, worker nem infra (a entrada do painel na rede `ia` e a variável `IA_URL` são do `compose.ia.yml` do insider-ia, TASK-IA-27). Os contratos consumidos são o **CTR-IA-02/03/04** e `POST /ia/manchetes/resumo` (insider-ia 13.3 e TASK-IA-38); até o serviço publicar, os testes usam fixtures desses contratos.
+
+**Duas trilhas paralelas dentro do grupo C.** Trilha **NOT** (manchetes, não depende do serviço de IA) e trilha **CHAT** (assistente e card). Arquivos compartilhados pelas duas — `server.js` (uma linha de registro de rota cada), `package.json` (uma entrada no `npm test` cada) e `public/css/app.css` (seção própria marcada com o ID da tarefa) — recebem mudanças mínimas, e quem commitar depois faz rebase antes do push.
+
+### Contrato próprio: `GET /noticias/favoritos` (CTR-PAI-NOT-01, servido pelo `server.js`)
+
+Entrada: `?simbolos=PETR4,WEGE3` (1 a 12 tickers, `^[A-Z]{4}[0-9]{1,2}$`; acima de 12 usa os 12 primeiros; inválido ⇒ 400). Opcional `&nomes=Petrobras,WEG` na mesma ordem, para refinar a busca.
+
+Saída 200:
+```json
+{ "geradoEm": "2026-10-08T09:00:00-03:00", "desatualizado": false,
+  "manchetes": [ { "titulo": "...", "link": "https://...", "fonte": "Valor", "publicadoEm": "2026-10-08T08:10:00-03:00",
+                   "simbolos": ["PETR4", "PRIO3"] } ],
+  "falhas": ["WEGE3"] }
+```
+- No máximo 30 manchetes, só dos últimos 7 dias, da mais nova para a mais antiga.
+- Mesma matéria em vários tickers aparece uma vez, com todos os `simbolos`.
+- `falhas` lista os tickers cuja busca falhou e não tinham cache. `desatualizado = true` quando alguma manchete veio de cache vencido por erro do Google.
+
+### Trilha NOT — manchetes dos favoritos na tela inicial
+
+| ID | Tarefa | Arquivos | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| TASK-NOT-1 | **Agregador** `noticiasFavoritos(simbolos, {buscar, agora})` com `buscar` injetável: no máximo 3 buscas em paralelo; cache em memória por ticker de 15 min; após erro, 30 min sem tentar de novo aquele ticker (devolve o cache vencido marcado `desatualizado`); duplicata = mesmo link **ou** títulos normalizados (minúsculas, sem acento/pontuação, sem " - Fonte" no fim) com similaridade de Jaccard por palavras ≥ 0,85; ordena por `publicadoEm` desc; corta 7 dias e 30 itens. Rota `GET /noticias/favoritos` no `server.js` (CTR-PAI-NOT-01) | `proxy/noticiasFavoritos.js`, `server.js` | — | Testes com `buscar` e relógio falsos: paralelismo ≤ 3, cache 15 min, pausa de 30 min após erro, junção de tickers, duplicata por título, corte de 7 dias/30 itens, 400 para ticker inválido | PLANEJADO |
+| TASK-NOT-2 | **Busca mais precisa:** `buscarNoticias(ticker, { nome })` pesquisa `"TICKER"` entre aspas e, com nome, `"TICKER" OR "Nome"`; `publicadoEm` convertido para ISO; `/noticias/:ticker` continua igual para a `NoticiasPage` | `proxy/noticiasApi.js` | — | Teste da URL montada (com e sem nome, nome com acento codificado) e da conversão de data do `pubDate` | PLANEJADO |
+| TASK-NOT-3 | **Card "Manchetes dos favoritos"** no topo da `InicioPage` (antes de "Saúde dos dados", largura total): lista favoritos via `listarFavoritos()`, chama `buscarManchetesFavoritos(simbolos, nomes)`; cada item com selo do ticker, título como link (`target="_blank" rel="noopener noreferrer"`), veículo e "há X h"; chips de filtro por ticker; 8 itens visíveis e botão "mais"; estados: carregando, sem favoritos ("Marque ativos com ★ para ver as manchetes aqui" + link `#/ativos?visao=favoritos`), tudo falhou ("Fontes de notícias indisponíveis agora"), `desatualizado` (selo "pode estar desatualizado") | `public/js/api/noticiasApi.js`, `public/js/components/inicio/ManchetesFavoritos.js`, `public/js/pages/InicioPage.js` | NOT-1 | Teste da função de renderização pura (`htmlManchetes(dados, filtro)`): escape de título/fonte (`<script>` vira texto), filtro por ticker, "mais N", cada estado | PLANEJADO |
+| TASK-NOT-4 | **Comunicado oficial em destaque:** no mesmo card, acima das manchetes, comunicados da CVM do dia útil mais recente dos favoritos (já carregados pela newsletter da `InicioPage`), com selo "Oficial – CVM"; nunca misturados com a mídia | `public/js/components/inicio/ManchetesFavoritos.js` | NOT-3 | Teste: comunicado aparece separado e com o selo; sem comunicado, a faixa some | PLANEJADO |
+| TASK-NOT-5 | **Resumo do dia por IA (opcional):** botão "Resumir com IA" no card chama `POST /ia/manchetes/resumo` (TASK-IA-38) com as manchetes já exibidas; mostra 3 tópicos com os links citados; sem serviço ou cota ⇒ "Resumo indisponível agora" e o card segue funcionando | `public/js/api/iaApi.js`, `public/js/components/inicio/ManchetesFavoritos.js` | NOT-3, CHAT-1, IA-38 | Teste com fixture do contrato: tópicos renderizados com links; link fora da lista enviada é descartado no front também | PLANEJADO |
+| TASK-NOT-6 | **Testes no `npm test`:** `tests/noticiasFavoritos.test.mjs` (NOT-1/2) e `tests/manchetesFavoritos.test.mjs` (NOT-3..5) | `tests/*.test.mjs`, `package.json` | NOT-1..5 | `npm test` verde | PLANEJADO |
+
+### Trilha CHAT — assistente conversacional e card IA na ficha
+
+| ID | Tarefa | Arquivos | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| TASK-CHAT-1 | **Proxy `/ia/*`** para `IA_URL` (padrão `http://ia-opiniao:8000`) com `http-proxy-middleware`: sem buffer de resposta (SSE passa em tempo real), timeout 120 s, remove `Origin`; prefixo `/ia/*` com o `/ia` removido ao encaminhar (`/ia/chat` → `/chat`, `/ia/ativo/WEGE3` → `/ativo/WEGE3`; insider-ia 13.3); `/ia/opiniao*` e `/ia/indexar` bloqueados (403: o painel não gera opinião nem reindexa); serviço fora ⇒ 503 `{ "erro": "IA_INDISPONIVEL" }`. Registro no `server.js` | `proxy/iaProxy.js`, `server.js` | — | Teste no estilo de `tests/proxyFluxos.test.mjs`: reescrita de caminho, 403 em `/ia/opiniao/ativo`, cabeçalho `Origin` removido, 503 com destino fora, `text/event-stream` repassado sem acumular | PLANEJADO |
+| TASK-CHAT-2 | **Cliente de IA:** `lerEventosSSE(texto)` puro (buffer parcial entre pedaços, `event:`/`data:`, linhas em branco) e `conversar({sessaoId, mensagem, simbolo}, {aoEvento, signal})` via `fetch` + `ReadableStream`; `buscarPacoteAtivo(s)` (`GET /ia/ativo/{s}`, CTR-IA-03), `gerarLeitura(s)` (`POST /ia/ativo/{s}/leitura`, CTR-IA-04), `resumirManchetes(lista)` (`POST /ia/manchetes/resumo`); `conversar` usa `POST /ia/chat` | `public/js/analise/sse.js`, `public/js/api/iaApi.js` | — | Testes do parser: evento partido em dois pedaços, vários eventos num pedaço, `data` JSON inválido vira evento `erro` local | PLANEJADO |
+| TASK-CHAT-3 | **Componente `<chat-ia simbolo? contexto?>`:** balões do usuário (direita) e da IA (esquerda); texto da IA inserido como **texto** (nunca `innerHTML` do conteúdo do modelo); indicador "digitando"; botão "Parar" (aborta o `fetch`); etiquetas de `fontes`; `aviso` em nota pequena sob o balão; erros por código do CTR-IA-02 (`INDISPONIVEL` ⇒ "Assistente indisponível até HH:MM" com `tentar_apos`; `LIMITE`; `FORA_DO_TEMA`); sugestões de perguntas como chips; rodapé com aviso experimental e o modelo do evento `inicio`; `Enter` envia, `Shift+Enter` quebra linha; `aria-live="polite"` na lista; `sessao_id` (UUID) e histórico em `sessionStorage` por chave `chat:<simbolo|geral>`, protegidos por try/catch; CSS dos balões (claro e escuro) em `app.css`, seção "CHAT-3" | `public/js/components/ia/ChatIa.js`, `public/css/app.css` | CHAT-2 | Testes: `<script>` na resposta aparece como texto; sequência `inicio→token→fim` monta um balão; `erro INDISPONIVEL` mostra horário; sem `sessionStorage` o componente funciona | PLANEJADO |
+| TASK-CHAT-4 | **Tela "Assistente"** `#/assistente`: item no menu, `<chat-ia>` sem símbolo, sugestões gerais ("O que é P/L?", "Como ler o score de confiança?", "O que mudou na WEGE3 esta semana?"), texto explicando o que o assistente faz e não faz (não recomenda compra/venda; usa só dados públicos) | `public/js/pages/AssistentePage.js`, `public/js/router.js`, `public/js/navegacao.js`, `public/js/main.js` | CHAT-3 | Rota abre a página; item de menu ativo; teste de rota no estilo de `tests/fluxosInterface.test.mjs` | PLANEJADO |
+| TASK-CHAT-5 | **Card "IA" na ficha** `<ativo-ia simbolo>` na aba Resumo da `ConsultaPage`, logo abaixo de `<opiniao-horizontes>`: (1) **pacote** (CTR-IA-03) com 3 horizontes compactos (reusa `OPINIOES`/`RISCOS` de `OpiniaoHorizontes.js`), 3 sinais mais fortes, 3 últimas manchetes; (2) **leitura**: botão "Ler com IA" chama CTR-IA-04 e mostra o parágrafo com origem e "em cache"; (3) **conversa**: `<details>` "Conversar sobre {simbolo}" com `<chat-ia simbolo>` e sugestões ("Por que o sinal está neutro?", "O que mudou desde ontem?", "Quais riscos aparecem nos números?"). Estados: carregando; serviço fora ("IA indisponível; a opinião por regra continua acima"); só opinião por regra no pregão ⇒ nota "Leitura do modelo ainda não gerada para este pregão; favoritos entram no próximo lote" (o painel não gera opinião: TASK-IA-37 descartada) | `public/js/components/ficha/AtivoIa.js`, `public/js/pages/ConsultaPage.js` | CHAT-2, CHAT-3 | Testes da renderização pura `htmlPacote(dados)` e dos estados; valor `null` aparece como "sem dado", nunca 0; a troca de ativo cancela a busca anterior (mesmo padrão de `OpiniaoHorizontes`) | PLANEJADO |
+| TASK-CHAT-6 | **Testes no `npm test`:** `tests/sse.test.mjs`, `tests/chatIa.test.mjs`, `tests/ativoIa.test.mjs`, `tests/iaProxy.test.mjs` | `tests/*.test.mjs`, `package.json` | CHAT-1..5 | `npm test` verde | PLANEJADO |
+| TASK-CHAT-7 | **Documentação:** seção 5 deste SPEC ("Contratos consumidos") com `/ia/*` e `/noticias/favoritos`; seção 2.1 (navegação) com `#/assistente`; nota no `README.md` sobre `IA_URL` | `SPEC.md`, `README.md` | CHAT-1..5, NOT-1 | Seções coerentes com o código | PLANEJADO |
+
+**Aceite do plano GEM no painel (depois das imagens no Hub).**
+- Tela inicial mostra manchetes dos favoritos sem duplicatas, com filtro por ticker; sem favoritos, mostra o convite.
+- `#/assistente` responde em streaming; com o Gemini fora, mostra "Assistente indisponível até HH:MM" e não trava.
+- Na ficha da WEGE3, o card IA mostra o pacote, gera a leitura ao clicar e conversa com o ativo fixado.
+- `npm test` verde.
