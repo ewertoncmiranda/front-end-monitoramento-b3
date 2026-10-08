@@ -1,4 +1,4 @@
-// TASK-NOT-3 + TASK-NOT-4: card "Notícias dos favoritos" na InicioPage.
+// TASK-NOT-3 + TASK-NOT-4 + TASK-NOT-5: card "Notícias dos favoritos" na InicioPage.
 import assert from 'node:assert/strict';
 
 globalThis.HTMLElement = class {
@@ -9,7 +9,7 @@ globalThis.HTMLElement = class {
 globalThis.customElements = { define() {} };
 
 const { comunicadoDestaqueDosFavoritos } = await import('../public/js/analise/inicio.js');
-const { htmlNoticiasFavoritos } = await import('../public/js/pages/InicioPage.js');
+const { htmlNoticiasFavoritos, htmlResumo } = await import('../public/js/pages/InicioPage.js');
 const src = await import('node:fs').then(({ readFileSync }) =>
   readFileSync(new URL('../public/js/api/noticiasApi.js', import.meta.url), 'utf8'),
 );
@@ -23,7 +23,7 @@ caso('buscarManchetesFavoritos exportada em noticiasApi.js', () => {
   assert.match(src, /\/noticias\/favoritos/);
 });
 
-// --- comunicadoDestaqueDosFavoritos ---
+// --- NOT-4: comunicadoDestaqueDosFavoritos ---
 caso('retorna null sem favoritos', () => {
   const edicao = { empresas: [{ simbolo: 'PETR4', porCategoria: { FATO_RELEVANTE: 1 } }] };
   assert.equal(comunicadoDestaqueDosFavoritos(edicao, []), null);
@@ -53,13 +53,13 @@ caso('nao retorna empresa que nao e favorita', () => {
   assert.equal(comunicadoDestaqueDosFavoritos(edicao, ['PETR4']), null);
 });
 
-// --- htmlNoticiasFavoritos ---
+// --- NOT-3: htmlNoticiasFavoritos ---
 caso('estado vazio quando sem favoritos', () => {
   const html = htmlNoticiasFavoritos(null, null, []);
   assert.match(html, /Nenhum favorito/);
 });
 
-caso('mostra alerta FATO RELEVANTE quando ha destaque', () => {
+caso('mostra alerta FATO RELEVANTE quando ha destaque (NOT-4)', () => {
   const newsletter = { semana: '2026-W41', empresas: [{ simbolo: 'PETR4', porCategoria: { FATO_RELEVANTE: 1 } }] };
   const manchetes = { manchetes: [], desatualizado: false, falhas: [] };
   const favs = [{ simbolo: 'PETR4' }];
@@ -84,8 +84,7 @@ caso('renderiza lista de manchetes com titulo, fonte e ticker', () => {
     desatualizado: false,
     falhas: [],
   };
-  const favs = [{ simbolo: 'PETR4' }];
-  const html = htmlNoticiasFavoritos(manchetes, null, favs);
+  const html = htmlNoticiasFavoritos(manchetes, null, [{ simbolo: 'PETR4' }]);
   assert.match(html, /Petrobras sobe 3%/);
   assert.match(html, /Valor/);
   assert.match(html, /PETR4/);
@@ -103,7 +102,7 @@ caso('mostra badge desatualizado quando cache vencido e ha manchetes', () => {
   assert.match(html, /desatualizado/);
 });
 
-caso('mostra aviso de falhas quando tickers falharam', () => {
+caso('mostra aviso de falhas mesmo sem manchetes', () => {
   const manchetes = { manchetes: [], desatualizado: false, falhas: ['VALE3'] };
   const html = htmlNoticiasFavoritos(manchetes, null, [{ simbolo: 'VALE3' }]);
   assert.match(html, /VALE3/);
@@ -115,4 +114,82 @@ caso('manchetes null mostra mensagem de indisponivel', () => {
   assert.match(html, /indispon/i);
 });
 
-console.log(`noticiasFavoritosCard.test.mjs ok (${casos} casos)`);
+caso('exibe botao Resumir com IA quando ha manchetes (NOT-5)', () => {
+  const manchetes = {
+    manchetes: [{ titulo: 'Noticia', link: 'https://a.com/1', fonte: 'X', publicadoEm: new Date().toISOString(), simbolos: ['PETR4'] }],
+    desatualizado: false, falhas: [],
+  };
+  const html = htmlNoticiasFavoritos(manchetes, null, [{ simbolo: 'PETR4' }]);
+  assert.match(html, /data-resumir-ia/);
+  assert.match(html, /data-resumo-ia/);
+});
+
+caso('nao exibe botao Resumir com IA quando lista esta vazia (NOT-5)', () => {
+  const manchetes = { manchetes: [], desatualizado: false, falhas: [] };
+  const html = htmlNoticiasFavoritos(manchetes, null, [{ simbolo: 'PETR4' }]);
+  assert.doesNotMatch(html, /data-resumir-ia/);
+});
+
+// --- NOT-5: htmlResumo ---
+caso('htmlResumo: renderiza 3 topicos com links validos', () => {
+  const resultado = {
+    topicos: [
+      { texto: 'Petroleo em alta', links: ['https://a.com/1'] },
+      { texto: 'Vale reduz producao', links: ['https://b.com/2'] },
+      { texto: 'Ibovespa fecha positivo', links: [] },
+    ],
+  };
+  const manchetesOriginais = [
+    { link: 'https://a.com/1' },
+    { link: 'https://b.com/2' },
+  ];
+  const html = htmlResumo(resultado, manchetesOriginais);
+  assert.match(html, /Petroleo em alta/);
+  assert.match(html, /href="https:\/\/a\.com\/1"/);
+  assert.match(html, /Vale reduz producao/);
+  assert.match(html, /Ibovespa fecha positivo/);
+});
+
+caso('htmlResumo: descarta links fora da lista original', () => {
+  const resultado = {
+    topicos: [{ texto: 'Topico A', links: ['https://externo.com/nao-estava-na-lista'] }],
+  };
+  const manchetesOriginais = [{ link: 'https://a.com/1' }];
+  const html = htmlResumo(resultado, manchetesOriginais);
+  assert.match(html, /Topico A/);
+  assert.doesNotMatch(html, /externo\.com/);
+});
+
+caso('htmlResumo: corta em 3 topicos', () => {
+  const resultado = {
+    topicos: [
+      { texto: 'T1', links: [] }, { texto: 'T2', links: [] },
+      { texto: 'T3', links: [] }, { texto: 'T4', links: [] },
+    ],
+  };
+  const html = htmlResumo(resultado, []);
+  assert.match(html, /T1/);
+  assert.match(html, /T3/);
+  assert.doesNotMatch(html, /T4/);
+});
+
+caso('htmlResumo: sem topicos retorna mensagem de indisponivel', () => {
+  assert.match(htmlResumo({ topicos: [] }, []), /indispon/i);
+  assert.match(htmlResumo(null, []), /indispon/i);
+});
+
+caso('htmlResumo: links de topicos diferentes nao vazam entre topicos', () => {
+  const resultado = {
+    topicos: [
+      { texto: 'Petrobras', links: ['https://a.com/1'] },
+      { texto: 'Vale', links: ['https://b.com/2'] },
+    ],
+  };
+  const manchetesOriginais = [{ link: 'https://a.com/1' }, { link: 'https://b.com/2' }];
+  const html = htmlResumo(resultado, manchetesOriginais);
+  // Ambos os links devem aparecer
+  assert.match(html, /a\.com\/1/);
+  assert.match(html, /b\.com\/2/);
+});
+
+console.log(`manchetesFavoritos.test.mjs ok (${casos} casos)`);

@@ -3,6 +3,7 @@ import { buscarSaudeDosDados } from '../api/validacaoApi.js';
 import { listarFavoritos } from '../api/favoritosApi.js';
 import { buscarNewsletter } from '../api/comunicadosApi.js';
 import { buscarManchetesFavoritos } from '../api/noticiasApi.js';
+import { resumirManchetes } from '../api/iaApi.js';
 import { fontesForaDoPrazo, maioresMovimentos, resumoDaSemana, comunicadoDestaqueDosFavoritos } from '../analise/inicio.js';
 import { ESTADO_GERAL, formatarIdade } from '../analise/saudeDosDados.js';
 import { formatarMoeda, formatarPercentual } from '../utils/numero.js';
@@ -67,8 +68,37 @@ export class InicioPage extends BaseComponent {
     this.bloco('[data-saude]', buscarSaudeDosDados(), htmlSaude, 'Saúde dos dados indisponível');
     this.bloco('[data-favoritos]', favoritosP, htmlFavoritos, 'Favoritos indisponíveis');
     this.bloco('[data-comunicados]', newsletterP, htmlComunicados, 'Comunicados indisponíveis');
-    this.bloco('[data-noticias]', noticiasP, ([manchetes, newsletter, favs]) =>
-      htmlNoticiasFavoritos(manchetes, newsletter, favs), 'Notícias indisponíveis');
+
+    // Noticias usa handler proprio para guardar manchetes no botao de resumo.
+    noticiasP.then(([manchetes, newsletter, favs]) => {
+      this._manchetesDados = manchetes;
+      const alvo = this.isConnected && this.querySelector('[data-noticias]');
+      if (alvo) alvo.innerHTML = htmlNoticiasFavoritos(manchetes, newsletter, favs);
+    }).catch((erro) => {
+      const alvo = this.isConnected && this.querySelector('[data-noticias]');
+      if (alvo) alvo.innerHTML = htmlEstadoVazio({ titulo: 'Notícias indisponíveis', causa: erro.message, acaoHref: '#/avaliacao', acaoRotulo: 'Ver saúde dos dados' });
+    });
+
+    this.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-resumir-ia]');
+      if (btn) this._resumirComIA(btn);
+    });
+  }
+
+  async _resumirComIA(btn) {
+    const painel = this.querySelector('[data-resumo-ia]');
+    if (!painel) return;
+    btn.disabled = true;
+    btn.textContent = 'Resumindo…';
+    try {
+      const resultado = await resumirManchetes(this._manchetesDados?.manchetes || []);
+      painel.innerHTML = htmlResumo(resultado, this._manchetesDados?.manchetes);
+      btn.hidden = true;
+    } catch {
+      painel.innerHTML = '<p class="small text-muted mt-2">Resumo indisponível agora.</p>';
+      btn.disabled = false;
+      btn.textContent = 'Resumir com IA';
+    }
   }
 
   /** Cada bloco resolve sozinho; erro vira estado vazio com a causa. */
@@ -206,8 +236,35 @@ export function htmlNoticiasFavoritos(manchetes, newsletter, favs) {
     }
   }
 
+  if (manchetes?.manchetes?.length) {
+    partes.push(`
+      <button class="btn btn-sm btn-outline-secondary mt-2" data-resumir-ia type="button">✦ Resumir com IA</button>
+      <div data-resumo-ia></div>`);
+  }
+
   partes.push('<a class="small d-block mt-2" href="#/comunicados">Ver comunicados oficiais</a>');
   return partes.join('');
+}
+
+/**
+ * TASK-NOT-5: renderiza o resumo retornado por /ia/manchetes/resumo.
+ * Links fora da lista original sao descartados (seguranca + consistencia).
+ */
+export function htmlResumo(resultado, manchetesOriginais) {
+  if (!resultado?.topicos?.length) {
+    return '<p class="small text-muted mt-2">Resumo indisponível agora.</p>';
+  }
+  const linksValidos = new Set((manchetesOriginais || []).map((m) => m.link).filter(Boolean));
+  const itens = resultado.topicos.slice(0, 3).map((t) => {
+    const linksOk = (t.links || []).filter((l) => linksValidos.has(l));
+    const refs = linksOk.map((l, i) =>
+      `<a href="${escaparHtml(l)}" target="_blank" rel="noopener noreferrer">[${i + 1}]</a>`).join(' ');
+    return `<li class="mb-1">${escaparHtml(t.texto)}${refs ? ` ${refs}` : ''}</li>`;
+  });
+  return `<div class="mt-2 border-top pt-2">
+    <p class="small text-muted mb-1">Resumo por IA:</p>
+    <ol class="small mb-0">${itens.join('')}</ol>
+  </div>`;
 }
 
 customElements.define('inicio-page', InicioPage);
