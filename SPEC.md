@@ -52,6 +52,7 @@ Fonte: public/js/router.js e public/js/main.js.
 | #/noticias | Notícias |
 | #/indices | Séries macroeconômicas |
 | #/avaliacao | Avaliação editorial, saúde de dados, backtest e diário de sinais |
+| #/assistente | Assistente de IA conversacional (`<chat-ia>`), sem ativo fixo; grupo "Assistente" no menu. Depende do serviço de IA e fica indisponível sem ele (TASK-CHAT-4) |
 | #/estudos | Formações, Conhecimento, Orientações, Material didático e Referência |
 | #/glossario | Glossário geral, acadêmico e detalhamento de padrões |
 | #/padroes | Explicação dos padrões e limitações |
@@ -169,8 +170,16 @@ Cursos documentais não registram conclusão de aulas ou progresso de leitura. �
 | GET /validacao/backtest | Placar da última execução |
 | GET /setores | Agrupamento por setor |
 | GET /indices-macro/{codigo} | Séries macroeconômicas |
+| GET /noticias/favoritos?simbolos=A,B | Manchetes dos favoritos (CTR-PAI-NOT-01), servido pelo próprio `server.js` com cache e deduplicação; usado no card da tela inicial |
+| POST /ia/chat | Assistente, resposta por SSE (CTR-IA-02): eventos `inicio`, `token`, `fontes`, `aviso`, `fim` ou `erro` (`INDISPONIVEL`, `LIMITE`, `FORA_DO_TEMA`) |
+| GET /ia/ativo/{simbolo} | Pacote do ativo para o card "IA" da ficha (CTR-IA-03); qualquer falha vira "IA indisponível" e a opinião por regra continua |
+| POST /ia/ativo/{simbolo}/leitura | Leitura em parágrafo, com origem e "em cache" (CTR-IA-04) |
+| POST /ia/manchetes/resumo | Resumo em 3 tópicos das manchetes exibidas; link fora da lista enviada é descartado também no front |
+| GET /ia/saude | Estado do serviço de IA |
 
-O proxy cobre oito prefixos: /ativos, /analises, /api, /setores, /indices-macro, /empresas, /comunicados e /validacao. Notícias têm tratamento próprio em server.js. Chamadas usam a mesma origem do front.
+O proxy cobre oito prefixos: /ativos, /analises, /api, /setores, /indices-macro, /empresas, /comunicados e /validacao. Notícias têm tratamento próprio em server.js.
+
+O prefixo `/ia/*` é um proxy à parte (`proxy/iaProxy.js`), que não passa pelo gestor: remove `/ia` e encaminha ao serviço de IA em `IA_URL` (padrão `http://ia-opiniao:8000`), repassando SSE sem acumular e removendo `Origin`. `/ia/opiniao*` e `/ia/indexar` são bloqueados (403 `ROTA_NAO_PERMITIDA`): o painel não gera opinião nem reindexa. Serviço fora responde 503 `IA_INDISPONIVEL`. Chamadas usam a mesma origem do front.
 
 pathRewrite recompõe o prefixo removido pelo Express e trata a raiz sem barra final adicional. O proxy remove Origin antes de encaminhar. Isso não implementa autenticação.
 
@@ -464,7 +473,7 @@ Saída 200:
 | TASK-CHAT-4 | **Tela "Assistente"** `#/assistente`: item no menu, `<chat-ia>` sem símbolo, sugestões gerais ("O que é P/L?", "Como ler o score de confiança?", "O que mudou na WEGE3 esta semana?"), texto explicando o que o assistente faz e não faz (não recomenda compra/venda; usa só dados públicos) | `public/js/pages/AssistentePage.js`, `public/js/router.js`, `public/js/navegacao.js`, `public/js/main.js` | CHAT-3 | Rota abre a página; item de menu ativo; teste de rota no estilo de `tests/fluxosInterface.test.mjs` | IMPLEMENTADO (Sessão 03, 2026-10-08): `AssistentePage.js`, grupo "Assistente" no menu (6 grupos), `<chat-ia>` geral com as 3 sugestões e o quadro do que faz/não faz; tests/assistente.test.mjs; verificado no navegador (rota, menu ativo, pergunta → "Assistente indisponível agora" sem o backend) |
 | TASK-CHAT-5 | **Card "IA" na ficha** `<ativo-ia simbolo>` na aba Resumo da `ConsultaPage`, logo abaixo de `<opiniao-horizontes>`: (1) **pacote** (CTR-IA-03) com 3 horizontes compactos (reusa `OPINIOES`/`RISCOS` de `OpiniaoHorizontes.js`), 3 sinais mais fortes, 3 últimas manchetes; (2) **leitura**: botão "Ler com IA" chama CTR-IA-04 e mostra o parágrafo com origem e "em cache"; (3) **conversa**: `<details>` "Conversar sobre {simbolo}" com `<chat-ia simbolo>` e sugestões ("Por que o sinal está neutro?", "O que mudou desde ontem?", "Quais riscos aparecem nos números?"). Estados: carregando; serviço fora ("IA indisponível; a opinião por regra continua acima"); só opinião por regra no pregão ⇒ nota "Leitura do modelo ainda não gerada para este pregão; favoritos entram no próximo lote" (o painel não gera opinião: TASK-IA-37 descartada) | `public/js/components/ficha/AtivoIa.js`, `public/js/pages/ConsultaPage.js` | CHAT-2, CHAT-3 | Testes da renderização pura `htmlPacote(dados)` e dos estados; valor `null` aparece como "sem dado", nunca 0; a troca de ativo cancela a busca anterior (mesmo padrão de `OpiniaoHorizontes`) | IMPLEMENTADO (Sessão 03, 2026-10-08): `AtivoIa.js` abaixo de `<opiniao-horizontes>`; `htmlPacote`/`htmlLeitura` puros (null = "sem dado", só regra ⇒ nota, link só http(s), texto escapado), chat montado só ao abrir o `<details>`; qualquer falha do pacote ⇒ "IA indisponível; a opinião por regra continua acima" (404 incluso enquanto a rota `/ativo` não existe no serviço, TASK-IA-35); tests/ativoIa.test.mjs; verificado no navegador com o serviço fora e com o pacote de exemplo do CTR-IA-03 |
 | TASK-CHAT-6 | **Testes no `npm test`:** `tests/sse.test.mjs`, `tests/chatIa.test.mjs`, `tests/ativoIa.test.mjs`, `tests/iaProxy.test.mjs` | `tests/*.test.mjs`, `package.json` | CHAT-1..5 | `npm test` verde | PLANEJADO |
-| TASK-CHAT-7 | **Documentação:** seção 5 deste SPEC ("Contratos consumidos") com `/ia/*` e `/noticias/favoritos`; seção 2.1 (navegação) com `#/assistente`; nota no `README.md` sobre `IA_URL` | `SPEC.md`, `README.md` | CHAT-1..5, NOT-1 | Seções coerentes com o código | PLANEJADO |
+| TASK-CHAT-7 | **Documentação:** seção 5 deste SPEC ("Contratos consumidos") com `/ia/*` e `/noticias/favoritos`; seção 2.1 (navegação) com `#/assistente`; nota no `README.md` sobre `IA_URL` | `SPEC.md`, `README.md` | CHAT-1..5, NOT-1 | Seções coerentes com o código | IMPLEMENTADO (2026-10-08): seção 2.1 (``#/assistente``), seção 5 (``/ia/*``, ``/noticias/favoritos`` e o proxy de IA) e nota de ``IA_URL`` no README |
 
 **Aceite do plano GEM no painel (depois das imagens no Hub).**
 - Tela inicial mostra manchetes dos favoritos sem duplicatas, com filtro por ticker; sem favoritos, mostra o convite.
