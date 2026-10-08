@@ -224,7 +224,7 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | ID | Prioridade | Descrição / aceite para encerrar | Estado |
 |---|---|---|---|
 | ISS-01 | Histórico | Listagem de monitorados entregue | IMPLEMENTADO |
-| ISS-02 | Média | Bootstrap e gráficos dependem de CDN; validar alternativa offline antes de prometer suporte offline | PLANEJADO |
+| ISS-02 | Média | Bootstrap e gráficos dependem de CDN; validar alternativa offline antes de prometer suporte offline | VERIFICADO (2026-10-08: Bootstrap 5.3.3 e lightweight-charts 4.2.0 copiados para `public/vendor/`; `public/index.html` usa os arquivos locais; `tests/dependenciasLocais.test.mjs` confirma existência e integridade; commit `60f72db`) |
 | ISS-03 | Média | Testes de componentes/proxy e fluxos reais ainda parciais; adicionar cenários de navegação, filtros, PDF e armazenamento indisponível | VERIFICADO (2026-10-07: navegação e filtros em tests/fluxosInterface.test.mjs; PDF e armazenamento em tests/estudosFluxos.test.mjs; proxy HTTP em tests/proxyFluxos.test.mjs; suíte npm test aprovada) |
 | ISS-04 | Histórico | Recomposição de prefixo no proxy implementada | IMPLEMENTADO |
 | ISS-05 | Histórico | Remoção de Origin no proxy implementada | IMPLEMENTADO |
@@ -238,10 +238,10 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | ID | Tarefa preservada / adicional | Estado |
 |---|---|---|
 | TASK-01 | Endpoint e tela de monitorados | IMPLEMENTADO |
-| TASK-02 | Vendorizar dependências de interface para uso offline | PLANEJADO |
+| TASK-02 | Vendorizar dependências de interface para uso offline | VERIFICADO (2026-10-08: ver ISS-02; commit `60f72db`) |
 | TASK-03 | Ampliar testes de componentes, progresso e proxy | VERIFICADO (2026-10-07: cenários de navegação, filtros combinados, abertura/fechamento de PDF, progresso sem armazenamento persistente e encaminhamento do proxy cobertos; npm test aprovado) |
 | TASK-04 | Serviço front-end no compose da infraestrutura | IMPLEMENTADO |
-| TASK-05 | Pausar/desativar monitoramento pela interface | PLANEJADO |
+| TASK-05 | Pausar/desativar monitoramento pela interface | VERIFICADO (2026-10-08: botão "Remover" na visão Favoritos com `title="Pausar a coleta intradiária"`; dispara `DELETE /ativos/favoritar/{s}`, que pausa o ciclo intradiário BRAPI; commit `ef60374`) |
 | TASK-06 | Reescrever SPEC com cursos, PDFs, glossário, filtros e planos | VERIFICADO |
 | TASK-07 | Atualizar narrativa da Avaliação com evidências atuais | IMPLEMENTADO (2026-10-07) |
 | TASK-08 | Auditar completude e proveniência dos termos de todos os PDFs | EM ANDAMENTO |
@@ -358,7 +358,7 @@ Algumas destas melhorias exigem que o gestor exponha campos ainda não declarado
 | REQ-ETL-2 | Exibir ticket médio diário (= `volume_financeiro ÷ numero_negocios`) na série histórica e no resumo da ficha; valor ausente quando `numero_negocios = 0`; tooltip explica a métrica | 1 | PLANEJADO |
 | REQ-ETL-3 | Exibir FCO bruto × FCO líquido lado a lado na aba Fundamentos da ficha; disponível apenas para empresas com DFC método direto; campo ausente mostra "—" sem ocultar o FCO líquido | 2 | PLANEJADO |
 | REQ-ETL-4 | Exibir composição ON × PN na ficha do ativo (gráfico de rosca ou barras empilhadas); zero aceitável para empresa sem PN; fonte e competência exibidas abaixo do gráfico | 2 | PLANEJADO |
-| REQ-ETL-5 | Tela de opções por ativo (`#/candles` ou nova rota `#/opcoes`): cadeia calls × puts agrupada por data de vencimento, último preço, volume e strike; linha ATM destacada; filtro por série de vencimento; reprocessar o mesmo arquivo não duplica registros | 3 | PLANEJADO |
+| REQ-ETL-5 | Tela de opções por ativo (`#/candles` ou nova rota `#/opcoes`): cadeia calls × puts agrupada por data de vencimento, último preço, volume e strike; linha ATM destacada; filtro por série de vencimento; reprocessar o mesmo arquivo não duplica registros | 3 | IMPLEMENTADO (2026-10-08; ver TASK-ETL-5) |
 
 ### Tarefas
 
@@ -368,7 +368,7 @@ Algumas destas melhorias exigem que o gestor exponha campos ainda não declarado
 | TASK-ETL-2 | **Ticket médio:** `calcularTicketMedio(vf, nn)` em `analise/pregoes.js` (retorna null quando nn ≤ 0); coluna `Ticket médio` na tabela de pregões; sparkline no resumo da ficha; teste unitário puro | Gestor expor `numero_negocios` em `/pregoes` | PLANEJADO |
 | TASK-ETL-3 | **FCO bruto × líquido:** par de barras horizontais em `components/ficha/FluxoCaixa.js`; `fco_bruto` e `fluxo_caixa_operacional` do DTO fundamentos-cvm; barra laranja (bruto) + verde (líquido); delta em R$ e % da receita líquida abaixo; exibido só quando ao menos um dos dois for não nulo | Gestor expor `fco_bruto` no DTO | PLANEJADO |
 | TASK-ETL-4 | **Composição ON × PN:** gráfico de rosca em `components/ficha/ComposicaoCapital.js` (Canvas API ou SVG inline); legenda com `qt_acao_ordinaria`, `qt_acao_preferencial` e total ex-tesouraria; competência da referência exibida; teste de renderização com dados mockados | Gestor expor campos em `/composicao-capital` ou fundamentos-cvm | PLANEJADO |
-| TASK-ETL-5 | **Painel de opções:** nova rota `#/opcoes?simbolo=PETR4&vencimento=202512`; `components/OpcoesPainel.js` com tabela calls/puts pela chain do vencimento selecionado; células coloridas por moneyness (ITM/ATM/OTM); seletor de série de vencimento disponível; modo cartão em 375 px; `<estado-vazio>` quando o ativo não tem opções | Gestor novo endpoint `/ativos/{s}/opcoes` | PLANEJADO |
+| TASK-ETL-5 | **Painel de opções:** nova rota `#/opcoes?simbolo=PETR4&vencimento=202512`; `components/OpcoesPainel.js` com tabela calls/puts pela chain do vencimento selecionado; células coloridas por moneyness (ITM/ATM/OTM); seletor de série de vencimento disponível; modo cartão em 375 px; `<estado-vazio>` quando o ativo não tem opções | Gestor novo endpoint `/ativos/{s}/opcoes` | VERIFICADO (2026-10-08: `pages/OpcaoPage.js` em `#/opcoes/{ativo}`; `components/OpcoesPainel.js` com tabela CALL/PUT e badge ITM/ATM/OTM; seletor de vencimento; item "Opções" no grupo Mercado de `navegacao.js`; rota `#/opcoes` e subrotas `#/opcoes/*` em `router.js`; gestor `OpcaoController` + `RepositorioOpcoes` em `feature-teste`; commits `be8f3a0` (frontend) e `fea7349` (gestor)) |
 
 ### Plano de execução
 
