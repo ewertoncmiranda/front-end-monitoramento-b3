@@ -1,6 +1,7 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarFundamentos, buscarFundamentosCvm } from '../api/analisesApi.js';
 import { buscarComposicaoCapital } from '../api/composicaoCapitalApi.js';
+import { buscarSituacaoCvm } from '../api/baseAtivosApi.js';
 import { buscarPregoes, velasDoBanco } from '../api/pregoesApi.js';
 import { buscarBacktest } from '../api/validacaoApi.js';
 import { indicadores, precoDasVelas, selosDeQualidade } from '../analise/fichaDoAtivo.js';
@@ -20,6 +21,7 @@ import '../components/ficha/ProventosContabeis.js';
 import '../components/ficha/ComunicadosDoAtivo.js';
 import '../components/ficha/OpiniaoHorizontes.js';
 import '../components/ficha/ComposicaoCapital.js';
+import '../components/ficha/UltimosPregoes.js';
 
 const CHAVE_RECENTES = 'ficha-recentes';
 const MAX_RECENTES = 6;
@@ -130,6 +132,7 @@ export class ConsultaPage extends BaseComponent {
           <opiniao-horizontes simbolo="${escaparHtml(simbolo)}"></opiniao-horizontes>
           <selos-qualidade></selos-qualidade>
           <indicadores-grid></indicadores-grid>
+          <ultimos-pregoes></ultimos-pregoes>
         </div>
         <div id="painel-fundamentos" role="tabpanel" aria-labelledby="aba-fundamentos" class="d-none" data-lazy></div>
         <div id="painel-fatores" role="tabpanel" aria-labelledby="aba-fatores" class="d-none" data-lazy></div>
@@ -148,7 +151,15 @@ export class ConsultaPage extends BaseComponent {
     const velasP = buscarPregoes(simbolo, { de: umMesAtras() }).then(velasDoBanco).catch(() => []);
     const aindaAqui = () => this._simbolo === simbolo && resultado.isConnected;
 
-    velasP.then((velas) => aindaAqui() && $('ativo-hero').setVelas(velas));
+    velasP.then((velas) => {
+      if (!aindaAqui()) return;
+      $('ativo-hero').setVelas(velas);
+      $('ultimos-pregoes').setVelas(velas);
+    });
+    // Situacao na CVM e UF da sede: falha sozinha, a ficha segue sem o selo.
+    buscarSituacaoCvm(simbolo).catch(() => null).then((cvmInfo) => {
+      if (cvmInfo && aindaAqui()) $('ativo-hero').setAtivo({ simbolo, situacaoRegistro: cvmInfo.situacaoRegistro, uf: cvmInfo.uf });
+    });
 
     fundamentosP.then((fundamentos) => {
       if (!aindaAqui()) return;

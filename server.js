@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolverBackendUrl } from './proxy/backendConfig.js';
 import { registrarProxy } from './proxy/apiProxy.js';
+import { registrarProxyIa } from './proxy/iaProxy.js';
 import { buscarNoticias } from './proxy/noticiasApi.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -15,6 +16,7 @@ async function iniciar() {
   const backendUrl = await resolverBackendUrl(console);
 
   registrarProxy(app, backendUrl);
+  registrarProxyIa(app);
 
   // Nao proxia pro backend Java: e o proprio Node que busca a manchete no
   // Google News RSS (ver proxy/noticiasApi.js) - nao ha regra de negocio

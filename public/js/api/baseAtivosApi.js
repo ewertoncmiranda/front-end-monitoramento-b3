@@ -12,6 +12,14 @@ export function listarAtivosBase({ q, setor, uf, pagina = 0, tamanho = 30 } = {}
   return httpGet(`/base/ativos?${params.toString()}`);
 }
 
+/** Situacao do registro na CVM e UF da sede de UM simbolo (via /base/ativos, busca exata). null se nao achar. */
+export async function buscarSituacaoCvm(simbolo) {
+  const alvo = String(simbolo).trim().toUpperCase();
+  const pagina = await listarAtivosBase({ q: alvo, tamanho: 10 });
+  const item = (pagina?.content || []).find((i) => String(i.simbolo).toUpperCase() === alvo);
+  return item ? { situacaoRegistro: item.situacaoRegistro ?? null, uf: item.ufMunicipio ?? null } : null;
+}
+
 export function listarSetoresBase() {
   return httpGet('/base/setores');
 }
