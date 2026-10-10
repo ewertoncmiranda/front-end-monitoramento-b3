@@ -122,6 +122,7 @@ Em qualquer um dos dois, acesse `http://localhost:8080`.
 | `PORT` | `8080` | Porta HTTP do servidor. |
 | `BACKEND_URL` | `http://gestor-ativos-brutos:8091` | Destino primário do proxy (nome de serviço Docker). |
 | `BACKEND_URL_FALLBACK` | `http://localhost:8091` | Usado se o primário não responder a um healthcheck (`/actuator/health`) no startup. |
+| `IA_URL` | `http://ia-opiniao:8000` | Serviço de IA (insider-ia). Tudo em `/ia/*` é encaminhado para ele sem o prefixo, com SSE em tempo real. `/ia/opiniao*` e `/ia/indexar` são bloqueados. Sem o serviço, a tela `#/assistente` e o card "IA" da ficha mostram "indisponível" e o resto do painel funciona. Fora do Docker: `IA_URL=http://localhost:8000`. |
 
 Se nenhum dos dois responder, o servidor sobe mesmo assim (modo degradado): a UI estática funciona normalmente, só as chamadas de API falham até o backend aparecer.
 

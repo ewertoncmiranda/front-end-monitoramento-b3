@@ -52,6 +52,7 @@ Fonte: public/js/router.js e public/js/main.js.
 | #/noticias | Notícias |
 | #/indices | Séries macroeconômicas |
 | #/avaliacao | Avaliação editorial, saúde de dados, backtest e diário de sinais |
+| #/assistente | Assistente de IA conversacional (`<chat-ia>`), sem ativo fixo; grupo "Assistente" no menu. Depende do serviço de IA e fica indisponível sem ele (TASK-CHAT-4) |
 | #/estudos | Formações, Conhecimento, Orientações, Material didático e Referência |
 | #/glossario | Glossário geral, acadêmico e detalhamento de padrões |
 | #/padroes | Explicação dos padrões e limitações |
@@ -84,6 +85,8 @@ Avaliação combina texto estático datado e três componentes que consultam API
 EstudosPage oferece duas visões dentro de **Formações**: **Planos de estudo** e **Biblioteca de cursos**. Não existem duas rotas independentes para cursos e planos.
 
 Os planos incluem formação progressiva (iniciante, essencial, básico, intermediário, avançado e especialização) e percurso APIMEC (diagnóstico, CB, CG1, CT1, conduta e simulados). São orientações pedagógicas locais, sem promessa de certificação.
+
+O material didático também inclui uma trilha operacional de opções inspirada nos conceitos reconhecidos no playbook visual analisado: fundamentos acadêmicos, execução, payoff, liquidez, custos, bloqueios de uso e laboratório de assertividade. As imagens foram tratadas como insumo de conteúdo, não como fonte normativa nem instrução de produto.
 
 planosCursos.js relaciona cursos às competências de cada etapa. Todos os 29 cursos estão associados ao plano progressivo. O mesmo documento pode integrar mais de uma etapa. As referências de cursos do percurso APIMEC apontam para IDs existentes.
 
@@ -122,7 +125,7 @@ Aceite: arquivo existente, URL local correspondente, páginas referenciadas dent
 
 ### 3.5 Glossário
 
-GlossarioPage combina verbetes gerais, **118 verbetes acadêmicos** em glossarioAcademico.js e padrões detalhados em glossarioPadroes.js. A busca inclui termo, sigla, definição, exemplo, aplicação e ressalva quando presentes.
+GlossarioPage combina verbetes gerais, **149 verbetes acadêmicos** em glossarioAcademico.js e padrões detalhados em glossarioPadroes.js. A busca inclui termo, sigla, definição, exemplo, aplicação e ressalva quando presentes. O grupo de derivativos contextualiza opções com call, put, titular, lançador, prêmio, strike, vencimento, estilo de exercício, moneyness, payoff, breakeven, travas, lançamento coberto, estruturas de volatilidade, gregas, liquidez e métricas de assertividade.
 
 Não há sincronização automática comprovada com infra/GLOSSARIO.md. O glossário local não deve ser descrito como simples espelho desse arquivo.
 
@@ -169,8 +172,16 @@ Cursos documentais não registram conclusão de aulas ou progresso de leitura. �
 | GET /validacao/backtest | Placar da última execução |
 | GET /setores | Agrupamento por setor |
 | GET /indices-macro/{codigo} | Séries macroeconômicas |
+| GET /noticias/favoritos?simbolos=A,B | Manchetes dos favoritos (CTR-PAI-NOT-01), servido pelo próprio `server.js` com cache e deduplicação; usado no card da tela inicial |
+| POST /ia/chat | Assistente, resposta por SSE (CTR-IA-02): eventos `inicio`, `token`, `fontes`, `aviso`, `fim` ou `erro` (`INDISPONIVEL`, `LIMITE`, `FORA_DO_TEMA`) |
+| GET /ia/ativo/{simbolo} | Pacote do ativo para o card "IA" da ficha (CTR-IA-03); qualquer falha vira "IA indisponível" e a opinião por regra continua |
+| POST /ia/ativo/{simbolo}/leitura | Leitura em parágrafo, com origem e "em cache" (CTR-IA-04) |
+| POST /ia/manchetes/resumo | Resumo em 3 tópicos das manchetes exibidas; link fora da lista enviada é descartado também no front |
+| GET /ia/saude | Estado do serviço de IA |
 
-O proxy cobre oito prefixos: /ativos, /analises, /api, /setores, /indices-macro, /empresas, /comunicados e /validacao. Notícias têm tratamento próprio em server.js. Chamadas usam a mesma origem do front.
+O proxy cobre oito prefixos: /ativos, /analises, /api, /setores, /indices-macro, /empresas, /comunicados e /validacao. Notícias têm tratamento próprio em server.js.
+
+O prefixo `/ia/*` é um proxy à parte (`proxy/iaProxy.js`), que não passa pelo gestor: remove `/ia` e encaminha ao serviço de IA em `IA_URL` (padrão `http://ia-opiniao:8000`), repassando SSE sem acumular e removendo `Origin`. `/ia/opiniao*` e `/ia/indexar` são bloqueados (403 `ROTA_NAO_PERMITIDA`): o painel não gera opinião nem reindexa. Serviço fora responde 503 `IA_INDISPONIVEL`. Chamadas usam a mesma origem do front.
 
 pathRewrite recompõe o prefixo removido pelo Express e trata a raiz sem barra final adicional. O proxy remove Origin antes de encaminhar. Isso não implementa autenticação.
 
@@ -196,7 +207,7 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | REQ-14 | Leitor PDF sob demanda, referência de página e nova aba | IMPLEMENTADO — teste visual pendente |
 | REQ-15 | Busca combinada com dificuldade, escopo e tipo | IMPLEMENTADO — testes verificam atributos HTML e o estado em URL; interação visual conferida manualmente em 2026-10-07 (restauração de busca/visão por link), sem teste automatizado de clique |
 | REQ-16 | Todos os cursos associados ao plano progressivo; IDs APIMEC válidos | VERIFICADO — tests/cursos.test.mjs |
-| REQ-17 | Glossário acadêmico e reconciliação integral com PDFs | EM ANDAMENTO — 118 verbetes; completude não demonstrada |
+| REQ-17 | Glossário acadêmico e reconciliação integral com PDFs | EM ANDAMENTO — 149 verbetes; completude não demonstrada |
 | REQ-18 | Progresso por etapa local; cursos documentais sem progresso | IMPLEMENTADO |
 | NFR-01 | Cliente sem build; servidor com npm install | IMPLEMENTADO |
 | NFR-02 | Navegação hash adequada a hospedagem estática; WebView exige validação própria | IMPLEMENTADO |
@@ -251,7 +262,9 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 
 Executado **npm test**, com sucesso: detector de padrões, nove casos de associação de comunicados, dez casos de diário, convenções de português e integridade do catálogo de cursos.
 
-Inspeção adicional por importação dos dados confirmou 29 cursos, 71 módulos, 97 aulas, cinco valores atuais de dificuldade, dois valores de escopo e 118 verbetes acadêmicos. Estes números descrevem o catálogo nesta data e devem ser atualizados quando ele mudar.
+Em 2026-10-08, após a inclusão da trilha e do glossário de opções, nova execução de **npm test** passou integralmente.
+
+Inspeção adicional por importação dos dados confirmou 29 cursos, 71 módulos, 97 aulas, cinco valores atuais de dificuldade, dois valores de escopo e 149 verbetes acadêmicos. Estes números descrevem o catálogo atual e devem ser atualizados quando ele mudar.
 
 O teste de cursos verifica existência dos PDFs, IDs únicos, aulas preenchidas e limites de páginas declarados, associação ao plano progressivo, referências APIMEC, atributos dos filtros e cinco termos acadêmicos. Não verifica toda a renderização, todos os metadados contra os PDFs, número físico de páginas, operação do iframe ou exaustividade do glossário.
 
@@ -447,12 +460,12 @@ Saída 200:
 
 | ID | Tarefa | Arquivos | Depende | Aceite | Status |
 |---|---|---|---|---|---|
-| TASK-NOT-1 | **Agregador** `noticiasFavoritos(simbolos, {buscar, agora})` com `buscar` injetável: no máximo 3 buscas em paralelo; cache em memória por ticker de 15 min; após erro, 30 min sem tentar de novo aquele ticker (devolve o cache vencido marcado `desatualizado`); duplicata = mesmo link **ou** títulos normalizados (minúsculas, sem acento/pontuação, sem " - Fonte" no fim) com similaridade de Jaccard por palavras ≥ 0,85; ordena por `publicadoEm` desc; corta 7 dias e 30 itens. Rota `GET /noticias/favoritos` no `server.js` (CTR-PAI-NOT-01) | `proxy/noticiasFavoritos.js`, `server.js` | — | Testes com `buscar` e relógio falsos: paralelismo ≤ 3, cache 15 min, pausa de 30 min após erro, junção de tickers, duplicata por título, corte de 7 dias/30 itens, 400 para ticker inválido | PLANEJADO |
-| TASK-NOT-2 | **Busca mais precisa:** `buscarNoticias(ticker, { nome })` pesquisa `"TICKER"` entre aspas e, com nome, `"TICKER" OR "Nome"`; `publicadoEm` convertido para ISO; `/noticias/:ticker` continua igual para a `NoticiasPage` | `proxy/noticiasApi.js` | — | Teste da URL montada (com e sem nome, nome com acento codificado) e da conversão de data do `pubDate` | PLANEJADO |
-| TASK-NOT-3 | **Card "Manchetes dos favoritos"** no topo da `InicioPage` (antes de "Saúde dos dados", largura total): lista favoritos via `listarFavoritos()`, chama `buscarManchetesFavoritos(simbolos, nomes)`; cada item com selo do ticker, título como link (`target="_blank" rel="noopener noreferrer"`), veículo e "há X h"; chips de filtro por ticker; 8 itens visíveis e botão "mais"; estados: carregando, sem favoritos ("Marque ativos com ★ para ver as manchetes aqui" + link `#/ativos?visao=favoritos`), tudo falhou ("Fontes de notícias indisponíveis agora"), `desatualizado` (selo "pode estar desatualizado") | `public/js/api/noticiasApi.js`, `public/js/components/inicio/ManchetesFavoritos.js`, `public/js/pages/InicioPage.js` | NOT-1 | Teste da função de renderização pura (`htmlManchetes(dados, filtro)`): escape de título/fonte (`<script>` vira texto), filtro por ticker, "mais N", cada estado | PLANEJADO |
-| TASK-NOT-4 | **Comunicado oficial em destaque:** no mesmo card, acima das manchetes, comunicados da CVM do dia útil mais recente dos favoritos (já carregados pela newsletter da `InicioPage`), com selo "Oficial – CVM"; nunca misturados com a mídia | `public/js/components/inicio/ManchetesFavoritos.js` | NOT-3 | Teste: comunicado aparece separado e com o selo; sem comunicado, a faixa some | PLANEJADO |
-| TASK-NOT-5 | **Resumo do dia por IA (opcional):** botão "Resumir com IA" no card chama `POST /ia/manchetes/resumo` (TASK-IA-38) com as manchetes já exibidas; mostra 3 tópicos com os links citados; sem serviço ou cota ⇒ "Resumo indisponível agora" e o card segue funcionando | `public/js/api/iaApi.js`, `public/js/components/inicio/ManchetesFavoritos.js` | NOT-3, CHAT-1, IA-38 | Teste com fixture do contrato: tópicos renderizados com links; link fora da lista enviada é descartado no front também | PLANEJADO |
-| TASK-NOT-6 | **Testes no `npm test`:** `tests/noticiasFavoritos.test.mjs` (NOT-1/2) e `tests/manchetesFavoritos.test.mjs` (NOT-3..5) | `tests/*.test.mjs`, `package.json` | NOT-1..5 | `npm test` verde | PLANEJADO |
+| TASK-NOT-1 | **Agregador** `noticiasFavoritos(simbolos, {buscar, agora})` com `buscar` injetável: no máximo 3 buscas em paralelo; cache em memória por ticker de 15 min; após erro, 30 min sem tentar de novo aquele ticker (devolve o cache vencido marcado `desatualizado`); duplicata = mesmo link **ou** títulos normalizados (minúsculas, sem acento/pontuação, sem " - Fonte" no fim) com similaridade de Jaccard por palavras ≥ 0,85; ordena por `publicadoEm` desc; corta 7 dias e 30 itens. Rota `GET /noticias/favoritos` no `server.js` (CTR-PAI-NOT-01) | `proxy/noticiasFavoritos.js`, `server.js` | — | Testes com `buscar` e relógio falsos: paralelismo ≤ 3, cache 15 min, pausa de 30 min após erro, junção de tickers, duplicata por título, corte de 7 dias/30 itens, 400 para ticker inválido | IMPLEMENTADO (f2285b8, 2026-10-08): `proxy/noticiasFavoritos.js` com Jaccard, cache 15 min, pausa 30 min, paralelo ≤ 3, dedup por link e título; rota `GET /noticias/favoritos` no `server.js`; `tests/noticiasFavoritos.test.mjs` (13 casos ok) |
+| TASK-NOT-2 | **Busca mais precisa:** `buscarNoticias(ticker, { nome })` pesquisa `"TICKER"` entre aspas e, com nome, `"TICKER" OR "Nome"`; `publicadoEm` convertido para ISO; `/noticias/:ticker` continua igual para a `NoticiasPage` | `proxy/noticiasApi.js` | — | Teste da URL montada (com e sem nome, nome com acento codificado) e da conversão de data do `pubDate` | IMPLEMENTADO (f2285b8, 2026-10-08): `proxy/noticiasApi.js` com aspas no ticker, `OR "Nome"` com nome, `pubDateParaIso` ISO; `tests/noticiasFavoritos.test.mjs` cobre URL e data |
+| TASK-NOT-3 | **Card "Manchetes dos favoritos"** no topo da `InicioPage` (antes de "Saúde dos dados", largura total): lista favoritos via `listarFavoritos()`, chama `buscarManchetesFavoritos(simbolos, nomes)`; cada item com selo do ticker, título como link (`target="_blank" rel="noopener noreferrer"`), veículo e "há X h"; chips de filtro por ticker; 8 itens visíveis e botão "mais"; estados: carregando, sem favoritos ("Marque ativos com ★ para ver as manchetes aqui" + link `#/ativos?visao=favoritos`), tudo falhou ("Fontes de notícias indisponíveis agora"), `desatualizado` (selo "pode estar desatualizado") | `public/js/api/noticiasApi.js`, `public/js/components/inicio/ManchetesFavoritos.js`, `public/js/pages/InicioPage.js` | NOT-1 | Teste da função de renderização pura (`htmlManchetes(dados, filtro)`): escape de título/fonte (`<script>` vira texto), filtro por ticker, "mais N", cada estado | IMPLEMENTADO (6ae67c3, 2026-10-08): `buscarManchetesFavoritos` em `noticiasApi.js`, card na `InicioPage` antes de "Saúde dos dados", escape XSS, chips de filtro, "8 visíveis + mais N", todos os estados; testes em `manchetesFavoritos.test.mjs` |
+| TASK-NOT-4 | **Comunicado oficial em destaque:** no mesmo card, acima das manchetes, comunicados da CVM do dia útil mais recente dos favoritos (já carregados pela newsletter da `InicioPage`), com selo "Oficial – CVM"; nunca misturados com a mídia | `public/js/components/inicio/ManchetesFavoritos.js` | NOT-3 | Teste: comunicado aparece separado e com o selo; sem comunicado, a faixa some | IMPLEMENTADO (6ae67c3, 2026-10-08): destaque `FATO_RELEVANTE` com selo "Oficial – CVM" acima das manchetes; sem comunicado a faixa some; testes: 4 casos ok |
+| TASK-NOT-5 | **Resumo do dia por IA (opcional):** botão "Resumir com IA" no card chama `POST /ia/manchetes/resumo` (TASK-IA-38) com as manchetes já exibidas; mostra 3 tópicos com os links citados; sem serviço ou cota ⇒ "Resumo indisponível agora" e o card segue funcionando | `public/js/api/iaApi.js`, `public/js/components/inicio/ManchetesFavoritos.js` | NOT-3, CHAT-1, IA-38 | Teste com fixture do contrato: tópicos renderizados com links; link fora da lista enviada é descartado no front também | IMPLEMENTADO (7ff585d, 2026-10-08): botão "Resumir com IA" aparece só com manchetes; `htmlResumo` renderiza 3 tópicos, descarta links fora da lista, corta em 3, "indisponível" sem tópicos; testes em `manchetesFavoritos.test.mjs` (5 casos ok) |
+| TASK-NOT-6 | **Testes no `npm test`:** `tests/noticiasFavoritos.test.mjs` (NOT-1/2) e `tests/manchetesFavoritos.test.mjs` (NOT-3..5) | `tests/*.test.mjs`, `package.json` | NOT-1..5 | `npm test` verde | IMPLEMENTADO (7ff585d, 2026-10-08): `tests/noticiasFavoritos.test.mjs` (13 casos) e `tests/manchetesFavoritos.test.mjs` (19 casos); `npm test` verde em todos os 38 arquivos de teste |
 
 ### Trilha CHAT — assistente conversacional e card IA na ficha
 
@@ -463,11 +476,54 @@ Saída 200:
 | TASK-CHAT-3 | **Componente `<chat-ia simbolo? contexto?>`:** balões do usuário (direita) e da IA (esquerda); texto da IA inserido como **texto** (nunca `innerHTML` do conteúdo do modelo); indicador "digitando"; botão "Parar" (aborta o `fetch`); etiquetas de `fontes`; `aviso` em nota pequena sob o balão; erros por código do CTR-IA-02 (`INDISPONIVEL` ⇒ "Assistente indisponível até HH:MM" com `tentar_apos`; `LIMITE`; `FORA_DO_TEMA`); sugestões de perguntas como chips; rodapé com aviso experimental e o modelo do evento `inicio`; `Enter` envia, `Shift+Enter` quebra linha; `aria-live="polite"` na lista; `sessao_id` (UUID) e histórico em `sessionStorage` por chave `chat:<simbolo|geral>`, protegidos por try/catch; CSS dos balões (claro e escuro) em `app.css`, seção "CHAT-3" | `public/js/components/ia/ChatIa.js`, `public/css/app.css` | CHAT-2 | Testes: `<script>` na resposta aparece como texto; sequência `inicio→token→fim` monta um balão; `erro INDISPONIVEL` mostra horário; sem `sessionStorage` o componente funciona | IMPLEMENTADO (Sessão 01, 2026-10-08): `components/ia/ChatIa.js` + CSS "CHAT-3" em `app.css`; testes adiados por decisão do usuário; falta ver com o serviço real |
 | TASK-CHAT-4 | **Tela "Assistente"** `#/assistente`: item no menu, `<chat-ia>` sem símbolo, sugestões gerais ("O que é P/L?", "Como ler o score de confiança?", "O que mudou na WEGE3 esta semana?"), texto explicando o que o assistente faz e não faz (não recomenda compra/venda; usa só dados públicos) | `public/js/pages/AssistentePage.js`, `public/js/router.js`, `public/js/navegacao.js`, `public/js/main.js` | CHAT-3 | Rota abre a página; item de menu ativo; teste de rota no estilo de `tests/fluxosInterface.test.mjs` | IMPLEMENTADO (Sessão 03, 2026-10-08): `AssistentePage.js`, grupo "Assistente" no menu (6 grupos), `<chat-ia>` geral com as 3 sugestões e o quadro do que faz/não faz; tests/assistente.test.mjs; verificado no navegador (rota, menu ativo, pergunta → "Assistente indisponível agora" sem o backend) |
 | TASK-CHAT-5 | **Card "IA" na ficha** `<ativo-ia simbolo>` na aba Resumo da `ConsultaPage`, logo abaixo de `<opiniao-horizontes>`: (1) **pacote** (CTR-IA-03) com 3 horizontes compactos (reusa `OPINIOES`/`RISCOS` de `OpiniaoHorizontes.js`), 3 sinais mais fortes, 3 últimas manchetes; (2) **leitura**: botão "Ler com IA" chama CTR-IA-04 e mostra o parágrafo com origem e "em cache"; (3) **conversa**: `<details>` "Conversar sobre {simbolo}" com `<chat-ia simbolo>` e sugestões ("Por que o sinal está neutro?", "O que mudou desde ontem?", "Quais riscos aparecem nos números?"). Estados: carregando; serviço fora ("IA indisponível; a opinião por regra continua acima"); só opinião por regra no pregão ⇒ nota "Leitura do modelo ainda não gerada para este pregão; favoritos entram no próximo lote" (o painel não gera opinião: TASK-IA-37 descartada) | `public/js/components/ficha/AtivoIa.js`, `public/js/pages/ConsultaPage.js` | CHAT-2, CHAT-3 | Testes da renderização pura `htmlPacote(dados)` e dos estados; valor `null` aparece como "sem dado", nunca 0; a troca de ativo cancela a busca anterior (mesmo padrão de `OpiniaoHorizontes`) | IMPLEMENTADO (Sessão 03, 2026-10-08): `AtivoIa.js` abaixo de `<opiniao-horizontes>`; `htmlPacote`/`htmlLeitura` puros (null = "sem dado", só regra ⇒ nota, link só http(s), texto escapado), chat montado só ao abrir o `<details>`; qualquer falha do pacote ⇒ "IA indisponível; a opinião por regra continua acima" (404 incluso enquanto a rota `/ativo` não existe no serviço, TASK-IA-35); tests/ativoIa.test.mjs; verificado no navegador com o serviço fora e com o pacote de exemplo do CTR-IA-03 |
-| TASK-CHAT-6 | **Testes no `npm test`:** `tests/sse.test.mjs`, `tests/chatIa.test.mjs`, `tests/ativoIa.test.mjs`, `tests/iaProxy.test.mjs` | `tests/*.test.mjs`, `package.json` | CHAT-1..5 | `npm test` verde | PLANEJADO |
-| TASK-CHAT-7 | **Documentação:** seção 5 deste SPEC ("Contratos consumidos") com `/ia/*` e `/noticias/favoritos`; seção 2.1 (navegação) com `#/assistente`; nota no `README.md` sobre `IA_URL` | `SPEC.md`, `README.md` | CHAT-1..5, NOT-1 | Seções coerentes com o código | PLANEJADO |
+| TASK-CHAT-6 | **Testes no `npm test`:** `tests/sse.test.mjs`, `tests/chatIa.test.mjs`, `tests/ativoIa.test.mjs`, `tests/iaProxy.test.mjs` | `tests/*.test.mjs`, `package.json` | CHAT-1..5 | `npm test` verde | IMPLEMENTADO (Sessão 01, 2026-10-08): `tests/sse.test.mjs` (8 casos, inclui `conversar` com fetch em fluxo) e `tests/chatIa.test.mjs` (6 casos, DOM mínimo simulado); `iaProxy`, `ativoIa` e `assistente` já estavam no `npm test` |
+| TASK-CHAT-7 | **Documentação:** seção 5 deste SPEC ("Contratos consumidos") com `/ia/*` e `/noticias/favoritos`; seção 2.1 (navegação) com `#/assistente`; nota no `README.md` sobre `IA_URL` | `SPEC.md`, `README.md` | CHAT-1..5, NOT-1 | Seções coerentes com o código | IMPLEMENTADO (2026-10-08): seção 2.1 (``#/assistente``), seção 5 (``/ia/*``, ``/noticias/favoritos`` e o proxy de IA) e nota de ``IA_URL`` no README |
 
 **Aceite do plano GEM no painel (depois das imagens no Hub).**
 - Tela inicial mostra manchetes dos favoritos sem duplicatas, com filtro por ticker; sem favoritos, mostra o convite.
 - `#/assistente` responde em streaming; com o Gemini fora, mostra "Assistente indisponível até HH:MM" e não trava.
 - Na ficha da WEGE3, o card IA mostra o pacote, gera a leitura ao clicar e conversa com o ativo fixado.
 - `npm test` verde.
+
+---
+
+## Plano OPR: aba Operabilidade e paper trading (2026-10-08)
+
+**Status:** PLANEJADO · **Contexto:** `infra-b3-ecossytem/SPEC.md`, Plano OPR. O painel não decide operação; ele mostra, com linguagem conservadora, se o sistema simulado já tem evidência mínima para ser considerado operável em paper trading.
+
+**Meta de UX.** Responder visualmente: o sistema venceu o CDI líquido de custos? por quantos pregões? com qual drawdown? quais operações estão abertas/fechadas? quais sinais foram bloqueados por liquidez, dados ou risco?
+
+### Navegação proposta
+
+Adicionar seção `#/operabilidade` ou subtela dentro de `#/avaliacao` com:
+
+- card de status: `Não operável`, `Em observação`, `Paper trading elegível` ou `Bloqueado`;
+- retorno líquido vs CDI;
+- drawdown máximo;
+- dias de diário avaliados;
+- operações abertas e encerradas;
+- bloqueios por liquidez/dados/risco;
+- tabela de diário e linha do tempo das operações simuladas.
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| OPR-PAI-1 | Criar cliente `operacionalApi.js` para consumir `/operacional/resumo`, `/operacional/diario`, `/operacional/operacoes`, `/operacional/bloqueios` e `/operacional/saude` | `public/js/api/operacionalApi.js` | gestor#OPR-GES-2..4 | Testes com `fetch` falso cobrem sucesso, vazio, erro 503 e datas | PLANEJADO |
+| OPR-PAI-2 | Criar página/aba `OperabilidadePage` com status, retorno líquido, CDI, excesso, drawdown, dias avaliados e alerta de que ainda é simulação | `public/js/pages/OperabilidadePage.js`, `router.js`, `navegacao.js` | OPR-PAI-1 | Estado vazio mostra “diário ainda não iniciado”; status nunca usa linguagem de recomendação de compra/venda | PLANEJADO |
+| OPR-PAI-3 | Criar componentes de carteira simulada: operações abertas, operações fechadas, motivo de entrada/saída, tamanho de posição e custos | `public/js/components/operacional/**` | OPR-PAI-1 | Operação fechada exibe retorno bruto, custos, retorno líquido e motivo de saída; valores `null` aparecem como “sem dado” | PLANEJADO |
+| OPR-PAI-4 | Criar gráfico simples de retorno líquido acumulado vs CDI e drawdown, com tabela acessível de diário | `public/js/components/operacional/GraficoOperabilidade.js` | OPR-PAI-1 | Gráfico funciona em claro/escuro; tabela permite auditar cada pregão; sem dado não desenha zero falso | PLANEJADO |
+| OPR-PAI-5 | Criar painel de bloqueios por liquidez, dado ausente, evento, fundamento futuro e limite de risco | `public/js/components/operacional/BloqueiosOperacionais.js` | OPR-PAI-1 | Usuário entende por que um sinal não virou operação simulada; filtros por motivo e símbolo | PLANEJADO |
+| OPR-PAI-6 | Testes no `npm test` para API, renderização dos estados, escape de texto e cálculo visual de status | `tests/operabilidade*.test.mjs`, `package.json` | OPR-PAI-2..5 | `npm test` verde; conteúdo vindo da API é escapado | PLANEJADO |
+
+### Textos obrigatórios
+
+- “Simulação/paper trading; não é recomendação de investimento.”
+- “Elegível” significa que os critérios internos foram cumpridos no diário, não garantia de retorno futuro.
+- Mostrar sempre a janela avaliada e se ela ainda é menor que 3 ou 6 meses.
+
+### Aceite local
+
+- A tela distingue claramente sistema sem diário, diário em observação, sistema bloqueado e paper trading elegível.
+- Retorno líquido, CDI e excesso aparecem juntos; nunca mostrar retorno bruto isolado como sucesso.
+- O usuário consegue abrir uma operação e ver qual regra entrou, qual regra saiu, custo estimado e impacto no resultado.
