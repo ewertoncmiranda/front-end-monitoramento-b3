@@ -11,6 +11,8 @@ import { formatarData } from '../utils/dataHora.js';
 import { htmlSelo } from '../utils/selos.js';
 import { escaparHtml } from '../utils/html.js';
 import { htmlEstadoVazio } from '../components/EstadoVazio.js';
+import { buscarAlertasOperacionais } from '../api/operacionalV2Api.js';
+import { htmlAlertasOperacionais } from '../components/inicio/AlertasOperacionais.js';
 import '../components/LoadingSpinner.js';
 
 // Unica responsabilidade: a pagina Inicio (REQ-UX-7) - um resumo do que mudou:
@@ -30,6 +32,9 @@ export class InicioPage extends BaseComponent {
         </form>
       </div>
       <div class="row g-3">
+        <section class="col-12" aria-labelledby="ini-alertas"><div class="card shadow-sm"><div class="card-body">
+          <div class="d-flex justify-content-between"><h6 id="ini-alertas">Alertas operacionais</h6><a class="small" href="#/operabilidade">Abrir cockpit</a></div>
+          <div data-alertas-operacionais>${carregando}</div></div></div></section>
         <section class="col-lg-6" aria-labelledby="ini-saude"><div class="card shadow-sm cartao-inicio"><div class="card-body">
           <h6 id="ini-saude">Saúde dos dados</h6><div data-saude>${carregando}</div></div></div></section>
         <section class="col-lg-6" aria-labelledby="ini-fav"><div class="card shadow-sm cartao-inicio"><div class="card-body">
@@ -66,6 +71,8 @@ export class InicioPage extends BaseComponent {
     ]);
 
     this.bloco('[data-saude]', buscarSaudeDosDados(), htmlSaude, 'Saúde dos dados indisponível');
+    this.bloco('[data-alertas-operacionais]', buscarAlertasOperacionais(),
+      (dados) => htmlAlertasOperacionais(dados, { compacto: true }), 'Alertas operacionais indisponíveis');
     this.bloco('[data-favoritos]', favoritosP, htmlFavoritos, 'Favoritos indisponíveis');
     this.bloco('[data-comunicados]', newsletterP, htmlComunicados, 'Comunicados indisponíveis');
 

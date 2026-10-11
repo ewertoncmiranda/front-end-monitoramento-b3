@@ -23,6 +23,7 @@ import '../components/ficha/OpiniaoHorizontes.js';
 import '../components/ficha/AtivoIa.js';
 import '../components/ficha/ComposicaoCapital.js';
 import '../components/ficha/UltimosPregoes.js';
+import '../components/ficha/OperabilidadeAtivo.js';
 
 const CHAVE_RECENTES = 'ficha-recentes';
 const MAX_RECENTES = 6;
@@ -139,6 +140,7 @@ export class ConsultaPage extends BaseComponent {
         <div id="painel-fundamentos" role="tabpanel" aria-labelledby="aba-fundamentos" class="d-none" data-lazy></div>
         <div id="painel-fatores" role="tabpanel" aria-labelledby="aba-fatores" class="d-none" data-lazy></div>
         <div id="painel-comunicados" role="tabpanel" aria-labelledby="aba-comunicados" class="d-none ficha-cartao" data-lazy></div>
+        <div id="painel-operabilidade" role="tabpanel" aria-labelledby="aba-operabilidade" class="d-none" data-lazy></div>
       </div>
     `;
     this._dados = { fundamentos: null, cvm: null, composicao: null };
@@ -237,6 +239,8 @@ export class ConsultaPage extends BaseComponent {
         <div class="col-lg-6"><proventos-contabeis simbolo="${seguro}"></proventos-contabeis></div></div>`;
     } else if (aba === 'comunicados') {
       painel.innerHTML = `<p class="ficha-rotulo">Comunicados oficiais (CVM)</p><comunicados-do-ativo simbolo="${seguro}"></comunicados-do-ativo>`;
+    } else if (aba === 'operabilidade') {
+      painel.innerHTML = `<operabilidade-ativo simbolo="${seguro}"></operabilidade-ativo>`;
     }
   }
 }

@@ -76,7 +76,7 @@ Até três meses, o gráfico usa o endpoint de histórico e permite base ajustad
 
 Padrões e comparação com taxa-base são calculados no navegador. Comunicados são associados por data de entrega; associação temporal não prova causalidade nem horário intradiário.
 
-Avaliação combina texto estático datado e três componentes que consultam API: SaudeDosDados, BacktestPlacar e DiarioDeSinais. O placar já renderiza intervalos de confiança. A seção editorial ainda diz que esses intervalos estão pendentes: divergência ISS-07.
+Avaliação foi refatorada em 2026-10-11 como cockpit de evidências: veredito executivo, notas por pilar, critérios de promoção de regra, Saúde dos dados, Backtest walk-forward, Ranking/LAC, Diário de sinais e link direto para Operabilidade. A página não recalcula recomendação nem promove regra; ela só organiza evidências vivas e mantém aviso experimental.
 
 ## 3. Estudos, cursos e PDFs
 
@@ -240,7 +240,7 @@ O enum canônico de recomendação vem de infra/contracts/insight.schema.json, d
 | ISS-04 | Histórico | Recomposição de prefixo no proxy implementada | IMPLEMENTADO |
 | ISS-05 | Histórico | Remoção de Origin no proxy implementada | IMPLEMENTADO |
 | ISS-06 | Média | SPEC não representava o produto; revisão confrontada com código e suíte em 27/09 | VERIFICADO |
-| ISS-07 | Média | Texto de Avaliação desatualizado sobre IC e tarefas; reconciliar afirmações, mantendo notas justificadas por evidência | IMPLEMENTADO (2026-10-07; teste em tests/componentes.test.mjs impede a regressão do texto) |
+| ISS-07 | Média | Texto de Avaliação desatualizado sobre IC e tarefas; reconciliar afirmações, mantendo notas justificadas por evidência | IMPLEMENTADO (2026-10-11: página refatorada como cockpit de evidências, com operabilidade, IA, confiança não calibrada e sinal técnico separado; teste em tests/componentes.test.mjs impede regressão sobre IC pendente) |
 | ISS-08 | Baixa | Formação completa misturava abrangência e dificuldade; `nivel` ficou apenas como dificuldade e `escopo` passou a representar abrangência no catálogo, detalhe e filtros | IMPLEMENTADO (2026-10-07; tests/cursos.test.mjs e tests/estudosFluxos.test.mjs) |
 | ISS-09 | Média | Não há matriz PDF/página/termo/verbetes que comprove todos os termos técnicos; concluir reconciliação documental | EM ANDAMENTO |
 | ISS-10 | Média | backendConfig usa http.get e aceita HTTP 2xx–4xx como saúde; HTTPS não suportado por esse cliente e 404 pode escolher destino inadequado; verificar com servidor local controlado | VERIFICADO (2026-10-07: só 2xx com `status` UP conta; http e https; tests/backend.test.mjs com servidor local) |
@@ -541,3 +541,53 @@ Rota inexistente responde 404: a tela mostra "dados operacionais indisponíveis"
 - A tela distingue claramente sistema sem diário, diário em observação, sistema bloqueado e paper trading elegível.
 - Retorno líquido, CDI e excesso aparecem juntos; nunca mostrar retorno bruto isolado como sucesso.
 - O usuário consegue abrir uma operação e ver qual regra entrou, qual regra saiu, custo estimado e impacto no resultado.
+
+---
+
+## Plano OPERABILIDADE V2: experiência por ticker e cockpit de mercado (2026-10-11)
+
+**Status:** IMPLEMENTADO NO PAINEL (2026-10-11; contratos e rotas V2 alinhados em código local) · **Contexto:** `infra-b3-ecossytem/SPEC.md`, Plano OPERABILIDADE V2. O painel transforma os dados OPR em uma experiência de decisão auditável: o usuário entende rapidamente se o ativo é operável, por quê, quais sinais concordam/divergem e o que invalida a tese. Em ambientes sem as migrations/rotas implantadas, os componentes continuam exibindo estado indisponível sem quebrar as telas OPR existentes.
+
+### Princípios de UX
+
+- Separar sempre `sinal analítico` de `operabilidade`.
+- Nunca mostrar retorno bruto isolado como sucesso; sempre junto de CDI líquido, custos e drawdown.
+- `confiança` sem curva real aparece como `não calibrada`.
+- Todo dado ausente aparece como `sem dado` com motivo quando disponível, nunca como zero.
+- Toda tela contém aviso: “Simulação/paper trading; não é recomendação de investimento.”
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| OPRV2-PAI-1 | Criar cliente V2 `operacionalV2Api.js` para cards, snapshot, consenso, tese, timeline, filtros e alertas | `public/js/api/operacionalV2Api.js` | gestor#OPRV2-GES-1..5 | Testes com fetch falso cobrem sucesso, vazio, 404 e erro de rede | IMPLEMENTADO (2026-10-11): sete leituras GET; 404 vira estado indisponível e demais erros permanecem visíveis |
+| OPRV2-PAI-2 | Enriquecer cards/listagem de ativos com status operacional, faixa de liquidez, confiança, sinal principal, sinal técnico, IA, último evento e bloqueio | `components/ativos/**`, `analise/operabilidade.js` | OPRV2-PAI-1, gestor#OPRV2-GES-1 | Usuário vê “sinal bom, mas bloqueado” sem abrir a ficha | IMPLEMENTADO (2026-10-11): coluna consome faixa de confiança, sinais estruturados, opinião IA, último evento e motivos de bloqueio do DTO real |
+| OPRV2-PAI-3 | Criar aba “Operabilidade” na ficha do ticker: elegibilidade, motivo de bloqueio, tamanho teórico, stop, custos, regra de saída e operações simuladas do ativo | `pages/ConsultaPage.js`, `components/ficha/OperabilidadeAtivo.js` | OPRV2-PAI-1, OPR-PAI-3 | Ativo bloqueado explica causas; ativo elegível mostra sizing/risco sem linguagem de ordem | IMPLEMENTADO (2026-10-11): quinta aba lazy na ficha, combinando snapshot V2 e operações OPR v1 |
+| OPRV2-PAI-4 | Criar componente “Consenso de sinais”: regra principal, técnico momentum, técnico reversão, IA, v2/ranking sombra e operacionalidade | `components/operacional/ConsensoSinais.js` | gestor#OPRV2-GES-2, gerar-insights#OPRV2-INS-2 | Divergências aparecem visualmente e com texto explicativo | IMPLEMENTADO (2026-10-11): fontes separadas, confiança calibrada/não calibrada e divergências explícitas |
+| OPRV2-PAI-5 | Criar bloco “Por que esse sinal existe?” com fatores positivos, negativos, riscos, dados ausentes e invalidadores | `components/operacional/TeseExplicada.js` | gestor#OPRV2-GES-2, gerar-insights#OPRV2-INS-3 | Conteúdo é escapado; cada item tem código, descrição e severidade | IMPLEMENTADO (2026-10-11): cinco grupos auditáveis, conteúdo externo escapado |
+| OPRV2-PAI-6 | Criar timeline do ticker com preço/sinal/comunicados/proventos/operações/bloqueios/mudança de recomendação | `components/operacional/TimelineAtivo.js` | gestor#OPRV2-GES-3, etl#OPRV2-ETL-2 | Timeline ordena por data, permite filtro por tipo e linka comunicados/documentos quando houver | IMPLEMENTADO (2026-10-11): ordenação decrescente, filtros tipo/severidade e links restritos a HTTP(S) |
+| OPRV2-PAI-7 | Criar filtros avançados globais por operabilidade, liquidez, risco, setor, evento recente, operação aberta/fechada, bloqueio, score não calibrado e evidência | `components/ativos/FiltrosOperacionais.js` | gestor#OPRV2-GES-4 | Filtros preservam URL/query string e funcionam em mobile | IMPLEMENTADO (2026-10-11): opções e contagens da API; nomes de filtro traduzidos para os parâmetros do gestor e aplicados aos snapshots atuais |
+| OPRV2-PAI-8 | Criar central de alertas operacional na Home e em `#/operabilidade`, refletindo estado atual do ticker/sistema | `components/inicio/AlertasOperacionais.js`, `pages/OperabilidadePage.js` | gestor#OPRV2-GES-5, infra#OPRV2-INFRA-4 | Alertas têm severidade, categoria, ticker, data e CTA para ficha/timeline; evento passado não é exibido como ativo | IMPLEMENTADO (2026-10-11): Home e cockpit, ordenação por severidade, contrato exige `ativo=true` e CTA para ficha/timeline |
+| OPRV2-PAI-9 | Melhorar visualização global de `#/operabilidade`: cockpit com retorno líquido vs CDI, drawdown, operações, bloqueios, status de maturidade 63/126 pregões e timeline resumida | `pages/OperabilidadePage.js`, `components/operacional/**` | OPR-PAI-1..6, OPRV2-PAI-1 | Tela responde: venceu CDI líquido? por quanto tempo? com qual risco? o que bloqueou? | IMPLEMENTADO (2026-10-11): preserva cockpit OPR e adiciona maturidade 63/126 e alertas/eventos recentes |
+| OPRV2-PAI-10 | Testes de UX e contrato: cards, consenso, tese, timeline, filtros, alertas, estados vazios e XSS | `tests/operabilidadeV2*.test.mjs`, `package.json` | OPRV2-PAI-1..9 | `npm test` verde; valores `null` não viram zero; texto da API é escapado | IMPLEMENTADO (2026-10-11): 11 casos V2 no `npm test`; suíte completa verde |
+
+### Evolução visual desejada
+
+| Área | Evolução |
+|---|---|
+| Card do ticker | status operacional, liquidez, confiança, sinal principal/técnico/IA, último evento |
+| Ficha do ticker | aba Operabilidade, consenso, tese explicada e timeline |
+| Operabilidade global | cockpit de maturidade, retorno líquido vs CDI, drawdown, operações e bloqueios |
+| Home | alertas operacionais e mudanças relevantes do dia |
+| Filtros | risco, liquidez, operável/bloqueado, evento recente, score não calibrado |
+
+### Dependências externas ao painel
+
+| Dependência | Necessária para |
+|---|---|
+| `gestor#OPRV2-GES-1` | cards enriquecidos |
+| `gestor#OPRV2-GES-2` | consenso e tese |
+| `gestor#OPRV2-GES-3` | timeline |
+| `gestor#OPRV2-GES-4` | filtros globais |
+| `gestor#OPRV2-GES-5` | central de alertas |
+| `gerar-insights#OPRV2-INS-5` | mostrar confiança calibrada em vez de “não calibrada” |

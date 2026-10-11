@@ -7,6 +7,8 @@ import { AVISO_SIMULACAO, STATUS, progresso, statusDe, venceuCdi } from '../anal
 import { htmlLegenda, htmlTabelaDiario, svgOperabilidade } from '../components/operacional/GraficoOperabilidade.js';
 import { htmlCarteira } from '../components/operacional/CarteiraSimulada.js';
 import { htmlBloqueios, htmlListaBloqueios } from '../components/operacional/BloqueiosOperacionais.js';
+import { buscarAlertasOperacionais } from '../api/operacionalV2Api.js';
+import { htmlAlertasOperacionais } from '../components/inicio/AlertasOperacionais.js';
 
 // Unica responsabilidade: tela "Operabilidade" (Plano OPR, OPR-PAI-2, rota #/operabilidade). Mostra se
 // o paper trading ja tem evidencia minima: status, retorno liquido x CDI liquido, drawdown, carteira
@@ -22,6 +24,16 @@ const pct = (v, sinal = true) => escaparHtml(formatarPercentual(v, 2, { sinal, v
 function kpi(rotulo, valor, extra = '') {
   return `<div class="col-6 col-md-3"><div class="opr-kpi"><span class="small text-muted">${escaparHtml(rotulo)}</span>
     <strong>${valor}</strong>${extra}</div></div>`;
+}
+
+export function htmlMaturidade(pregoes) {
+  const valor = Number.isFinite(Number(pregoes)) ? Math.max(0, Number(pregoes)) : 0;
+  return `<div class="row g-2 mb-3" aria-label="Maturidade da simulação">
+    ${[63, 126].map((meta) => {
+      const fracao = Math.min(1, valor / meta);
+      return `<div class="col-md-6"><div class="d-flex justify-content-between small"><span>${meta === 63 ? 'Evidência mínima' : 'Janela ampliada'}</span><span>${valor} de ${meta} pregões</span></div>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${meta}" aria-valuenow="${Math.min(valor, meta)}"><div class="progress-bar" style="width:${(fracao * 100).toFixed(1)}%"></div></div></div>`;
+    }).join('')}</div>`;
 }
 
 export function htmlResumo(resumo, saude) {
@@ -41,11 +53,12 @@ export function htmlResumo(resumo, saude) {
     </div>
     <p class="small mb-2">${escaparHtml(st.descricao)}</p>
     ${naoIniciado ? `<p class="small text-muted mb-2">${escaparHtml(MENSAGEM_NAO_INICIADO)}</p>` : ''}
-    <div class="mb-3" aria-label="Pregões avaliados">
+    <div class="mb-2" aria-label="Pregões avaliados">
       <div class="d-flex justify-content-between small"><span>Pregões avaliados</span><span>${escaparHtml(prog.texto)}</span></div>
       <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(prog.fracao * 100)}">
         <div class="progress-bar" style="width:${(prog.fracao * 100).toFixed(1)}%"></div></div>
     </div>
+    ${htmlMaturidade(resumo?.pregoesAvaliados)}
     <div class="row g-2">
       ${kpi('Retorno líquido acumulado', pct(resumo?.retornoLiquidoAcumulado), comparacao)}
       ${kpi('CDI líquido de IR', pct(resumo?.cdiLiquidoIrAcumulado))}
@@ -64,9 +77,10 @@ export function htmlResumo(resumo, saude) {
   </section>`;
 }
 
-export function htmlOperabilidade({ resumo, saude, diario, operacoes, bloqueios }, filtro = {}) {
+export function htmlOperabilidade({ resumo, saude, diario, operacoes, bloqueios, alertas }, filtro = {}) {
   const grafico = svgOperabilidade(diario?.itens);
   return `${htmlResumo(resumo, saude)}
+    <section class="ficha-cartao mb-3"><p class="ficha-rotulo">Alertas e eventos recentes</p>${htmlAlertasOperacionais(alertas)}</section>
     <section class="ficha-cartao mb-3">
       <p class="ficha-rotulo">Retorno líquido acumulado x CDI líquido de IR</p>
       ${grafico ? `${htmlLegenda()}<div class="grafico-operabilidade-caixa">${grafico}</div>` : `<p class="small text-muted">${escaparHtml(MENSAGEM_NAO_INICIADO)}</p>`}
@@ -94,9 +108,10 @@ export class OperabilidadePage extends BaseComponent {
     const alvo = this.querySelector('[data-conteudo]');
     let dados;
     try {
-      const [resumo, saude, diario, operacoes, bloqueios] = await Promise.all([
-        buscarResumo(), buscarSaude().catch(() => null), buscarDiario(), buscarOperacoes(), buscarBloqueios()]);
-      dados = { resumo, saude: saude?.indisponivel ? null : saude, diario, operacoes, bloqueios };
+      const [resumo, saude, diario, operacoes, bloqueios, alertas] = await Promise.all([
+        buscarResumo(), buscarSaude().catch(() => null), buscarDiario(), buscarOperacoes(), buscarBloqueios(),
+        buscarAlertasOperacionais({ limite: 8 }).catch(() => ({ itens: [] }))]);
+      dados = { resumo, saude: saude?.indisponivel ? null : saude, diario, operacoes, bloqueios, alertas };
     } catch (erro) {
       alvo.innerHTML = `<p class="small text-danger mb-0">Não foi possível carregar a operabilidade: ${escaparHtml(erro?.message || 'erro')}</p>`;
       return;

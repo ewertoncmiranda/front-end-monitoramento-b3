@@ -93,3 +93,30 @@ export function separarCarteira(itens) {
     fechadas: (itens || []).filter((o) => o.status === 'FECHADA').sort(ordenar),
   };
 }
+
+/** Leitura compacta usada nos cards/listagem da Operabilidade V2. */
+export function resumoOperacionalTicker(dados) {
+  if (!dados) return null;
+  const status = statusDe(dados.statusOperacional || dados.statusSistema);
+  const confianca = dados.confiancaFaixa ?? dados.confianca ?? dados.confiancaPrincipal ?? null;
+  const motivos = dados.motivosBloqueio || dados.bloqueios || [];
+  const tecnico = dados.sinalTecnico && typeof dados.sinalTecnico === 'object'
+    ? Object.entries(dados.sinalTecnico).filter(([, valor]) => valor).map(([chave, valor]) => `${chave}: ${valor}`).join(' · ')
+    : dados.sinalTecnico || dados.tecnico?.sinal || null;
+  return {
+    status,
+    statusRotulo: STATUS[status].rotulo,
+    statusClasse: STATUS[status].classe,
+    liquidez: dados.faixaLiquidez || dados.liquidez || null,
+    risco: dados.risco || dados.nivelRisco || null,
+    confianca,
+    confiancaCalibrada: dados.confiancaCalibrada === true
+      || ['ALTA', 'MEDIA', 'BAIXA'].includes(dados.confiancaFaixa),
+    sinalPrincipal: dados.sinalPrincipal || dados.regraPrincipal?.sinal || null,
+    sinalTecnico: tecnico,
+    sinalIa: dados.sinalIa || dados.opiniaoIa || dados.ia?.sinal || null,
+    ultimoEvento: dados.ultimoEvento || dados.ultimoEventoTipo || null,
+    bloqueado: status === 'BLOQUEADO' || dados.bloqueado === true || Boolean(dados.motivoBloqueio) || motivos.length > 0,
+    motivoBloqueio: dados.motivoBloqueio || motivos[0]?.descricao || motivos[0]?.detalhe || motivos[0]?.codigo || null,
+  };
+}

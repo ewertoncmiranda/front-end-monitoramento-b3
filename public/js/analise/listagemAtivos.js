@@ -7,6 +7,7 @@ import { formatarMoeda, formatarPercentual } from '../utils/numero.js';
 import { htmlSelo } from '../utils/selos.js';
 import { leituraDaRecomendacao } from './fichaDoAtivo.js';
 import { htmlEstadoVazio } from '../components/EstadoVazio.js';
+import { resumoOperacionalTicker } from './operabilidade.js';
 
 /** Filtros fixos de cada visao (chip) em GET /painel/ativos. */
 export function filtrosDaVisao(visao) {
@@ -38,7 +39,7 @@ export function htmlTabelaAtivos(itens, { visao = 'todos' } = {}) {
           <tr>
             <th>Símbolo</th><th>Empresa</th>
             <th class="text-end">Fechamento</th><th class="text-end">Variação</th>
-            <th>20 pregões</th><th>Sinal</th><th>Último comunicado</th><th>Selos</th><th class="text-end">Ação</th>
+            <th>20 pregões</th><th>Sinal</th><th>Operabilidade</th><th>Último comunicado</th><th>Selos</th><th class="text-end">Ação</th>
           </tr>
         </thead>
         <tbody>${linhas}</tbody>
@@ -65,10 +66,29 @@ export function htmlLinhaAtivo(item, { permitirRemoverFavorito = false } = {}) {
       <td data-label="Variação" class="text-end ${classeVariacao(item.variacaoPercentual)}">${formatarVariacao(item.variacaoPercentual)}</td>
       <td data-label="20 pregões">${htmlSparkline(item.serieFechamentos, item.simbolo)}</td>
       <td data-label="Sinal">${htmlSinal(item.sinal)}</td>
+      <td data-label="Operabilidade">${htmlOperacionalTicker(item.operacional)}</td>
       <td data-label="Último comunicado">${htmlComunicado(item.ultimoComunicado)}</td>
       <td data-label="Selos"><div class="d-flex flex-wrap gap-1">${htmlSelos(selos)}</div></td>
       <td data-label="Ação" class="text-end">${htmlAcaoFavorito(item.simbolo, Boolean(selos.favorito), permitirRemoverFavorito)}</td>
     </tr>`;
+}
+
+export function htmlOperacionalTicker(dados) {
+  const r = resumoOperacionalTicker(dados);
+  if (!r) return '<span class="small text-muted">sem dado</span>';
+  const confianca = r.confianca === null || r.confianca === undefined
+    ? 'sem dado' : typeof r.confianca === 'string'
+      ? (r.confianca === 'NAO_CALIBRADA' ? 'não calibrada' : r.confianca.toLowerCase())
+      : r.confiancaCalibrada ? formatarPercentual(r.confianca, 0) : 'não calibrada';
+  const sinais = [r.sinalPrincipal && `principal ${r.sinalPrincipal}`, r.sinalTecnico && `técnico ${r.sinalTecnico}`, r.sinalIa && `IA ${r.sinalIa}`]
+    .filter(Boolean).join(' · ');
+  return `<div class="d-flex flex-column gap-1">
+    <span><span class="badge ${r.statusClasse}">${escaparHtml(r.statusRotulo)}</span>${r.liquidez ? ` <span class="badge text-bg-light border">${escaparHtml(r.liquidez)}</span>` : ''}</span>
+    <span class="small text-muted">Confiança: ${escaparHtml(confianca)}</span>
+    ${sinais ? `<span class="small">${escaparHtml(sinais)}</span>` : ''}
+    ${r.bloqueado ? `<span class="small text-danger">Sinal presente, mas bloqueado${r.motivoBloqueio ? `: ${escaparHtml(r.motivoBloqueio)}` : ''}</span>` : ''}
+    ${r.ultimoEvento ? `<span class="small text-muted">${escaparHtml(r.ultimoEvento.descricao || r.ultimoEvento.tipo || r.ultimoEvento)}</span>` : ''}
+  </div>`;
 }
 
 /**
