@@ -93,3 +93,25 @@ export function separarCarteira(itens) {
     fechadas: (itens || []).filter((o) => o.status === 'FECHADA').sort(ordenar),
   };
 }
+
+/** Leitura compacta usada nos cards/listagem da Operabilidade V2. */
+export function resumoOperacionalTicker(dados) {
+  if (!dados) return null;
+  const status = statusDe(dados.statusOperacional || dados.statusSistema);
+  const confianca = dados.confianca ?? dados.confiancaPrincipal ?? null;
+  return {
+    status,
+    statusRotulo: STATUS[status].rotulo,
+    statusClasse: STATUS[status].classe,
+    liquidez: dados.faixaLiquidez || dados.liquidez || null,
+    risco: dados.risco || dados.nivelRisco || null,
+    confianca,
+    confiancaCalibrada: dados.confiancaCalibrada === true,
+    sinalPrincipal: dados.sinalPrincipal || dados.regraPrincipal?.sinal || null,
+    sinalTecnico: dados.sinalTecnico || dados.tecnico?.sinal || null,
+    sinalIa: dados.sinalIa || dados.ia?.sinal || null,
+    ultimoEvento: dados.ultimoEvento || null,
+    bloqueado: status === 'BLOQUEADO' || dados.bloqueado === true || Boolean(dados.motivoBloqueio),
+    motivoBloqueio: dados.motivoBloqueio || dados.bloqueios?.[0]?.descricao || dados.bloqueios?.[0]?.codigo || null,
+  };
+}

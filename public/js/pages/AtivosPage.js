@@ -5,6 +5,8 @@ import { hashDaBase, lerFiltrosBase } from '../analise/filtrosBase.js';
 import { filtrosDaVisao, htmlTabelaAtivos } from '../analise/listagemAtivos.js';
 import { escaparHtml } from '../utils/html.js';
 import { htmlSelo } from '../utils/selos.js';
+import { buscarFiltrosOperacionais, buscarTickers } from '../api/operacionalV2Api.js';
+import { filtrosAtivos, htmlFiltrosOperacionais, temFiltroOperacional } from '../components/ativos/FiltrosOperacionais.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -62,6 +64,7 @@ export class AtivosPage extends BaseComponent {
           <button type="button" class="btn btn-primary w-100" id="ativos-filtrar">Filtrar</button>
         </div>
       </div>
+      <div data-filtros-operacionais>${htmlFiltrosOperacionais({}, this)}</div>
       <div id="ativos-resultado"><loading-spinner></loading-spinner></div>
       <div id="ativos-paginacao" class="d-flex justify-content-between align-items-center mt-3"></div>
       <p class="small text-muted mt-3 mb-0">Sinal = última leitura das regras do ecossistema, ${htmlSelo('EXPERIMENTAL', 'regra experimental')}: não é recomendação de investimento.</p>
@@ -82,6 +85,13 @@ export class AtivosPage extends BaseComponent {
     this.querySelector('#ativos-busca').addEventListener('keydown', (evento) => {
       if (evento.key === 'Enter') this.querySelector('#ativos-filtrar').click();
     });
+    this.addEventListener('change', (evento) => {
+      const filtro = evento.target.closest('[data-filtro-operacional]');
+      if (!filtro) return;
+      this[filtro.dataset.filtroOperacional] = filtro.value;
+      this.pagina = 0;
+      this.carregar();
+    });
     this.onclick = (evento) => {
       const chip = evento.target.closest('[data-visao]');
       if (chip) { this.trocarVisao(chip.dataset.visao); return; }
@@ -91,10 +101,35 @@ export class AtivosPage extends BaseComponent {
       if (removerBotao) { this.alterarFavorito(removerBotao, removerBotao.dataset.removerFavorito, false); return; }
       const pagina = evento.target.closest('[data-pagina]');
       if (pagina) { this.pagina = Number(pagina.dataset.pagina); this.carregar(); }
+      const limpar = evento.target.closest('[data-limpar-filtros-operacionais]');
+      if (limpar) {
+        Object.keys(filtrosAtivos(this)).forEach((chave) => { this[chave] = ''; });
+        this.pagina = 0;
+        this.desenharFiltrosOperacionais();
+        this.carregar();
+      }
     };
 
     this.carregarSetores();
+    this.carregarFiltrosOperacionais();
     this.carregar();
+  }
+
+  desenharFiltrosOperacionais(opcoes = this._opcoesOperacionais || {}) {
+    const alvo = this.querySelector('[data-filtros-operacionais]');
+    if (alvo) alvo.innerHTML = htmlFiltrosOperacionais(opcoes, this);
+  }
+
+  async carregarFiltrosOperacionais() {
+    try {
+      const opcoes = await buscarFiltrosOperacionais();
+      if (!opcoes?.indisponivel) {
+        this._opcoesOperacionais = opcoes;
+        this.desenharFiltrosOperacionais(opcoes);
+      }
+    } catch {
+      // A listagem base continua utilizavel quando a API V2 esta fora.
+    }
   }
 
   trocarVisao(visao) {
@@ -130,17 +165,44 @@ export class AtivosPage extends BaseComponent {
     const resultado = this.querySelector('#ativos-resultado');
     resultado.innerHTML = '<loading-spinner></loading-spinner>';
     try {
-      history.replaceState(null, '', hashDaBase({ visao: this.visao, q: this.q, setor: this.setor, uf: this.uf, pagina: this.pagina }));
+      history.replaceState(null, '', hashDaBase({ visao: this.visao, q: this.q, setor: this.setor, uf: this.uf, pagina: this.pagina, ...filtrosAtivos(this) }));
     } catch { /* sem History API: o link so nao acompanha */ }
     try {
-      this.pagePayload = await listarAtivosPainel({
+      const parametrosBase = {
         q: this.q,
         setor: this.setor,
         uf: this.uf,
         pagina: this.pagina,
         tamanho: this.tamanho,
         ...filtrosDaVisao(this.visao),
-      });
+      };
+      const parametrosOperacionais = {
+        busca: this.q, setor: this.setor, pagina: this.pagina, tamanho: this.tamanho,
+        ...filtrosAtivos(this),
+      };
+      const [base, operacionais] = await Promise.all([
+        listarAtivosPainel(parametrosBase),
+        buscarTickers(parametrosOperacionais).catch(() => ({ indisponivel: true })),
+      ]);
+      const baseItens = base.content || [];
+      if (operacionais?.indisponivel) {
+        this.pagePayload = base;
+      } else {
+        const itensV2 = operacionais.itens || [];
+        const porSimbolo = new Map(itensV2.map((item) => [String(item.simbolo).toUpperCase(), item]));
+        if (temFiltroOperacional(this)) {
+          const basePorSimbolo = new Map(baseItens.map((item) => [String(item.simbolo).toUpperCase(), item]));
+          this.pagePayload = {
+            ...base,
+            content: itensV2.map((op) => ({ ...(basePorSimbolo.get(String(op.simbolo).toUpperCase()) || op), operacional: op })),
+            totalElements: operacionais.totalElements ?? itensV2.length,
+            totalPages: operacionais.totalPages ?? 1,
+            number: operacionais.number ?? this.pagina,
+          };
+        } else {
+          this.pagePayload = { ...base, content: baseItens.map((item) => ({ ...item, operacional: porSimbolo.get(String(item.simbolo).toUpperCase()) })) };
+        }
+      }
       resultado.innerHTML = htmlTabelaAtivos(this.pagePayload.content || [], { visao: this.visao });
       this.renderPaginacao(this.pagePayload);
     } catch (erro) {

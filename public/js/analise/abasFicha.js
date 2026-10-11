@@ -6,6 +6,7 @@ export const ABAS = [
   { id: 'fundamentos', rotulo: 'Fundamentos' },
   { id: 'fatores', rotulo: 'Fatores e proventos' },
   { id: 'comunicados', rotulo: 'Comunicados' },
+  { id: 'operabilidade', rotulo: 'Operabilidade' },
 ];
 
 export const ABA_PADRAO = 'resumo';

@@ -7,7 +7,7 @@ globalThis.customElements = { define() {} };
 import { ABAS, abaDoHash, abaValida, hashDaFicha, proximaAba } from '../public/js/analise/abasFicha.js';
 const { renderizar } = await import('../public/js/components/ficha/ComunicadosDoAtivo.js');
 
-assert.deepEqual(ABAS.map((a) => a.id), ['resumo', 'fundamentos', 'fatores', 'comunicados']);
+assert.deepEqual(ABAS.map((a) => a.id), ['resumo', 'fundamentos', 'fatores', 'comunicados', 'operabilidade']);
 assert.equal(abaValida('fatores'), 'fatores');
 assert.equal(abaValida('hack"><script>'), 'resumo');
 assert.equal(abaDoHash('#/gestao/PETR4?aba=comunicados'), 'comunicados');
@@ -17,9 +17,9 @@ assert.equal(hashDaFicha('PETR4', 'resumo'), '#/gestao/PETR4');
 assert.equal(hashDaFicha('PETR4', 'fatores'), '#/gestao/PETR4?aba=fatores');
 assert.equal(hashDaFicha('A B', 'x'), '#/gestao/A%20B');
 assert.equal(proximaAba('resumo', 'ArrowRight'), 'fundamentos');
-assert.equal(proximaAba('resumo', 'ArrowLeft'), 'comunicados');
+assert.equal(proximaAba('resumo', 'ArrowLeft'), 'operabilidade');
 assert.equal(proximaAba('fatores', 'Home'), 'resumo');
-assert.equal(proximaAba('fatores', 'End'), 'comunicados');
+assert.equal(proximaAba('fatores', 'End'), 'operabilidade');
 assert.equal(proximaAba('fatores', 'a'), null);
 
 assert.match(renderizar('PETR4', { comunicados: [] }), /Sem comunicados/);
