@@ -397,3 +397,22 @@ tema-toggle[modo="bottom"] {
 .ativo-ia .ia-numeros dd { margin: 0; font-weight: 600; }
 .ativo-ia .ia-leitura-texto { white-space: pre-line; }
 .ativo-ia details > summary { cursor: pointer; color: var(--bs-link-color); }
+
+/* --- OPR-PAI: tela Operabilidade (paper trading) ---------------------------- */
+.opr-kpi { display: flex; flex-direction: column; gap: .1rem; padding: .5rem .6rem; border: 1px solid var(--bs-border-color); border-radius: .5rem; height: 100%; }
+.opr-kpi strong { font-size: 1.05rem; }
+.grafico-operabilidade { width: 100%; height: auto; max-height: 16rem; display: block; }
+.grafico-operabilidade .eixo { stroke: var(--bs-border-color); }
+.grafico-operabilidade .grade { stroke: var(--bs-border-color); stroke-dasharray: 3 3; opacity: .7; }
+.grafico-operabilidade text { fill: var(--bs-secondary-color); font-size: 10px; }
+.grafico-operabilidade path { fill: none; stroke-width: 2; }
+.grafico-operabilidade .linha-carteira { stroke: var(--bs-primary); }
+.grafico-operabilidade .linha-cdi { stroke: var(--bs-secondary-color); stroke-dasharray: 5 3; }
+.grafico-operabilidade .drawdown { stroke: var(--bs-danger); stroke-width: 2; opacity: .6; }
+.legenda-operabilidade .marca-legenda { display: inline-block; width: .9rem; height: .25rem; vertical-align: middle; margin-right: .25rem; }
+.legenda-operabilidade .marca-legenda.carteira { background: var(--bs-primary); }
+.legenda-operabilidade .marca-legenda.cdi { background: var(--bs-secondary-color); }
+.legenda-operabilidade .marca-legenda.drawdown { background: var(--bs-danger); opacity: .6; }
+.operabilidade-pagina .table-responsive { max-height: none; overflow-y: hidden; }
+.operabilidade-pagina .table th, .operabilidade-pagina .table td { white-space: nowrap; }
+.operabilidade-pagina .tabela-diario { max-height: 22rem; overflow-y: auto; }

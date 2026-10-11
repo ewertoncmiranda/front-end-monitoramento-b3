@@ -489,7 +489,7 @@ Saída 200:
 
 ## Plano OPR: aba Operabilidade e paper trading (2026-10-08)
 
-**Status:** PLANEJADO · **Contexto:** `infra-b3-ecossytem/SPEC.md`, Plano OPR. O painel não decide operação; ele mostra, com linguagem conservadora, se o sistema simulado já tem evidência mínima para ser considerado operável em paper trading.
+**Status:** IMPLEMENTADO no painel (2026-10-11; dados reais dependem do OPR-GES) · **Contexto:** `infra-b3-ecossytem/SPEC.md`, Plano OPR. O painel não decide operação; ele mostra, com linguagem conservadora, se o sistema simulado já tem evidência mínima para ser considerado operável em paper trading.
 
 **Meta de UX.** Responder visualmente: o sistema venceu o CDI líquido de custos? por quantos pregões? com qual drawdown? quais operações estão abertas/fechadas? quais sinais foram bloqueados por liquidez, dados ou risco?
 
@@ -505,16 +505,30 @@ Adicionar seção `#/operabilidade` ou subtela dentro de `#/avaliacao` com:
 - bloqueios por liquidez/dados/risco;
 - tabela de diário e linha do tempo das operações simuladas.
 
+### Contrato `/operacional/*` (CTR-OPR-PAI, fixado em 2026-10-11)
+
+O que a tela consome do gestor (OPR-GES-2..4 implementam contra isto). JSON em camelCase, nomes das colunas da V23; frações (`0.0052` = 0,52%), valores em R$; ausente é `null`, nunca 0. Só leitura.
+
+| Rota | Corpo |
+|---|---|
+| `GET /operacional/resumo` | `{ versaoRegra, statusSistema, motivosStatus: [{codigo, descricao}], dataInicio, ultimoPregao, pregoesAvaliados, pregoesMinimos, capitalInicial, patrimonio, retornoLiquidoAcumulado, cdiAcumulado, cdiLiquidoIrAcumulado, excessoSobreCdiLiquido, drawdown, drawdownMaximo, posicoesAbertas, operacoesFechadas, impostoEstimadoMes }`. Sem diário: `statusSistema = NAO_OPERAVEL`, `pregoesAvaliados = 0`, `ultimoPregao = null` |
+| `GET /operacional/diario?inicio=&fim=` | `{ itens: [{ dataPregao, patrimonio, caixa, exposicao, posicoesAbertas, retornoBrutoDia, retornoLiquidoDia, retornoLiquidoAcumulado, cdiAcumulado, cdiLiquidoIrAcumulado, excessoSobreCdiLiquido, drawdown, drawdownMaximo, impostoEstimadoMes, statusSistema }] }` |
+| `GET /operacional/operacoes?status=&simbolo=` | `{ itens: [{ id, simbolo, setorGrupo, horizontePregoes, status, dataDecisaoEntrada, dataEntrada, precoEntrada, quantidade, valorEntrada, stopInicial, stopAtual, faixaLiquidezEntrada, custosEntrada, dataSaida, precoSaida, motivoSaida, custosSaida, resultadoBruto, resultadoPosCustos, impostoEstimado, resultadoPosImpostoEstimado, motivoEntrada: {…}, motivoSaidaDetalhe: {…} }] }` (`motivo*` = os JSON gravados) |
+| `GET /operacional/bloqueios?data=` | `{ dataPregao, itens: [{ simbolo, faixa, motivos: [{codigo, detalhe, valor, limite}] }] }` (códigos da elegibilidade OPR-INS-1 e do sizing OPR-INS-2; fonte: `evento_operacional` BLOQUEIO_*) |
+| `GET /operacional/saude` | `{ status, ultimaExecucao, dadosDoDiaCompletos, violacoes: [{codigo, descricao}] }` |
+
+Rota inexistente responde 404: a tela mostra "dados operacionais indisponíveis" em vez de quebrar.
+
 ### Tarefas desta aplicação
 
 | ID | Tarefa | Arquivos | Depende | Aceite | Status |
 |---|---|---|---|---|---|
-| OPR-PAI-1 | Criar cliente `operacionalApi.js` para consumir `/operacional/resumo`, `/operacional/diario`, `/operacional/operacoes`, `/operacional/bloqueios` e `/operacional/saude` | `public/js/api/operacionalApi.js` | gestor#OPR-GES-2..4 | Testes com `fetch` falso cobrem sucesso, vazio, erro 503 e datas | PLANEJADO |
-| OPR-PAI-2 | Criar página/aba `OperabilidadePage` com status, retorno líquido, CDI, excesso, drawdown, dias avaliados e alerta de que ainda é simulação | `public/js/pages/OperabilidadePage.js`, `router.js`, `navegacao.js` | OPR-PAI-1 | Estado vazio mostra “diário ainda não iniciado”; status nunca usa linguagem de recomendação de compra/venda | PLANEJADO |
-| OPR-PAI-3 | Criar componentes de carteira simulada: operações abertas, operações fechadas, motivo de entrada/saída, tamanho de posição e custos | `public/js/components/operacional/**` | OPR-PAI-1 | Operação fechada exibe retorno bruto, custos, retorno líquido e motivo de saída; valores `null` aparecem como “sem dado” | PLANEJADO |
-| OPR-PAI-4 | Criar gráfico simples de retorno líquido acumulado vs CDI e drawdown, com tabela acessível de diário | `public/js/components/operacional/GraficoOperabilidade.js` | OPR-PAI-1 | Gráfico funciona em claro/escuro; tabela permite auditar cada pregão; sem dado não desenha zero falso | PLANEJADO |
-| OPR-PAI-5 | Criar painel de bloqueios por liquidez, dado ausente, evento, fundamento futuro e limite de risco | `public/js/components/operacional/BloqueiosOperacionais.js` | OPR-PAI-1 | Usuário entende por que um sinal não virou operação simulada; filtros por motivo e símbolo | PLANEJADO |
-| OPR-PAI-6 | Testes no `npm test` para API, renderização dos estados, escape de texto e cálculo visual de status | `tests/operabilidade*.test.mjs`, `package.json` | OPR-PAI-2..5 | `npm test` verde; conteúdo vindo da API é escapado | PLANEJADO |
+| OPR-PAI-1 | Criar cliente `operacionalApi.js` para consumir `/operacional/resumo`, `/operacional/diario`, `/operacional/operacoes`, `/operacional/bloqueios` e `/operacional/saude` | `public/js/api/operacionalApi.js` | gestor#OPR-GES-2..4 | Testes com `fetch` falso cobrem sucesso, vazio, erro 503 e datas | IMPLEMENTADO (Sessão 03, 2026-10-11): `public/js/api/operacionalApi.js` (resumo, diario, operacoes, bloqueios, saude) pelo `httpClient`; filtros na query; 404 = gestor sem a rota ⇒ `{indisponivel: true}`; 503/rede sobem como erro; `/operacional` incluído no proxy do gestor (`proxy/apiProxy.js`) |
+| OPR-PAI-2 | Criar página/aba `OperabilidadePage` com status, retorno líquido, CDI, excesso, drawdown, dias avaliados e alerta de que ainda é simulação | `public/js/pages/OperabilidadePage.js`, `router.js`, `navegacao.js` | OPR-PAI-1 | Estado vazio mostra “diário ainda não iniciado”; status nunca usa linguagem de recomendação de compra/venda | IMPLEMENTADO (Sessão 03, 2026-10-11): `pages/OperabilidadePage.js` em `#/operabilidade`, item do grupo Avaliação (com "Saúde e placar"); status com rótulo e descrição conservadores (`analise/operabilidade.js`, enum `contracts/statusOperacional.js`), progresso rumo aos 63 pregões, retorno líquido, CDI líquido, excesso, drawdown máximo, patrimônio, posições, IR estimado do mês e motivos do status; aviso de simulação fixo; estados carregando, indisponível (OPR-GES pendente), erro e "diário ainda não iniciado" |
+| OPR-PAI-3 | Criar componentes de carteira simulada: operações abertas, operações fechadas, motivo de entrada/saída, tamanho de posição e custos | `public/js/components/operacional/**` | OPR-PAI-1 | Operação fechada exibe retorno bruto, custos, retorno líquido e motivo de saída; valores `null` aparecem como “sem dado” | IMPLEMENTADO (Sessão 03, 2026-10-11): `components/operacional/CarteiraSimulada.js`: abertas (com PENDENTE "entra na próxima abertura") e encerradas com entrada → saída, bruto, custos, pós-custos, IR estimado, líquido e motivo de saída (gatilhos no title); null como "sem dado" |
+| OPR-PAI-4 | Criar gráfico simples de retorno líquido acumulado vs CDI e drawdown, com tabela acessível de diário | `public/js/components/operacional/GraficoOperabilidade.js` | OPR-PAI-1 | Gráfico funciona em claro/escuro; tabela permite auditar cada pregão; sem dado não desenha zero falso | IMPLEMENTADO (Sessão 03, 2026-10-11): `components/operacional/GraficoOperabilidade.js`: SVG retorno líquido acumulado × CDI líquido de IR e faixa de drawdown, cores do Bootstrap (claro/escuro conferidos no navegador); ponto null quebra a linha; tabela do diário (mais recente primeiro) num `<details>` |
+| OPR-PAI-5 | Criar painel de bloqueios por liquidez, dado ausente, evento, fundamento futuro e limite de risco | `public/js/components/operacional/BloqueiosOperacionais.js` | OPR-PAI-1 | Usuário entende por que um sinal não virou operação simulada; filtros por motivo e símbolo | IMPLEMENTADO (Sessão 03, 2026-10-11): `components/operacional/BloqueiosOperacionais.js`: motivos agrupados (liquidez, dado, evento, fundamento, risco, outro) com contagem, filtro por motivo e por ativo. Depende de o gerar-insights gravar os bloqueios em `evento_operacional` (BLOQUEIO_LIQUIDEZ/BLOQUEIO_DADO) para o gestor ler |
+| OPR-PAI-6 | Testes no `npm test` para API, renderização dos estados, escape de texto e cálculo visual de status | `tests/operabilidade*.test.mjs`, `package.json` | OPR-PAI-2..5 | `npm test` verde; conteúdo vindo da API é escapado | IMPLEMENTADO (Sessão 03, 2026-10-11): `tests/operabilidade.test.mjs` no `npm test` (13 casos: API com fetch falso para sucesso, vazio, 404 e 503; status sem linguagem de recomendação; resumo vazio sem zero falso; carteira; gráfico com lacuna; bloqueios com escape e filtros; rota, menu e proxy). Conferido no navegador (painel local na 8093): estado indisponível com o gestor atual, tela completa com dados de teste, tema escuro e 375 px sem rolagem lateral |
 
 ### Textos obrigatórios
 
