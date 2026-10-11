@@ -6,6 +6,13 @@
  * v1 antiga (sem juros), mantida no backtest so para comparar antes e depois.
  */
 export function nomeDaVersao(versao, versoes = []) {
+  const conhecidos = {
+    TECNICO_MOMENTUM: 'técnico: momentum',
+    TECNICO_REVERSAO: 'técnico: reversão',
+  };
+  for (const [prefixo, nome] of Object.entries(conhecidos)) {
+    if (String(versao || '').startsWith(prefixo)) return nome;
+  }
   const nomes = ['v1 (oficial)', 'v2 (sombra)', 'v1 antiga (sem juros)'];
   return nomes[versoes.indexOf(versao)] || versao;
 }

@@ -54,6 +54,22 @@ caso('avaliacao: nao afirma mais que o IC esta pendente (ISS-07)', () => {
   assert.ok(!/TASK-50[^']{0,40}em andamento/.test(fonte));
 });
 
+caso('avaliacao: notas atuais sao editoriais e mostram proximos passos', () => {
+  const fonte = readFileSync(new URL('../public/js/pages/AvaliacaoPage.js', import.meta.url), 'utf8');
+  assert.match(fonte, /São editoriais e datadas, não notas automáticas/);
+  assert.match(fonte, /COTAHIST amplo/);
+  assert.match(fonte, /proventos B3 \+ DVA\/CVM/);
+  assert.match(fonte, /3 a 6 meses/);
+  assert.match(fonte, /Próximo passo:/);
+});
+
+caso('backtest: texto nao orienta comando manual e reconhece proventos historicos', () => {
+  const fonte = readFileSync(new URL('../public/js/components/BacktestPlacar.js', import.meta.url), 'utf8');
+  assert.ok(!/python -m app\.validacao\.backtest/.test(fonte));
+  assert.match(fonte, /rotina de validação\/backtest da infraestrutura/);
+  assert.match(fonte, /B3 com DVA\/CVM/);
+});
+
 const { svgProventos, pontosDoGrafico } = await import('../public/js/analise/graficoProventos.js');
 const { barraDePercentil } = await import('../public/js/analise/lacunas.js');
 const { formatarNumero, formatarPercentual, formatarMoeda, variacao } = await import('../public/js/utils/numero.js');

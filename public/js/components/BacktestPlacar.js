@@ -57,7 +57,7 @@ export class BacktestPlacar extends BaseComponent {
     const dados = this._dados;
     if (!dados.execucao) {
       area.innerHTML = `<div class="alert alert-info small mb-0">Nenhum backtest rodou ainda.
-        Rode <code>python -m app.validacao.backtest</code> no gerar-insights depois de carregar o COTAHIST.</div>`;
+        Aguarde a rotina de validação/backtest da infraestrutura depois de carregar o COTAHIST amplo.</div>`;
       return;
     }
     const e = dados.execucao;
@@ -92,17 +92,17 @@ export class BacktestPlacar extends BaseComponent {
 }
 
 /**
- * Quanto do placar tem retorno com proventos (infra#TASK-36). A B3 devolve so
- * os ~12 meses anteriores a cada consulta (coleta desde 2026-09-27): janela
- * mais antiga sem ajuste e, quase sempre, falta de dado.
+ * Quanto do placar tem retorno com proventos (TASK-46/TASK-56). O backtest ja
+ * combina B3 com DVA/CVM para cobrir historico; o contador mostra em quais
+ * janelas houve ajuste efetivo no retorno.
  */
 function renderProventos(placar) {
   const total = placar.reduce((s, l) => s + l.avaliados, 0);
   const comProvento = placar.reduce((s, l) => s + (l.janelasComProvento || 0), 0);
   const fracao = total ? ((comProvento / total) * 100).toFixed(1).replace('.', ',') : '0';
   return `<p class="small text-muted mb-1">Proventos no retorno: ${comProvento} de ${total} janelas (${fracao}%).
-    A fonte (B3) só devolve os proventos dos ~12 meses anteriores à coleta; nas janelas mais antigas o
-    preço é bruto, e pagadoras de dividendo aparecem piores do que são.</p>`;
+    A fonte combina proventos B3 com DVA/CVM para cobrir o histórico; quando o contador é baixo, leia
+    como baixa incidência de provento na janela, não como ausência da correção histórica.</p>`;
 }
 
 /**
