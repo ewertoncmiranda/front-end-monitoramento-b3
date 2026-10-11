@@ -20,6 +20,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # TASK-42: a imagem so e publicada se os testes passarem (sem lint: decisao de 2026-10-07).
+      - name: Testes
+        run: npm test
+
   build-and-push:
     needs: build-check
     runs-on: ubuntu-latest
