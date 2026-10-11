@@ -19,6 +19,8 @@ const ROTAS_PROXIADAS = [
   '/favoritos',
   // Tabela unica de ativos do painel (gestor TASK-UX-5, REQ-UX-8)
   '/painel',
+  // Paper trading do Plano OPR (gestor OPR-GES-2..4, tela Operabilidade)
+  '/operacional',
 ];
 
 export function registrarProxy(app, backendUrl) {

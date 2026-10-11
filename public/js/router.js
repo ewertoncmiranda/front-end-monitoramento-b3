@@ -26,6 +26,7 @@ const rotas = {
   '#/indices': 'indices-macro-page',
   '#/opcoes': 'opcao-page',
   '#/assistente': 'assistente-page',
+  '#/operabilidade': 'operabilidade-page',
 };
 
 const ROTA_PADRAO = '#/inicio';
