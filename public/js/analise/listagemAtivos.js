@@ -77,7 +77,9 @@ export function htmlOperacionalTicker(dados) {
   const r = resumoOperacionalTicker(dados);
   if (!r) return '<span class="small text-muted">sem dado</span>';
   const confianca = r.confianca === null || r.confianca === undefined
-    ? 'sem dado' : r.confiancaCalibrada ? formatarPercentual(r.confianca, 0) : 'não calibrada';
+    ? 'sem dado' : typeof r.confianca === 'string'
+      ? (r.confianca === 'NAO_CALIBRADA' ? 'não calibrada' : r.confianca.toLowerCase())
+      : r.confiancaCalibrada ? formatarPercentual(r.confianca, 0) : 'não calibrada';
   const sinais = [r.sinalPrincipal && `principal ${r.sinalPrincipal}`, r.sinalTecnico && `técnico ${r.sinalTecnico}`, r.sinalIa && `IA ${r.sinalIa}`]
     .filter(Boolean).join(' · ');
   return `<div class="d-flex flex-column gap-1">

@@ -21,23 +21,24 @@ export function htmlSnapshot(snapshot) {
   if (!snapshot || snapshot.indisponivel) {
     return '<section class="ficha-cartao"><p class="ficha-rotulo">Elegibilidade operacional</p><p class="small text-muted mb-0">Snapshot operacional V2 ainda indisponível.</p></section>';
   }
-  const status = statusDe(snapshot.statusOperacional || snapshot.statusSistema);
+  const dados = { ...(snapshot.payload || {}), ...snapshot };
+  const status = statusDe(dados.statusOperacional || dados.statusSistema);
   const definicao = STATUS[status];
-  const elegivel = snapshot.elegivel === true || status === 'PAPER_TRADING_ELEGIVEL';
+  const elegivel = dados.elegivel === true || status === 'PAPER_TRADING_ELEGIVEL';
   return `<section class="ficha-cartao">
     <div class="d-flex flex-wrap justify-content-between gap-2"><div><p class="ficha-rotulo mb-1">Elegibilidade operacional</p>
       <span class="badge ${definicao.classe}">${escaparHtml(definicao.rotulo)}</span>
-      ${snapshot.faixaLiquidez ? `<span class="badge text-bg-light border ms-1">Liquidez ${escaparHtml(snapshot.faixaLiquidez)}</span>` : ''}</div>
-      <span class="small text-muted">${escaparHtml(formatarData(snapshot.dataPregao, SEM))}</span></div>
+      ${dados.faixaLiquidez ? `<span class="badge text-bg-light border ms-1">Liquidez ${escaparHtml(dados.faixaLiquidez)}</span>` : ''}</div>
+      <span class="small text-muted">${escaparHtml(formatarData(dados.dataPregao, SEM))}</span></div>
     <p class="small mt-2 mb-1">${elegivel ? 'Elegível apenas para a carteira simulada.' : 'Não elegível para nova posição simulada neste pregão.'}</p>
-    ${listaMotivos(snapshot)}
+    ${listaMotivos(dados)}
     <div class="row g-2 mt-1">
-      <div class="col-6 col-md-3"><span class="small text-muted d-block">Tamanho teórico</span><strong>${escaparHtml(formatarMoeda(snapshot.tamanhoTeorico ?? snapshot.valorPosicao, SEM))}</strong></div>
-      <div class="col-6 col-md-3"><span class="small text-muted d-block">Stop</span><strong>${escaparHtml(formatarMoeda(snapshot.stop ?? snapshot.stopInicial, SEM))}</strong></div>
-      <div class="col-6 col-md-3"><span class="small text-muted d-block">Custos estimados</span><strong>${escaparHtml(formatarMoeda(snapshot.custosEstimados, SEM))}</strong></div>
-      <div class="col-6 col-md-3"><span class="small text-muted d-block">Risco estimado</span><strong>${escaparHtml(formatarPercentual(snapshot.riscoEstimado, 2, { vazio: SEM }))}</strong></div>
+      <div class="col-6 col-md-3"><span class="small text-muted d-block">Tamanho teórico</span><strong>${escaparHtml(formatarMoeda(dados.tamanhoTeorico ?? dados.valorPosicao, SEM))}</strong></div>
+      <div class="col-6 col-md-3"><span class="small text-muted d-block">Stop</span><strong>${escaparHtml(formatarMoeda(dados.stop ?? dados.stopInicial, SEM))}</strong></div>
+      <div class="col-6 col-md-3"><span class="small text-muted d-block">Custos estimados</span><strong>${escaparHtml(formatarMoeda(dados.custosEstimados, SEM))}</strong></div>
+      <div class="col-6 col-md-3"><span class="small text-muted d-block">Risco estimado</span><strong>${escaparHtml(formatarPercentual(dados.riscoEstimado, 2, { vazio: SEM }))}</strong></div>
     </div>
-    <p class="small mt-2 mb-0"><strong>Regra de saída:</strong> ${escaparHtml(snapshot.regraSaida || SEM)}</p>
+    <p class="small mt-2 mb-0"><strong>Regra de saída:</strong> ${escaparHtml(dados.regraSaida || SEM)}</p>
   </section>`;
 }
 

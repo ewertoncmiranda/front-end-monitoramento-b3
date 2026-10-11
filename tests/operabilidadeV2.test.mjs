@@ -44,12 +44,12 @@ await caso('api V2 cobre cards, snapshot, consenso, tese, timeline, filtros e al
     '/operacional/filtros': { liquidez: ['ALTA'] },
     '/operacional/alertas': { itens: [] },
   });
-  assert.equal((await api.buscarTickers({ liquidez: 'ALTA' })).itens[0].simbolo, 'PETR4');
+  assert.equal((await api.buscarTickers({ statusOperacional: 'BLOQUEADO', liquidez: 'ALTA', risco: 'ALTO' })).itens[0].simbolo, 'PETR4');
   assert.equal((await api.buscarSnapshot('petr4')).simbolo, 'PETR4');
   await api.buscarConsenso('petr4'); await api.buscarTese('petr4');
   await api.buscarTimeline('petr4', { tipo: 'EVENTO_CVM' });
   await api.buscarFiltrosOperacionais(); await api.buscarAlertasOperacionais({ limite: 5 });
-  assert.ok(chamadas.includes('/operacional/tickers?liquidez=ALTA'));
+  assert.ok(chamadas.includes('/operacional/tickers?status=BLOQUEADO&liquidez=ALTA&risco=ALTO'));
   assert.ok(chamadas.includes('/operacional/tickers/PETR4/timeline?tipo=EVENTO_CVM'));
   assert.ok(chamadas.includes('/operacional/alertas?limite=5'));
 });
@@ -78,6 +78,15 @@ await caso('card mostra sinal bom mas bloqueado e confiança não calibrada', ()
   assert.doesNotMatch(html, /R\$ 0,00/);
 });
 
+await caso('card V2 lê confiança por faixa e motivos de bloqueio estruturados', () => {
+  const html = lista.htmlOperacionalTicker({ statusOperacional: 'BLOQUEADO', confiancaFaixa: 'NAO_CALIBRADA',
+    sinalPrincipal: 'SINAL_POSITIVO', sinalTecnico: { momentum: 'NEUTRO', reversao: null }, opiniaoIa: 'POSITIVA',
+    motivosBloqueio: [{ codigo: 'SEM_FUNDAMENTO_VIGENTE', descricao: 'Fundamento não publicado' }] });
+  assert.match(html, /não calibrada/);
+  assert.match(html, /Fundamento não publicado/);
+  assert.match(html, /IA POSITIVA/);
+});
+
 await caso('aba do ticker traz snapshot conservador e operações simuladas', () => {
   const html = ficha.htmlOperabilidadeAtivo({ simbolo: 'PETR4', snapshot: SNAPSHOT, consenso: { itens: [] }, tese: {}, timeline: { itens: [] }, operacoes: { itens: [] } });
   assert.match(html, /Elegibilidade operacional/);
@@ -97,6 +106,23 @@ await caso('consenso destaca divergências e não inventa confiança', () => {
   assert.match(html, /não calibrada/);
   assert.match(html, /Divergências/);
   assert.doesNotMatch(html, /<b>NEUTRO<\/b>/);
+});
+
+await caso('consenso e tese aceitam os envelopes reais do gestor', () => {
+  const htmlConsenso = consenso.htmlConsenso({ consenso: {
+    direcaoAnalitica: 'POSITIVA', operabilidade: 'NAO_OPERAVEL', resumo: 'Sinal positivo, mas bloqueado.',
+    sinais: [{ fonte: 'REGRA_PRINCIPAL', valor: 'SINAL_POSITIVO', direcao: 'POSITIVO', peso: 3, detalhe: null }],
+    divergencias: [{ codigo: 'SINAL_POSITIVO_NAO_OPERAVEL', descricao: 'Ativo bloqueado por dado ausente.' }],
+  } });
+  assert.match(htmlConsenso, /Sinal positivo, mas bloqueado/);
+  assert.match(htmlConsenso, /SINAL_POSITIVO/);
+  assert.match(htmlConsenso, /Ativo bloqueado por dado ausente/);
+  const htmlTese = tese.htmlTese({ tese: {
+    aviso: 'Simulação para estudo; não é recomendação de investimento.', positivos: [], negativos: [], riscos: [],
+    invalidadores: [], dadosAusentes: [{ codigo: 'SEM_FUNDAMENTO', descricao: 'Fundamento ausente', severidade: 'ALTA' }],
+  } });
+  assert.match(htmlTese, /Simulação para estudo/);
+  assert.match(htmlTese, /Fundamento ausente/);
 });
 
 await caso('tese escapa positivos, riscos, ausências e invalidadores', () => {
@@ -121,6 +147,14 @@ await caso('timeline ordena, filtra e só cria link http(s)', () => {
   assert.doesNotMatch(html, /<script>/);
 });
 
+await caso('timeline adapta os nomes enviados pela API V2', () => {
+  const html = timeline.htmlTimeline({ itens: [{ tipo: 'BLOQUEIO_DADO', severidade: 'ATENCAO',
+    dataEvento: '2026-10-09', criadoEm: '2026-10-09T18:00:00', titulo: 'Dados incompletos',
+    payload: { codigo: 'SEM_FUNDAMENTO' } }] });
+  assert.match(html, /BLOQUEIO_DADO/);
+  assert.match(html, /Dados incompletos/);
+});
+
 await caso('filtros operacionais preservam URL e podem ser limpos', () => {
   const estado = { statusOperacional: 'BLOQUEADO', liquidez: 'ALTA', risco: '', bloqueio: 'SIM' };
   assert.equal(filtros.temFiltroOperacional(estado), true);
@@ -134,12 +168,14 @@ await caso('filtros operacionais preservam URL e podem ser limpos', () => {
 
 await caso('alertas priorizam crítico, têm CTA e escapam conteúdo', () => {
   const html = alertas.htmlAlertasOperacionais({ itens: [
-    { severidade: 'INFO', categoria: 'SINAL', descricao: 'mudou' },
-    { severidade: 'CRITICO', categoria: 'RISCO', simbolo: 'PETR4', descricao: '<b>drawdown</b>', createdAt: '2026-10-10T12:00:00' },
+    { ativo: true, severidade: 'INFO', categoria: 'SINAL', descricao: 'mudou' },
+    { ativo: true, severidade: 'CRITICO', categoria: 'RISCO', simbolo: 'PETR4', descricao: '<b>risco</b>', createdAt: '2026-10-10T12:00:00' },
   ] });
   assert.ok(html.indexOf('CRITICO') < html.indexOf('INFO'));
   assert.match(html, /#\/gestao\/PETR4\?aba=operabilidade/);
-  assert.doesNotMatch(html, /<b>drawdown<\/b>/);
+  assert.doesNotMatch(html, /<b>risco<\/b>/);
+  assert.equal((alertas.ordenarAlertas([{ ativo: false, severidade: 'CRITICO' }]).length), 1);
+  assert.doesNotMatch(alertas.htmlAlertasOperacionais({ itens: [{ ativo: false, severidade: 'CRITICO' }] }), /CRITICO/);
 });
 
 await caso('cockpit mostra maturidade de 63 e 126 pregões', () => {

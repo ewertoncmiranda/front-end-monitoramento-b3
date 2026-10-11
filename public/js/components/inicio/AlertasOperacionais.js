@@ -9,7 +9,7 @@ export function ordenarAlertas(itens) {
 }
 export function htmlAlertasOperacionais(dados, { compacto = false } = {}) {
   if (dados?.indisponivel) return '<p class="small text-muted mb-0">Alertas operacionais V2 ainda indisponíveis.</p>';
-  const itens = ordenarAlertas(dados?.itens).slice(0, compacto ? 5 : 30);
+  const itens = ordenarAlertas((dados?.itens || []).filter((a) => a.ativo === true)).slice(0, compacto ? 5 : 30);
   if (!itens.length) return '<p class="small text-muted mb-0">Nenhum alerta operacional ativo.</p>';
   return `<div class="list-group list-group-flush">${itens.map((a) => {
     const simbolo = a.simbolo ? String(a.simbolo).toUpperCase() : '';

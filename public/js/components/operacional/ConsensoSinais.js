@@ -11,6 +11,15 @@ const FONTES = [
 ];
 
 function normalizar(dados = {}) {
+  dados = dados.consenso || dados;
+  if (Array.isArray(dados.sinais)) {
+    const rotulos = {
+      REGRA_PRINCIPAL: 'Regra principal', TECNICO_MOMENTUM: 'Técnico · momentum',
+      TECNICO_REVERSAO: 'Técnico · reversão', REGRA_V2_SOMBRA: 'V2 / ranking sombra', OPINIAO_IA: 'IA',
+    };
+    return dados.sinais.map((s) => ({ ...s, rotulo: rotulos[s.fonte] || s.fonte, sinal: s.valor,
+      explicacao: s.detalhe }));
+  }
   if (Array.isArray(dados.itens)) return dados.itens;
   return FONTES.map(([chave, rotulo]) => ({ fonte: chave, rotulo, ...(dados[chave] || {}) }));
 }
@@ -24,6 +33,7 @@ export function htmlConsenso(dados) {
   if (!dados || dados.indisponivel) {
     return '<section class="ficha-cartao"><p class="ficha-rotulo">Consenso de sinais</p><p class="small text-muted mb-0">Consenso ainda indisponível.</p></section>';
   }
+  const bloco = dados.consenso || dados;
   const itens = normalizar(dados);
   const cards = itens.map((item) => {
     const sinal = item.sinal ?? item.valor ?? item.status ?? null;
@@ -34,9 +44,11 @@ export function htmlConsenso(dados) {
       ${item.explicacao || item.descricao ? `<p class="small mb-0 mt-1">${escaparHtml(item.explicacao || item.descricao)}</p>` : ''}
     </div></div>`;
   }).join('');
-  const divergencias = (dados.divergencias || []).map((d) => `<li>${escaparHtml(d.descricao || d.codigo || d)}</li>`).join('');
+  const divergencias = (bloco.divergencias || []).map((d) => `<li>${escaparHtml(d.descricao || d.codigo || d)}</li>`).join('');
   return `<section class="ficha-cartao">
     <p class="ficha-rotulo">Consenso de sinais</p>
+    ${bloco.resumo ? `<p>${escaparHtml(bloco.resumo)}</p>` : ''}
+    ${bloco.direcaoAnalitica ? `<p class="small mb-1">Direção analítica: <strong>${escaparHtml(bloco.direcaoAnalitica)}</strong> · Operabilidade: <strong>${escaparHtml(bloco.operabilidade || 'sem dado')}</strong></p>` : ''}
     <p class="small text-muted">Sinal analítico e operabilidade são leituras separadas.</p>
     <div class="row g-2">${cards}</div>
     ${divergencias ? `<div class="alert alert-warning small py-2 mt-2 mb-0"><strong>Divergências:</strong><ul class="mb-0">${divergencias}</ul></div>` : ''}

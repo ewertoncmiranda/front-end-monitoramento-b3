@@ -24,7 +24,7 @@ function valoresDe(opcoes, chave, padrao) {
   return valor.map((v) => (typeof v === 'string' ? { valor: v, rotulo: rotulo(v) } : {
     valor: v.valor ?? v.codigo ?? v.id,
     rotulo: v.rotulo ?? v.descricao ?? rotulo(v.valor ?? v.codigo ?? v.id),
-    contagem: v.contagem,
+    contagem: v.contagem ?? v.total,
   }));
 }
 export function filtrosAtivos(estado = {}) {

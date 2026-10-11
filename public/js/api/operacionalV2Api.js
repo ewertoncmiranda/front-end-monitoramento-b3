@@ -28,7 +28,9 @@ function lista(dados, chave = 'itens') {
 }
 
 export async function buscarTickers(filtros = {}) {
-  return lista(await obter('tickers', filtros));
+  const nomesApi = { statusOperacional: 'status' };
+  const parametros = Object.fromEntries(Object.entries(filtros).map(([chave, valor]) => [nomesApi[chave] || chave, valor]));
+  return lista(await obter('tickers', parametros));
 }
 
 export function buscarSnapshot(simbolo) {

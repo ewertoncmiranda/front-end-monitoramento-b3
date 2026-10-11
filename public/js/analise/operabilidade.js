@@ -98,7 +98,11 @@ export function separarCarteira(itens) {
 export function resumoOperacionalTicker(dados) {
   if (!dados) return null;
   const status = statusDe(dados.statusOperacional || dados.statusSistema);
-  const confianca = dados.confianca ?? dados.confiancaPrincipal ?? null;
+  const confianca = dados.confiancaFaixa ?? dados.confianca ?? dados.confiancaPrincipal ?? null;
+  const motivos = dados.motivosBloqueio || dados.bloqueios || [];
+  const tecnico = dados.sinalTecnico && typeof dados.sinalTecnico === 'object'
+    ? Object.entries(dados.sinalTecnico).filter(([, valor]) => valor).map(([chave, valor]) => `${chave}: ${valor}`).join(' · ')
+    : dados.sinalTecnico || dados.tecnico?.sinal || null;
   return {
     status,
     statusRotulo: STATUS[status].rotulo,
@@ -106,12 +110,13 @@ export function resumoOperacionalTicker(dados) {
     liquidez: dados.faixaLiquidez || dados.liquidez || null,
     risco: dados.risco || dados.nivelRisco || null,
     confianca,
-    confiancaCalibrada: dados.confiancaCalibrada === true,
+    confiancaCalibrada: dados.confiancaCalibrada === true
+      || ['ALTA', 'MEDIA', 'BAIXA'].includes(dados.confiancaFaixa),
     sinalPrincipal: dados.sinalPrincipal || dados.regraPrincipal?.sinal || null,
-    sinalTecnico: dados.sinalTecnico || dados.tecnico?.sinal || null,
-    sinalIa: dados.sinalIa || dados.ia?.sinal || null,
-    ultimoEvento: dados.ultimoEvento || null,
-    bloqueado: status === 'BLOQUEADO' || dados.bloqueado === true || Boolean(dados.motivoBloqueio),
-    motivoBloqueio: dados.motivoBloqueio || dados.bloqueios?.[0]?.descricao || dados.bloqueios?.[0]?.codigo || null,
+    sinalTecnico: tecnico,
+    sinalIa: dados.sinalIa || dados.opiniaoIa || dados.ia?.sinal || null,
+    ultimoEvento: dados.ultimoEvento || dados.ultimoEventoTipo || null,
+    bloqueado: status === 'BLOQUEADO' || dados.bloqueado === true || Boolean(dados.motivoBloqueio) || motivos.length > 0,
+    motivoBloqueio: dados.motivoBloqueio || motivos[0]?.descricao || motivos[0]?.detalhe || motivos[0]?.codigo || null,
   };
 }

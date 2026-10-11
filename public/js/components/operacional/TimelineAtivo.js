@@ -10,14 +10,20 @@ export function linkSeguro(valor) {
   }
 }
 export function filtrarTimeline(itens, filtro = {}) {
-  return [...(itens || [])]
+  const normalizados = (itens || []).map((item) => ({
+    ...item,
+    tipoEvento: item.tipoEvento || item.tipo,
+    ocorridoEm: item.ocorridoEm || item.criadoEm || item.dataEvento || item.dataPregao || item.data,
+    descricao: item.descricao || item.titulo || item.payload?.descricao || item.payload?.codigo,
+  }));
+  return normalizados
     .filter((item) => !filtro.tipo || item.tipoEvento === filtro.tipo)
     .filter((item) => !filtro.severidade || item.severidade === filtro.severidade)
     .sort((a, b) => String(b.ocorridoEm || b.dataPregao || '').localeCompare(String(a.ocorridoEm || a.dataPregao || '')));
 }
 
 export function htmlFiltrosTimeline(itens, filtro = {}) {
-  const tipos = [...new Set((itens || []).map((i) => i.tipoEvento).filter(Boolean))].sort();
+  const tipos = [...new Set((itens || []).map((i) => i.tipoEvento || i.tipo).filter(Boolean))].sort();
   return `<div class="d-flex flex-wrap gap-2 mb-2">
     <select class="form-select form-select-sm w-auto" data-timeline-tipo aria-label="Filtrar timeline por tipo">
       <option value="">Todos os eventos</option>${tipos.map((t) => `<option value="${escaparHtml(t)}"${filtro.tipo === t ? ' selected' : ''}>${escaparHtml(t)}</option>`).join('')}
