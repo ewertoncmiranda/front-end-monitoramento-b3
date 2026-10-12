@@ -14,13 +14,13 @@ export async function httpGet(path) {
   return handleResponse(response);
 }
 
-export async function httpPost(path) {
-  const response = await executarFetch((signal) => fetch(`${apiConfig.baseUrl}${path}`, { method: 'POST', signal }));
+export async function httpPost(path, body) {
+  const response = await executarFetch((signal) => fetch(`${apiConfig.baseUrl}${path}`, { method: 'POST', body, signal }));
   return handleResponse(response);
 }
 
-export async function httpDelete(path) {
-  const response = await executarFetch((signal) => fetch(`${apiConfig.baseUrl}${path}`, { method: 'DELETE', signal }));
+export async function httpDelete(path, body) {
+  const response = await executarFetch((signal) => fetch(`${apiConfig.baseUrl}${path}`, { method: 'DELETE', body, signal }));
   return handleResponse(response);
 }
 
