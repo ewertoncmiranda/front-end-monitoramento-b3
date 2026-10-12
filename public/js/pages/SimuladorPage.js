@@ -69,8 +69,6 @@ export class SimuladorPage extends BaseComponent {
     this.historicosPorOperacoes = {};
     // 3: data de referência para estratégias
     this.dataEstrategias = '';
-    // 15: persiste aba ativa entre navegações
-    try { this.abaAtiva = sessionStorage.getItem('simulador-aba') || 'estrategias'; } catch { this.abaAtiva = 'estrategias'; }
     // 9: restaura último resultado retroativo
     try {
       const saved = JSON.parse(sessionStorage.getItem('simulador-retroativo') || 'null');
@@ -568,8 +566,9 @@ export class SimuladorPage extends BaseComponent {
 
     // 10: CSV da tabela "Pregão a pregão"
     this.querySelector('#btn-csv-retroativo')?.addEventListener('click', () => {
-      const { pontos = [], simbolo = 'ativo', dataEntrada = '' } = this.historicoRetroativo || {};
+      const { pontos = [] } = this.historicoRetroativo || {};
       if (!pontos.length) return;
+      const { simbolo = 'ativo', inicio = 'periodo' } = this.retroativoParams || {};
       const estrategias = [...new Set(pontos.flatMap((p) => Object.keys(p.quintilPorEstrategia || {})))].sort();
       const cabecalho = ['Data', 'Preco', 'RetornoDia_pct', 'RetornoAcum_pct', 'PnL_R$', ...estrategias].join(';');
       const linhas = pontos.map((p) => [
@@ -585,7 +584,7 @@ export class SimuladorPage extends BaseComponent {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `retroativo_${simbolo}_${dataEntrada || 'periodo'}.csv`;
+      a.download = `retroativo_${simbolo}_${inicio}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -599,7 +598,7 @@ export class SimuladorPage extends BaseComponent {
 
         if (container.style.display !== 'none') {
           container.style.display = 'none';
-          btn.textContent = 'P&L completo';
+          btn.textContent = 'Ver desempenho';
           return;
         }
 
