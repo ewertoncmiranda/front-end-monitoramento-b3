@@ -15,10 +15,10 @@ import { buscarResumo } from '../api/operacionalApi.js';
 import { escaparHtml } from '../utils/html.js';
 import { htmlTabelaEstrategias, obterIaLivre } from '../components/simulador/TabelaEstrategias.js';
 import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../components/simulador/CenarioSimulador.js';
-import { htmlControlesRetroativo, htmlResultadoRetroativo } from '../components/simulador/Retroativo.js';
+import { htmlControlesRetroativo, htmlResultadoRetroativo, janelaEntreDatas } from '../components/simulador/Retroativo.js';
 import { htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
 import { htmlOperabilidadeParalela } from '../components/simulador/OperabilidadeParalela.js';
-import { campo, listaDe, validarSimboloAtivo } from '../components/simulador/utils.js';
+import { campo, listaDe, validarSimboloAtivo, ESTRATEGIAS_PADRAO } from '../components/simulador/utils.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -284,15 +284,30 @@ export class SimuladorPage extends BaseComponent {
 
     this.querySelector('#form-retroativo')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const simbolo = this.querySelector('#retroativo-ativo')?.value;
+      const inicio = this.querySelector('#retroativo-inicio')?.value;
+      const fim = this.querySelector('#retroativo-fim')?.value;
+      if (!simbolo || !inicio || !fim || fim < inicio) {
+        this.erroRetroativo = 'Selecione ativo, início e fim (fim deve ser posterior ao início).';
+        this.render();
+        return;
+      }
+      const janela = janelaEntreDatas(inicio, fim);
+      this.erroRetroativo = '';
+      this.resultadoRetroativo = null;
+      this.render();
       try {
-        this.resultadoRetroativo = await retroativoSimulador(
-          this.querySelector('#retroativo-ativo')?.value,
-          this.querySelector('#retroativo-estrategia')?.value,
-          'v1',
-          this.querySelector('#retroativo-janela')?.value,
-          this.querySelector('#retroativo-inicio')?.value,
+        const resultados = await Promise.all(
+          ESTRATEGIAS_PADRAO.map(async (estrategia) => {
+            try {
+              const resultado = await retroativoSimulador(simbolo, estrategia, 'v1', janela, inicio);
+              return { estrategia, resultado, erro: null };
+            } catch (err) {
+              return { estrategia, resultado: null, erro: err?.message || 'indisponível' };
+            }
+          })
         );
-        this.erroRetroativo = '';
+        this.resultadoRetroativo = resultados;
       } catch (erroApi) {
         this.erroRetroativo = erroApi?.message || 'Erro ao analisar retroativo.';
       }
