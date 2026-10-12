@@ -2,6 +2,11 @@ import { httpDelete, httpGet, httpPost } from './httpClient.js';
 
 // SIM-PAI-1: API do simulador - CRUD de ativos monitorados
 
+export async function listarTodosAtivosBase() {
+  const dados = await httpGet('/base/ativos?tamanho=500&pagina=0');
+  return (dados?.content || dados?.itens || []).map((a) => ({ simbolo: a.simbolo || a.ticker || a })).filter((a) => a.simbolo);
+}
+
 export async function listarAtivosSimulador() {
   return httpGet('/simulador/ativos');
 }

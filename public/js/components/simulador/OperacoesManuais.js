@@ -1,7 +1,7 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
-import { ESTRATEGIAS_PADRAO } from './utils.js';
+import { ESTRATEGIAS_PADRAO, htmlComboboxAtivo } from './utils.js';
 
 const SEM = '—';
 
@@ -19,7 +19,6 @@ function opcoesVersao() {
 
 // melhoria 1: formulário em seção colapsável distinta da listagem
 function htmlFormulario(ativos) {
-  const opcoesAtivos = ativos.map((a) => `<option>${escaparHtml(a.simbolo)}</option>`).join('');
   return `
     <details class="mb-3">
       <summary class="btn btn-outline-primary btn-sm mb-0"
@@ -30,9 +29,7 @@ function htmlFormulario(ativos) {
         <form id="form-operacao" class="row g-2">
           <div class="col-md-3">
             <label class="form-label small mb-1" for="operacao-ativo">Ativo</label>
-            <select id="operacao-ativo" class="form-select form-select-sm" required>
-              <option value="">Ativo…</option>${opcoesAtivos}
-            </select>
+            ${htmlComboboxAtivo('operacao-ativo', ativos, { placeholder: 'Ativo…' })}
           </div>
           <div class="col-md-3">
             <label class="form-label small mb-1" for="operacao-data">Data de entrada</label>

@@ -61,6 +61,12 @@ export function dataFutura(dataIso, hoje = hojeIso()) {
   return Boolean(dataIso && dataIso > hoje);
 }
 
+export function htmlComboboxAtivo(id, ativos = [], { label = 'Ativo', cssClass = 'form-control form-control-sm', placeholder = 'Digite ou busque…', required = true } = {}) {
+  const listId = `dl-${id}`;
+  const opcoes = ativos.map((a) => `<option value="${escaparHtml(a.simbolo || a)}"></option>`).join('');
+  return `<input type="text" id="${id}" list="${listId}" class="${cssClass}" placeholder="${placeholder}" autocomplete="off"${required ? ' required' : ''}><datalist id="${listId}">${opcoes}</datalist>`;
+}
+
 export function validarSimboloAtivo(simbolo) {
   const valor = String(simbolo || '').trim().toUpperCase();
   return /^[A-Z]{4}[0-9]{1,2}$/.test(valor) ? null : 'Ativo inválido: use o formato XXXX0 ou XXXX00.';

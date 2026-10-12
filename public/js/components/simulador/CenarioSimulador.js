@@ -1,6 +1,7 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
+import { htmlComboboxAtivo } from './utils.js';
 
 const SEM = 'sem dado';
 export const hojeIso = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
@@ -18,7 +19,7 @@ export function validarCenario({ simbolo, dataEntrada, janela, capital }, hoje =
 
 export function htmlFormularioCenario(ativos = []) {
   return `<form id="form-cenario" class="row g-3">
-    <div class="col-md-3"><label for="cenario-ativo" class="form-label">Ativo</label><select class="form-select form-select-sm" id="cenario-ativo" required><option value="">Selecione…</option>${ativos.map((a) => `<option>${escaparHtml(a.simbolo)}</option>`).join('')}</select></div>
+    <div class="col-md-3"><label for="cenario-ativo" class="form-label">Ativo</label>${htmlComboboxAtivo('cenario-ativo', ativos)}</div>
     <div class="col-md-3"><label for="cenario-data" class="form-label">Data de entrada</label><input type="date" max="${hojeIso()}" class="form-control form-control-sm" id="cenario-data" required></div>
     <div class="col-md-2"><label for="cenario-janela" class="form-label">Janela (1–63)</label><input type="number" min="1" max="63" value="21" class="form-control form-control-sm" id="cenario-janela" required></div>
     <div class="col-md-2"><label for="cenario-capital" class="form-label">Capital (R$)</label><input type="number" min="1" step="100" value="10000" class="form-control form-control-sm" id="cenario-capital" required></div>

@@ -1,7 +1,7 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
-import { ESTRATEGIAS_PADRAO } from './utils.js';
+import { ESTRATEGIAS_PADRAO, htmlComboboxAtivo } from './utils.js';
 
 const SEM = '—';
 
@@ -15,16 +15,13 @@ export function janelaEntreDatas(inicioIso, fimIso) {
 }
 
 export function htmlFormularioRetroativo(ativos = []) {
-  const opcoesAtivos = ativos.map((a) => `<option>${escaparHtml(a.simbolo)}</option>`).join('');
   const hoje = new Date().toISOString().slice(0, 10);
   const umAnoAtras = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
   return `
     <form id="form-retroativo" class="row g-3">
       <div class="col-md-4">
         <label class="form-label" for="retroativo-ativo">Ativo</label>
-        <select id="retroativo-ativo" class="form-select form-select-sm" required>
-          <option value="">Selecione…</option>${opcoesAtivos}
-        </select>
+        ${htmlComboboxAtivo('retroativo-ativo', ativos)}
       </div>
       <div class="col-md-3">
         <label class="form-label" for="retroativo-inicio">Início</label>
