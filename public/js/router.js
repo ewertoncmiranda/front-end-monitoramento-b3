@@ -27,6 +27,7 @@ const rotas = {
   '#/opcoes': 'opcao-page',
   '#/assistente': 'assistente-page',
   '#/operabilidade': 'operabilidade-page',
+  '#/simulador': 'simulador-page',
   '#/ficha': 'gestao-page',
 };
 

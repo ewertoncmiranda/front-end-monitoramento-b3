@@ -20,6 +20,7 @@ import './pages/IndicesMacroPage.js';
 import './pages/OpcaoPage.js';
 import './pages/AssistentePage.js';
 import './pages/OperabilidadePage.js';
+import './pages/SimuladorPage.js';
 import { iniciarRouter } from './router.js';
 import { inicializarTema } from './utils/tema.js';
 
