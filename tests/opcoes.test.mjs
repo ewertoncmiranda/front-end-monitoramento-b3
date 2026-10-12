@@ -106,11 +106,11 @@ caso('barra de filtros presente na cadeia valida com datas de vencimento', () =>
   assert.match(html, /2026-11-17/);
   assert.match(html, /2026-12-19/);
   assert.match(html, /data-filtro-tipo/);
-  assert.match(html, /data-filtro-moneyness/);
-  assert.match(html, /ITM/);
-  assert.match(html, /ATM/);
   assert.match(html, /OTM/);
   assert.match(html, /data-filtro-min-negocios/);
+  assert.match(html, /data-filtro-min-volume/);
+  assert.match(html, /data-filtro-min-liquidez/);
+  assert.match(html, /data-filtro-max-distancia/);
 });
 
 caso('vencimentos no filtro aparecem formatados e ordenados', () => {
