@@ -591,3 +591,35 @@ Rota inexistente responde 404: a tela mostra "dados operacionais indisponíveis"
 | `gestor#OPRV2-GES-4` | filtros globais |
 | `gestor#OPRV2-GES-5` | central de alertas |
 | `gerar-insights#OPRV2-INS-5` | mostrar confiança calibrada em vez de “não calibrada” |
+
+---
+
+## Plano OPT: experiência de opções com dados confiáveis (2026-10-12)
+
+**Status:** PLANEJADO · **Contexto comum:** ver `infra-b3-ecossytem/SPEC.md`, Plano OPT. A rota `#/opcoes/{ativo}` funciona e o backend recebe o clique, mas `B3SA3/BVMF3` retornam `opcoes: []` porque a base de opções está suspeita/contaminada. O painel deve explicar o vazio e só enriquecer a cadeia depois que o gestor expuser dados validados.
+
+### Regras para agentes
+
+- Painel não infere opção por prefixo, BDI ou ticker. Só renderiza o contrato do gestor.
+- Estado vazio é parte do produto: vazio sem motivo é bug.
+- IDs `OPT-PAI-*` são reservados; não renomear.
+- Qualquer texto deve manter linguagem de estudo/simulação; não sugerir operação real.
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| OPT-PAI-1 | Melhorar estado vazio da tela de opções | `pages/OpcaoPage.js`, `components/OpcoesPainel.js` | gestor#OPT-GES-2 | Para `SEM_CADEIA_VALIDA`, `CARGA_OPCOES_AUSENTE`, `BASE_OPCOES_CONTAMINADA` e `TICKER_NORMALIZADO`, a tela mostra causa, ticker canônico e próximo passo; não fica “em branco” | IMPLEMENTADO (2026-10-12): `OpcoesPainel` renderiza alertas por status, mostra solicitado/canônico e próximo passo; `OpcaoPage` exibe ticker canônico/alias; `tests/opcoes.test.mjs` cobre vazio explicado, ticker normalizado, base contaminada com escape e cadeia válida |
+| OPT-PAI-2 | Criar bloco de saúde/qualidade da cadeia de opções | nova seção em `#/opcoes` e/ou `#/avaliacao` | gestor#OPT-GES-3 | Mostra totais válidos/invalidos, vencimento 9999, ativos monitorados com/sem cadeia, prefixos suspeitos e último pregão válido | IMPLEMENTADO NO PAINEL (2026-10-12): `#/opcoes` consulta `GET /opcoes/saude`, renderiza todas as métricas obrigatórias, preserva `null` como “sem dado” e trata 404 como diagnóstico ainda indisponível até o gestor concluir OPT-GES-3 |
+| OPT-PAI-3 | Filtros da cadeia válida | `OpcoesPainel.js` | gestor#OPT-GES-1 | Filtros por vencimento, tipo, negócios, volume, liquidez e distância do strike; null aparece como “sem dado” | PLANEJADO |
+| OPT-PAI-4 | Avisos pedagógicos de risco e qualidade | `OpcoesPainel.js`, glossário/ajuda contextual | OPT-PAI-1 | Tela informa que opções exigem liquidez, vencimento, strike, custo, spread e payoff; cadeia incompleta bloqueia leitura de assertividade | PLANEJADO |
+| OPT-PAI-5 | Testes de UX para opções | `tests/*opcoes*.test.mjs` | OPT-PAI-1..4 | Testes cobrem vazio explicado, ticker normalizado, dados suspeitos, escape de texto e renderização de calls/puts válidas | PLANEJADO |
+
+### Estados de UX obrigatórios
+
+| Status da API | Mensagem esperada |
+|---|---|
+| `SEM_CADEIA_VALIDA` | “Não há cadeia de opções válida carregada para este ativo no último pregão.” |
+| `CARGA_OPCOES_AUSENTE` | “A carga de opções ainda não rodou ou não publicou dados válidos.” |
+| `BASE_OPCOES_CONTAMINADA` | “A base contém registros suspeitos e foi bloqueada para evitar leitura enganosa.” |
+| `TICKER_NORMALIZADO` | “O ticker solicitado foi normalizado para o código atual antes da consulta.” |

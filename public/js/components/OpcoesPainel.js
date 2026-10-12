@@ -5,6 +5,29 @@ import { escaparHtml } from '../utils/html.js';
 const BDI_TIPO = { '12': 'CALL', '14': 'PUT' };
 const BDI_COR  = { '12': 'text-success', '14': 'text-danger' };
 
+const STATUS_OPCOES = {
+  SEM_CADEIA_VALIDA: {
+    titulo: 'Sem cadeia válida',
+    proximo: 'Aguarde uma carga validada por ativo-objeto antes de interpretar strikes, vencimentos ou assertividade.',
+    classe: 'warning',
+  },
+  CARGA_OPCOES_AUSENTE: {
+    titulo: 'Carga de opções ausente',
+    proximo: 'A rotina de opções ainda precisa publicar dados válidos; nenhuma leitura operacional deve ser feita agora.',
+    classe: 'secondary',
+  },
+  BASE_OPCOES_CONTAMINADA: {
+    titulo: 'Base bloqueada por qualidade',
+    proximo: 'A consulta por prefixo foi bloqueada para evitar misturar séries de ativos diferentes ou vencimentos inválidos.',
+    classe: 'danger',
+  },
+  TICKER_NORMALIZADO: {
+    titulo: 'Ticker normalizado',
+    proximo: 'Confira o código canônico usado antes de comparar a cadeia com preço, liquidez e payoff.',
+    classe: 'info',
+  },
+};
+
 // Unica responsabilidade: renderizar a tabela de opcoes de um ativo no ultimo
 // pregao disponivel. Moneyness e calculado em relacao ao preco_medio da opcao
 // vs preco_exercicio: ITM (in the money), ATM, OTM.
@@ -18,7 +41,7 @@ export class OpcoesPainel extends BaseComponent {
 
   _template(d) {
     if (!d.opcoes || d.opcoes.length === 0) {
-      return '<p class="text-muted">Nenhuma opção encontrada para esse ativo no último pregão.</p>';
+      return _estadoVazioOpcoes(d);
     }
 
     const calls = d.opcoes.filter((o) => o.bdi === '12' || o.bdi === 12);
@@ -32,11 +55,42 @@ export class OpcoesPainel extends BaseComponent {
       : '';
 
     return `
+      ${d.status === 'TICKER_NORMALIZADO' ? _avisoStatus(d) : ''}
       <p class="text-muted small mb-2">Pregão: ${dataPregao} &nbsp;·&nbsp; ${d.opcoes.length} série(s)</p>
       ${tabelaCalls}
       ${tabelaPuts}
     `;
   }
+}
+
+function _estadoVazioOpcoes(d = {}) {
+  const status = STATUS_OPCOES[d.status] || STATUS_OPCOES.SEM_CADEIA_VALIDA;
+  const solicitado = d.simboloSolicitado || d.simbolo || '';
+  const canonico = d.simboloCanonico || solicitado;
+  const motivo = d.motivo || 'Não há cadeia de opções válida carregada para este ativo no último pregão.';
+  const alias = d.aliasAplicado && solicitado && canonico && solicitado !== canonico;
+  return `
+    <div class="alert alert-${status.classe} mb-0" role="status">
+      <div class="d-flex flex-wrap justify-content-between gap-2">
+        <strong>${escaparHtml(status.titulo)}</strong>
+        ${d.status ? `<span class="badge text-bg-light">${escaparHtml(d.status)}</span>` : ''}
+      </div>
+      <p class="mb-2">${escaparHtml(motivo)}</p>
+      <dl class="row small mb-2">
+        ${solicitado ? `<dt class="col-sm-3">Solicitado</dt><dd class="col-sm-9">${escaparHtml(solicitado)}</dd>` : ''}
+        ${canonico ? `<dt class="col-sm-3">Canônico</dt><dd class="col-sm-9">${escaparHtml(canonico)}${alias ? ' <span class="badge text-bg-info">normalizado</span>' : ''}</dd>` : ''}
+      </dl>
+      <p class="small mb-0"><strong>Próximo passo:</strong> ${escaparHtml(status.proximo)}</p>
+    </div>
+  `;
+}
+
+function _avisoStatus(d = {}) {
+  const status = STATUS_OPCOES[d.status];
+  if (!status) return '';
+  return `<div class="alert alert-${status.classe} py-2 small" role="status">
+    <strong>${escaparHtml(status.titulo)}.</strong> ${escaparHtml(d.motivo || status.proximo)}
+  </div>`;
 }
 
 function _tabelaOpcoes(opcoes, tipo) {
