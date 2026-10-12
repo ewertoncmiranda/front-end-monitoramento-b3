@@ -41,8 +41,9 @@ export async function deletarOperacaoSimulador(id) {
 }
 
 // SIM-PAI-2: Análise IA sob demanda
-export async function analisarIaSimulador(simbolo) {
-  return httpPost(`/simulador/ia/${simbolo}`);
+export async function analisarIaSimulador(simbolo, payload) {
+  const body = payload ? new URLSearchParams({ resultados: JSON.stringify(payload.resultados || []) }) : undefined;
+  return httpPost(`/simulador/ia/${simbolo}`, body);
 }
 
 // SIM-PAI-4: Retroativo

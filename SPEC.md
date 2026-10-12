@@ -623,3 +623,28 @@ Rota inexistente responde 404: a tela mostra "dados operacionais indisponíveis"
 | `CARGA_OPCOES_AUSENTE` | “A carga de opções ainda não rodou ou não publicou dados válidos.” |
 | `BASE_OPCOES_CONTAMINADA` | “A base contém registros suspeitos e foi bloqueada para evitar leitura enganosa.” |
 | `TICKER_NORMALIZADO` | “O ticker solicitado foi normalizado para o código atual antes da consulta.” |
+
+---
+
+## Plano SIM: Simulador de Operações (2026-10-12)
+
+**Status:** PLANEJADO · **Contexto comum:** ver `infra-b3-ecossytem/SPEC.md` Plano SIM. Nova aba "Simulador de operações" com quatro sub-views: (1) tabela de 7+1 estratégias por ativo, (2) cenário pontual what-if com data/capital/janela, (3) retroativo histórico por estratégia, (4) lista de operações manuais com acompanhamento dia a dia. Dados vêm do gestor; IA_LIVRE é sob demanda via clique.
+
+### Princípios de UX
+
+- Todas as telas mantêm aviso de simulação; nunca linguagem de recomendação ou ordem real.
+- IA_LIVRE é resultado analítico, não autorização de operação real.
+- Dado ausente aparece como `—`, nunca como zero.
+- Operações com `status=PENDENTE` mostram countdown até a data de entrada.
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| SIM-PAI-1 | Criar `SimuladorPage.js` com rota `#/simulador`, navegação entre as quatro abas internas e widget de ativos monitorados (CRUD da classe `simulador_ativo`) | `pages/SimuladorPage.js`, `api/simuladorApi.js` | gestor#SIM-GES-1 | Ativo inexistente no cadastro não pode ser adicionado; remoção marca `ativo=false`; aba mostra estado vazio com CTA de adição | PLANEJADO |
+| SIM-PAI-2 | Aba "Estratégias": tabela 7+1 por ativo com quintil, retorno e coluna IA_LIVRE clicável | `components/simulador/TabelaEstrategias.js` | gestor#SIM-GES-2, SIM-PAI-1 | Clicar em IA_LIVRE chama `POST /simulador/ia/{simbolo}` com os 7 resultados da linha; exibe spinner durante chamada; mostra painel expandido com texto + "salvo às HH:MM" | IMPLEMENTADO (2026-10-12): `TabelaEstrategias.js` renderiza sete estratégias + IA_LIVRE, monta payload com sete resultados, aplica cache por ativo e escapa texto retornado pela IA; `SimuladorPage.js` carrega resultados por ativo e liga ação com spinner |
+| SIM-PAI-3 | Aba "Cenário": controles de ativo, data de entrada, janela (1–63 pregões) e capital; cards de resultado por estratégia; gráfico de linha vs CDI | `components/simulador/CenarioSimulador.js` | gestor#SIM-GES-7, SIM-PAI-1 | Resultado exibe R$ ganho/perdido, %, posição vs CDI e frase-resumo; data futura bloqueada (apenas datas com cotação real) | IMPLEMENTADO (2026-10-12): componente de cenário valida ativo/data/janela/capital, bloqueia data futura e janela fora de 1–63 pregões, renderiza cards por estratégia e SVG simples de comparação vs CDI |
+| SIM-PAI-4 | Aba "Retroativo": seleciona estratégia + janela + período histórico e exibe taxa de acerto, retorno médio, melhor/pior entrada e distribuição de resultados | `components/simulador/Retroativo.js` | gestor#SIM-GES-6, SIM-PAI-1 | Aviso de limitação in-sample visível; sem dados no período mostra estado vazio explicado | IMPLEMENTADO (2026-10-12): `Retroativo.js` exibe aviso in-sample, controles de ativo/estratégia/janela/início, taxa de acerto, retorno médio, melhor/pior entrada, distribuição e vazio explicado quando não há dados |
+| SIM-PAI-5 | Aba "Operações": lista de operações manuais com status, P&L do dia e acumulado; expansível para histórico pregão a pregão | `components/simulador/OperacoesManuais.js` | gestor#SIM-GES-3, SIM-GES-4, SIM-PAI-1 | PENDENTE mostra data de abertura estimada; ABERTA mostra linha por pregão ao expandir; FECHADA mostra resumo com retorno vs CDI | IMPLEMENTADO (2026-10-12): lista em accordion diferencia PENDENTE, ABERTA e FECHADA; mostra P&L diário/acumulado, abertura estimada, histórico pregão a pregão e retorno vs CDI |
+| SIM-PAI-6 | Painel lateral de operabilidade paralela: mini-resumo do paper trading real (status, retorno vs CDI, pregões avaliados) exibido junto ao simulador para comparação direta | `components/simulador/OperabilidadeParalela.js` | OPR-PAI-1, SIM-PAI-1 | Reusa dados já carregados da OperabilidadePage; não faz chamada extra | IMPLEMENTADO (2026-10-12): painel lateral mostra status, retorno vs CDI e pregões avaliados; a página busca o resumo operacional uma vez e o repassa ao componente, com estado educativo quando ausente |
+| SIM-PAI-7 | Testes | `tests/simulador.test.mjs` | SIM-PAI-1..6 | Cobre: ativo inválido rejeitado, IA_LIVRE cache reutilizado (sem segunda chamada), data futura bloqueada, valor `null` nunca vira zero, XSS no texto IA escapado | IMPLEMENTADO (2026-10-12): `tests/simulador.test.mjs` cobre rejeição de ativo inválido, payload/cache IA_LIVRE, bloqueio de data futura, preservação de `null` como “sem dado”, escape XSS, vazio retroativo, status de operações e operabilidade paralela |

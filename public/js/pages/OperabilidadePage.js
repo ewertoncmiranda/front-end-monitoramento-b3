@@ -9,6 +9,7 @@ import { htmlCarteira } from '../components/operacional/CarteiraSimulada.js';
 import { htmlBloqueios, htmlListaBloqueios } from '../components/operacional/BloqueiosOperacionais.js';
 import { buscarAlertasOperacionais } from '../api/operacionalV2Api.js';
 import { htmlAlertasOperacionais } from '../components/inicio/AlertasOperacionais.js';
+import { guardarOperabilidade } from '../analise/operabilidadeStore.js';
 
 // Unica responsabilidade: tela "Operabilidade" (Plano OPR, OPR-PAI-2, rota #/operabilidade). Mostra se
 // o paper trading ja tem evidencia minima: status, retorno liquido x CDI liquido, drawdown, carteira
@@ -122,6 +123,7 @@ export class OperabilidadePage extends BaseComponent {
     }
     const indisp = (d) => (d?.indisponivel ? { itens: [] } : d);
     dados = { ...dados, diario: indisp(dados.diario), operacoes: indisp(dados.operacoes), bloqueios: indisp(dados.bloqueios) };
+    guardarOperabilidade(dados);
     this._dados = dados;
     this._filtro = { grupo: '', simbolo: '' };
     alvo.innerHTML = htmlOperabilidade(dados, this._filtro);
