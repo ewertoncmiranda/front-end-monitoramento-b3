@@ -2,6 +2,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { buscarOpcoes, buscarSaudeOpcoes } from '../api/opcoesApi.js';
 import { buscarFundamentos, buscarFundamentosCvm } from '../api/analisesApi.js';
 import { buscarPregoes } from '../api/pregoesApi.js';
+import { buscarProventosContabeis } from '../api/lacunasApi.js';
 import { escaparHtml } from '../utils/html.js';
 import '../components/OpcoesPainel.js';
 import '../components/SeletorDeAtivos.js';
@@ -25,7 +26,7 @@ function _data90dAtras() {
 
 // Constroi o contexto do ativo-objeto a partir dos dados enriquecidos.
 // Nunca lanca excecao — campos ausentes ficam null.
-function _montarContexto(fundamentos, cvm, pregoes) {
+function _montarContexto(fundamentos, cvm, pregoes, proventos) {
   const velas = pregoes?.velas || [];
   const resumo = pregoes?.resumo;
 
@@ -50,8 +51,53 @@ function _montarContexto(fundamentos, cvm, pregoes) {
     ? Number(fundamentos.margemSegurancaPercent) : null;
 
   const vol21d = _calcVol21d(velas);
+  const atr14 = _calcAtr14(velas);
+  const volRelativo = _calcVolRelativo(velas);
+  const saltos = (pregoes?.saltos || []).map((s) => ({ data: s.data, variacao: s.variacao }));
+  const exDividendos = _extrairExDividendos(proventos);
 
-  return { precoAtual, variacaoDia, max63d, min63d, posicaoRange, lpa, vpa, pl, graham, recomendacao, margem, vol21d };
+  return {
+    precoAtual, variacaoDia, max63d, min63d, posicaoRange,
+    lpa, vpa, pl, graham, recomendacao, margem,
+    vol21d, atr14, volRelativo, saltos, exDividendos,
+  };
+}
+
+// ATR14 em R$: media do true range dos ultimos 14 pregoes.
+function _calcAtr14(velas) {
+  if (velas.length < 2) return null;
+  const janela = velas.slice(-15);
+  const trs = [];
+  for (let i = 1; i < janela.length; i++) {
+    const h = Number(janela[i].maxima), l = Number(janela[i].minima), c = Number(janela[i - 1].fechamento);
+    if (!h || !l || !c) continue;
+    trs.push(Math.max(h - l, Math.abs(h - c), Math.abs(l - c)));
+  }
+  if (trs.length < 5) return null;
+  return trs.reduce((a, b) => a + b, 0) / trs.length;
+}
+
+// Volume relativo: volume financeiro do ultimo pregao / media dos 21 pregoes anteriores.
+function _calcVolRelativo(velas) {
+  if (velas.length < 5) return null;
+  const ult = Number(velas[velas.length - 1].volumeFinanceiro ?? velas[velas.length - 1].volume ?? 0);
+  if (!ult) return null;
+  const prev = velas.slice(-22, -1).map((v) => Number(v.volumeFinanceiro ?? v.volume ?? 0)).filter((x) => x > 0);
+  if (prev.length < 5) return null;
+  const media = prev.reduce((a, b) => a + b, 0) / prev.length;
+  return media > 0 ? ult / media : null;
+}
+
+// Extrai datas ex-dividendo futuras (ou recentes 30d) dos proventos contabeis.
+function _extrairExDividendos(proventos) {
+  if (!Array.isArray(proventos)) return [];
+  const hoje = new Date();
+  const limite = new Date(hoje);
+  limite.setDate(hoje.getDate() - 30);
+  return proventos
+    .filter((p) => p.data_ex && new Date(p.data_ex) >= limite)
+    .map((p) => ({ data: p.data_ex, tipo: p.tipo_provento || p.tipo || '', valor: Number(p.valor_por_acao ?? 0) }))
+    .sort((a, b) => a.data.localeCompare(b.data));
 }
 
 function _calcVarDia(velas) {
@@ -115,12 +161,13 @@ export class OpcaoPage extends BaseComponent {
     history.replaceState(null, '', `#/opcoes/${encodeURIComponent(simbolo)}`);
 
     try {
-      // Busca paralela: opcoes (obrigatório) + 3 enriquecedores (degradam graciosamente).
-      const [dadosR, fundR, cvmR, pregoesR] = await Promise.allSettled([
+      // Busca paralela: opcoes (obrigatório) + 4 enriquecedores (degradam graciosamente).
+      const [dadosR, fundR, cvmR, pregoesR, proventosR] = await Promise.allSettled([
         buscarOpcoes(simbolo),
         buscarFundamentos(simbolo),
         buscarFundamentosCvm(simbolo),
         buscarPregoes(simbolo, { de: _data90dAtras(), intervalo: 'dia' }),
+        buscarProventosContabeis(simbolo),
       ]);
 
       if (dadosR.status === 'rejected') throw dadosR.reason;
@@ -128,8 +175,9 @@ export class OpcaoPage extends BaseComponent {
       const fundamentos = fundR.status === 'fulfilled' ? fundR.value : null;
       const cvm       = cvmR.status === 'fulfilled'   ? cvmR.value   : null;
       const pregoes   = pregoesR.status === 'fulfilled' ? pregoesR.value : null;
+      const proventos = proventosR.status === 'fulfilled' ? proventosR.value : null;
 
-      this._contexto = _montarContexto(fundamentos, cvm, pregoes);
+      this._contexto = _montarContexto(fundamentos, cvm, pregoes, proventos);
       this._renderizar(resultado, simbolo, { ...dados, contexto: this._contexto }, null);
     } catch (erro) {
       resultado.innerHTML = `<status-alert variante="danger" mensagem="${escaparHtml(erro.message)}"></status-alert>`;

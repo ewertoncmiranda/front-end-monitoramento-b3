@@ -7,7 +7,7 @@ export const GRUPOS = [
   {
     id: 'ativos', rotulo: 'Ativos', icone: '🗂️',
     itens: [
-      { rotulo: 'Ficha do ativo', rota: '#/gestao' },
+      { rotulo: 'Ficha do ativo', rota: '#/ficha' },
       // Tabela unica (REQ-UX-8): substitui as listas Base, Favoritos, Monitorados e Setores.
       { rotulo: 'Tabela de ativos', rota: '#/ativos' },
     ],
@@ -42,7 +42,9 @@ const EXTRAS = {
   '#/favoritos': 'ativos',
   '#/monitorados': 'ativos',
   '#/setores': 'ativos',
+  '#/gestao': 'ativos',
   '#/opcoes': 'mercado',
+  '#/ficha': 'ativos',
   '#/formulas': 'estudos',
   '#/glossario': 'estudos',
   '#/padroes': 'estudos',

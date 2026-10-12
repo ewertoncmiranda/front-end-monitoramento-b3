@@ -257,4 +257,42 @@ caso('colunas distancia e break-even ausentes quando sem contexto', () => {
   assert.match(html, /—/);
 });
 
+// ── ATR14, volume relativo, saltos e proventos ────────────────────────────────
+
+caso('card contexto mostra ATR14 e volume relativo quando presentes no contexto', () => {
+  const ctx = { ...CTX_BASE, atr14: 1.45, volRelativo: 2.3 };
+  const html = render({ simboloSolicitado: 'PETR4', simboloCanonico: 'PETR4', aliasAplicado: false, status: 'OK', motivo: '', vencimentos: [], opcoes: [OPCAO_CALL], contexto: ctx });
+  assert.match(html, /ATR14 R\$1\.45/);
+  assert.match(html, /Vol\.rel\. 2\.30×/);
+});
+
+caso('aviso de saltos aparece quando contexto tem saltos detectados', () => {
+  const ctx = { ...CTX_BASE, saltos: [{ data: '2026-08-15', variacao: -0.45 }] };
+  const html = render({ simboloSolicitado: 'PETR4', simboloCanonico: 'PETR4', aliasAplicado: false, status: 'OK', motivo: '', vencimentos: [], opcoes: [OPCAO_CALL], contexto: ctx });
+  assert.match(html, /salto\(s\)/);
+  assert.match(html, /15\/08\/2026/);
+  assert.match(html, /-45\.0%/);
+});
+
+caso('aviso de saltos ausente quando saltos e array vazio', () => {
+  const ctx = { ...CTX_BASE, saltos: [] };
+  const html = render({ simboloSolicitado: 'PETR4', simboloCanonico: 'PETR4', aliasAplicado: false, status: 'OK', motivo: '', vencimentos: [], opcoes: [OPCAO_CALL], contexto: ctx });
+  assert.doesNotMatch(html, /salto\(s\)/);
+});
+
+caso('aviso de ex-dividendo aparece quando exDividendos tem datas', () => {
+  const ctx = { ...CTX_BASE, exDividendos: [{ data: '2026-11-05', tipo: 'DIVIDENDO', valor: 1.5 }] };
+  const html = render({ simboloSolicitado: 'PETR4', simboloCanonico: 'PETR4', aliasAplicado: false, status: 'OK', motivo: '', vencimentos: [], opcoes: [OPCAO_CALL], contexto: ctx });
+  assert.match(html, /Ex-dividendo/);
+  assert.match(html, /05\/11\/2026/);
+  assert.match(html, /DIVIDENDO/);
+  assert.match(html, /prêmio das CALLs/);
+});
+
+caso('aviso de ex-dividendo ausente quando exDividendos e array vazio', () => {
+  const ctx = { ...CTX_BASE, exDividendos: [] };
+  const html = render({ simboloSolicitado: 'PETR4', simboloCanonico: 'PETR4', aliasAplicado: false, status: 'OK', motivo: '', vencimentos: [], opcoes: [OPCAO_CALL], contexto: ctx });
+  assert.doesNotMatch(html, /Ex-dividendo/);
+});
+
 console.log(`opcoes.test.mjs ok (${casos} casos)`);

@@ -3,10 +3,10 @@ import { escaparHtml } from '../utils/html.js';
 import '../pages/ConsultaPage.js';
 import '../pages/CadastroPage.js';
 
-/** `#/gestao/PETR4` (rota da busca global) ou `#/gestao?ativo=PETR4` -> "PETR4". */
+/** `#/gestao/PETR4`, `#/ficha/PETR4` (rota direta) ou `?ativo=PETR4` -> "PETR4". */
 function ativoDoHash() {
   const [caminho, consulta = ''] = window.location.hash.split('?');
-  const doCaminho = decodeURIComponent(caminho.replace(/^#\/gestao\/?/, ''));
+  const doCaminho = decodeURIComponent(caminho.replace(/^#\/(gestao|ficha)\/?/, ''));
   return (doCaminho || new URLSearchParams(consulta).get('ativo') || '').trim().toUpperCase();
 }
 
