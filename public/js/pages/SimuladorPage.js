@@ -21,11 +21,22 @@ import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../c
 import { htmlControlesRetroativo, htmlResultadoRetroativo, janelaEntreDatas } from '../components/simulador/Retroativo.js';
 import { htmlHistoricoOperacao, htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
 import { htmlOperabilidadeParalela } from '../components/simulador/OperabilidadeParalela.js';
-import { campo, listaDe, validarSimboloAtivo, htmlComboboxAtivo, ESTRATEGIAS_PADRAO } from '../components/simulador/utils.js';
+import { campo, listaDe, validarSimboloAtivo, htmlComboboxAtivo, ESTRATEGIAS_PADRAO, CAPITAIS_SIMULACAO, CAPITAL_BASE, labelCapital } from '../components/simulador/utils.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
 // SIM-PAI-1: Página principal do simulador com 4 abas internas
+
+// Escala pnlRs de cada ponto proporcionalmente; percentuais ficam inalterados.
+function escalarHistorico(historico, capital) {
+  if (!historico || capital === CAPITAL_BASE) return historico;
+  const f = capital / CAPITAL_BASE;
+  return {
+    ...historico,
+    totalPnlRs: (historico.totalPnlRs || 0) * f,
+    pontos: (historico.pontos || []).map((p) => ({ ...p, pnlRs: (p.pnlRs || 0) * f })),
+  };
+}
 
 const ABAS = [
   { id: 'estrategias', rotulo: 'Estratégias' },
@@ -69,6 +80,8 @@ export class SimuladorPage extends BaseComponent {
     this.historicosPorOperacoes = {};
     // 3: data de referência para estratégias
     this.dataEstrategias = '';
+    // capital selecionado para escalar P&L no retroativo (pregão a pregão)
+    this.capitalRetroativo = CAPITAL_BASE;
     // 9: restaura último resultado retroativo
     try {
       const saved = JSON.parse(sessionStorage.getItem('simulador-retroativo') || 'null');
@@ -251,7 +264,6 @@ export class SimuladorPage extends BaseComponent {
 
   abaRetroativo() {
     const { simbolo, inicio, fim } = this.retroativoParams || {};
-    // 6: janela visível
     const janelaChip = inicio && fim
       ? `<p class="small text-muted mt-1 mb-0">Janela estimada: <strong>${janelaEntreDatas(inicio, fim)}</strong> pregões</p>`
       : '';
@@ -260,17 +272,27 @@ export class SimuladorPage extends BaseComponent {
       ? `Pregão a pregão — ${escaparHtml(simbolo)} (${escaparHtml(inicio || '')} → ${escaparHtml(fim || '')})`
       : 'Pregão a pregão';
 
-    // 10: botão CSV
     const btnCsv = this.historicoRetroativo?.pontos?.length
       ? `<button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="btn-csv-retroativo">⬇ CSV</button>`
       : '';
 
+    // seletor de capital para escalar P&L client-side
+    const seletorCapital = this.historicoRetroativo
+      ? `<div class="d-flex align-items-center gap-1 flex-wrap">
+           <span class="small text-muted me-1">Capital:</span>
+           ${CAPITAIS_SIMULACAO.map((c) => `<button type="button"
+             class="btn btn-sm ${c === this.capitalRetroativo ? 'btn-primary' : 'btn-outline-secondary'}"
+             data-capital-retroativo="${c}">${escaparHtml(labelCapital(c))}</button>`).join('')}
+         </div>`
+      : '';
+
     const secaoHistorico = this.historicoRetroativo
       ? `<div class="mt-4">
-           <div class="d-flex align-items-center gap-2 mb-2">
+           <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
              <h6 class="text-muted mb-0">${tituloHistorico}</h6>${btnCsv}
            </div>
-           ${htmlHistoricoOperacao(this.historicoRetroativo)}
+           ${seletorCapital}
+           <div class="mt-2">${htmlHistoricoOperacao(escalarHistorico(this.historicoRetroativo, this.capitalRetroativo))}</div>
          </div>`
       : '';
 
@@ -332,7 +354,6 @@ export class SimuladorPage extends BaseComponent {
         this.cenarioPreenchido = {
           simbolo: btn.dataset.simbolo,
           dataEntrada: btn.dataset.dataEntrada,
-          capital: btn.dataset.capital,
         };
         this.resultadoCenario = null;
         this.erroCenario = '';
@@ -362,7 +383,6 @@ export class SimuladorPage extends BaseComponent {
         simbolo: this.querySelector('#cenario-ativo')?.value,
         dataEntrada: this.querySelector('#cenario-data')?.value,
         janela: this.querySelector('#cenario-janela')?.value,
-        capital: this.querySelector('#cenario-capital')?.value,
       };
       const erro = validarCenario(dados);
       if (erro) {
@@ -372,7 +392,7 @@ export class SimuladorPage extends BaseComponent {
         return;
       }
       try {
-        this.resultadoCenario = await cenarioSimulador(dados.simbolo, dados.dataEntrada, dados.janela, dados.capital);
+        this.resultadoCenario = await cenarioSimulador(dados.simbolo, dados.dataEntrada, dados.janela, CAPITAL_BASE);
         this.erroCenario = '';
       } catch (erroApi) {
         this.erroCenario = erroApi?.message || 'Erro ao simular cenário.';
@@ -538,6 +558,14 @@ export class SimuladorPage extends BaseComponent {
       this.dataEstrategias = '';
       await this.carregarResultadosEstrategias();
       this.render();
+    });
+
+    // seletor de capital no retroativo (escala P&L client-side)
+    this.querySelectorAll('[data-capital-retroativo]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.capitalRetroativo = Number(btn.dataset.capitalRetroativo);
+        this.render();
+      });
     });
 
     // 1: consulta rápida de qualquer ativo
