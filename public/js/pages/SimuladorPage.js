@@ -2,6 +2,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import {
   analisarIaSimulador,
   buscarHistoricoOperacao,
+  buscarHistoricoPeriodo,
   buscarResultadosSimulador,
   cenarioSimulador,
   criarOperacaoSimulador,
@@ -448,6 +449,40 @@ export class SimuladorPage extends BaseComponent {
         }
 
         btn.textContent = 'Ocultar P&L';
+      });
+    });
+
+    // Retroativo — P&L por período (carregado on-demand por entrada)
+    this.querySelectorAll('[data-historico-periodo]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const simbolo = btn.dataset.simbolo;
+        const inicio = btn.dataset.inicio;
+        const fim = btn.dataset.fim;
+        const containerId = `hist-retro-${simbolo}-${inicio}`;
+        const row = this.querySelector(`#${containerId}`);
+        if (!row) return;
+
+        const td = row.querySelector('td');
+        if (row.style.display !== 'none') {
+          row.style.display = 'none';
+          btn.textContent = 'P&L';
+          return;
+        }
+
+        if (!row.dataset.carregado) {
+          td.innerHTML = '<span class="spinner-border spinner-border-sm ms-1"></span>';
+          row.style.display = '';
+          try {
+            const historico = await buscarHistoricoPeriodo(simbolo, inicio, fim);
+            td.innerHTML = htmlHistoricoOperacao(historico);
+            row.dataset.carregado = '1';
+          } catch (err) {
+            td.innerHTML = `<p class="small text-danger ms-1">Erro: ${escaparHtml(err.message || 'indisponível')}</p>`;
+          }
+        } else {
+          row.style.display = '';
+        }
+        btn.textContent = 'Ocultar';
       });
     });
   }

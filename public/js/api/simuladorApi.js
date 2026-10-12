@@ -49,6 +49,11 @@ export async function buscarHistoricoOperacao(id) {
   return httpGet(`/simulador/operacoes/${id}/historico`);
 }
 
+export async function buscarHistoricoPeriodo(simbolo, inicio, fim, capital = 10000) {
+  const params = new URLSearchParams({ simbolo, inicio, fim, capital: capital.toString() });
+  return httpGet(`/simulador/retroativo/historico?${params}`);
+}
+
 // SIM-PAI-2: Análise IA sob demanda
 export async function analisarIaSimulador(simbolo, payload) {
   const body = payload ? new URLSearchParams({ resultados: JSON.stringify(payload.resultados || []) }) : undefined;
