@@ -21,6 +21,8 @@ const ROTAS_PROXIADAS = [
   '/painel',
   // Paper trading do Plano OPR (gestor OPR-GES-2..4, tela Operabilidade)
   '/operacional',
+  // Simulador de operacoes (gestor SIM-GES-*)
+  '/simulador',
 ];
 
 export function registrarProxy(app, backendUrl) {
