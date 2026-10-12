@@ -1,26 +1,162 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
+import { ESTRATEGIAS_PADRAO } from './utils.js';
 
 const SEM = '—';
-export function htmlOperacoes(operacoes = [], ativos = []) {
+
+const VERSOES_ESTRATEGIA = ESTRATEGIAS_PADRAO.map((e) => `${e}_v1`);
+
+const STATUS_LISTA = ['PENDENTE', 'ABERTA', 'FECHADA'];
+
+// melhoria 2: estratégia vira select com todas as versões conhecidas
+function opcoesVersao() {
+  return VERSOES_ESTRATEGIA.map((v) => {
+    const rotulo = v.replace(/_v(\d+)$/, ' v$1').replace(/_/g, ' ');
+    return `<option value="${escaparHtml(v)}">${escaparHtml(rotulo)}</option>`;
+  }).join('');
+}
+
+// melhoria 1: formulário em seção colapsável distinta da listagem
+function htmlFormulario(ativos) {
+  const opcoesAtivos = ativos.map((a) => `<option>${escaparHtml(a.simbolo)}</option>`).join('');
+  return `
+    <details class="mb-3">
+      <summary class="btn btn-outline-primary btn-sm mb-0"
+               style="display:inline-flex;align-items:center;gap:4px;list-style:none;cursor:pointer;">
+        + Nova operação
+      </summary>
+      <div class="border rounded p-3 mt-2">
+        <form id="form-operacao" class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label small mb-1" for="operacao-ativo">Ativo</label>
+            <select id="operacao-ativo" class="form-select form-select-sm" required>
+              <option value="">Ativo…</option>${opcoesAtivos}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1" for="operacao-data">Data de entrada</label>
+            <input id="operacao-data" type="date" class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small mb-1" for="operacao-capital">Capital (R$)</label>
+            <input id="operacao-capital" type="number" min="1" value="10000"
+                   class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1" for="operacao-versao">Estratégia</label>
+            <select id="operacao-versao" class="form-select form-select-sm" required>
+              ${opcoesVersao()}
+            </select>
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Criar</button>
+          </div>
+        </form>
+      </div>
+    </details>`;
+}
+
+// melhoria 5: filtro por status
+function htmlFiltros(filtroStatus) {
+  const btnTodas = `<button type="button"
+    class="btn btn-sm ${filtroStatus === '' ? 'btn-secondary' : 'btn-outline-secondary'}"
+    data-filtro-status="">Todas</button>`;
+  const btnStatus = STATUS_LISTA.map((s) =>
+    `<button type="button"
+      class="btn btn-sm ${filtroStatus === s ? 'btn-primary' : 'btn-outline-secondary'}"
+      data-filtro-status="${s}">${s}</button>`
+  ).join('');
+  return `<div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+    <span class="small text-muted">Status:</span>
+    ${btnTodas}${btnStatus}
+  </div>`;
+}
+
+export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
   if (operacoes && !Array.isArray(operacoes)) operacoes = operacoes.itens || operacoes.operacoes || [];
-  const form = `<form id="form-operacao" class="row g-2 mb-3"><div class="col-md-3"><select id="operacao-ativo" class="form-select form-select-sm" required><option value="">Ativo…</option>${ativos.map((a) => `<option>${escaparHtml(a.simbolo)}</option>`).join('')}</select></div><div class="col-md-3"><input id="operacao-data" type="date" class="form-control form-control-sm" required></div><div class="col-md-2"><input id="operacao-capital" type="number" min="1" value="10000" class="form-control form-control-sm" aria-label="Capital" required></div><div class="col-md-3"><input id="operacao-versao" value="MOMENTO_PURO_v1" class="form-control form-control-sm" aria-label="Versão da estratégia" required></div><div class="col-md-1"><button class="btn btn-primary btn-sm w-100">Criar</button></div></form>`;
-  if (!operacoes.length) return `${form}<p class="small text-muted">Nenhuma operação manual cadastrada.</p>`;
-  const lista = operacoes.map((o) => {
+
+  const form = htmlFormulario(ativos);
+  const filtros = htmlFiltros(filtroStatus);
+  const lista = filtroStatus
+    ? operacoes.filter((o) => (o.status || '') === filtroStatus)
+    : operacoes;
+
+  if (!lista.length) {
+    const msg = filtroStatus
+      ? `Nenhuma operação com status ${filtroStatus}.`
+      : 'Nenhuma operação manual cadastrada.';
+    return `${form}${filtros}<p class="small text-muted">${msg}</p>`;
+  }
+
+  const itens = lista.map((o) => {
     const diarios = o.diarios || o.historico || [];
     const pnl = diarios.at(-1)?.pnlRs ?? o.pnlRs;
     const acum = diarios.at(-1)?.retornoAcumPct ?? o.retornoAcumPct;
     const status = o.status || SEM;
+
     const resumoStatus = status === 'PENDENTE'
       ? `Abertura estimada: ${escaparHtml(formatarData(o.dataAberturaEstimada || o.dataEntrada, SEM))}`
       : status === 'FECHADA'
         ? `Retorno vs CDI: ${escaparHtml(formatarPercentual(o.retornoVsCdi ?? o.excessoCdi, 2, { sinal: true, vazio: SEM }))}`
-        : 'Histórico pregão a pregão';
-    const detalhe = diarios.length ? `<details><summary>Histórico pregão a pregão</summary><div class="table-responsive"><table class="table table-sm"><tbody>${diarios.map((d) => `<tr><td>${escaparHtml(formatarData(d.dataPregao))}</td><td>${escaparHtml(formatarMoeda(d.pnlRs ?? d.pnlDia, SEM))}</td><td>${escaparHtml(formatarPercentual(d.retornoAcumPct ?? d.pnlAcumulado, 2, { sinal: true, vazio: SEM }))}</td></tr>`).join('')}</tbody></table></div></details>` : '<small class="text-muted">O contrato atual ainda não publicou o acompanhamento pregão a pregão.</small>';
-    return `<article class="ficha-cartao mb-2"><div class="d-flex flex-wrap justify-content-between gap-2"><div><strong>${escaparHtml(o.simbolo || SEM)}</strong> <span class="badge text-bg-secondary">${escaparHtml(status)}</span><div class="small">entrada ${escaparHtml(formatarData(o.dataEntrada))} · ${escaparHtml(formatarMoeda(o.capital, SEM))}</div><div class="small text-muted">${resumoStatus}</div></div><div class="text-end"><div>P&L ${escaparHtml(formatarMoeda(pnl, SEM))}</div><div>acumulado ${escaparHtml(formatarPercentual(acum, 2, { sinal: true, vazio: SEM }))}</div>${status === 'PENDENTE' ? `<button class="btn btn-sm btn-outline-danger mt-1" data-excluir-operacao="${o.id}">Excluir</button>` : ''}</div></div>${detalhe}</article>`;
+        : 'Em andamento';
+
+    // melhoria 3: PENDENTE não mostra travessões — explica que ainda não há P&L
+    const financeiro = status === 'PENDENTE'
+      ? `<div class="small text-muted">Aguardando data de entrada para calcular P&amp;L.</div>`
+      : `<div>P&amp;L ${escaparHtml(formatarMoeda(pnl, SEM))}</div>
+         <div>acumulado ${escaparHtml(formatarPercentual(acum, 2, { sinal: true, vazio: SEM }))}</div>`;
+
+    // melhoria 4: ABERTA tem botão Encerrar; PENDENTE mantém Excluir
+    const botaoAcao = status === 'PENDENTE'
+      ? `<button class="btn btn-sm btn-outline-danger mt-1" data-excluir-operacao="${o.id}">Excluir</button>`
+      : status === 'ABERTA'
+        ? `<button class="btn btn-sm btn-outline-warning mt-1" data-encerrar-operacao="${o.id}">Encerrar</button>`
+        : '';
+
+    // melhoria 6: thead com rótulos de coluna no histórico
+    const thead = `<thead><tr>
+      <th class="small fw-normal text-muted" style="white-space:nowrap">Data</th>
+      <th class="small fw-normal text-muted text-end">P&amp;L dia</th>
+      <th class="small fw-normal text-muted text-end">Acumulado</th>
+    </tr></thead>`;
+
+    const detalhe = diarios.length
+      ? `<details class="mt-2"><summary class="small text-muted" style="cursor:pointer;">
+           Histórico pregão a pregão (${diarios.length})
+         </summary>
+         <div class="table-responsive mt-1">
+           <table class="table table-sm">
+             ${thead}
+             <tbody>${diarios.map((d) => `<tr>
+               <td>${escaparHtml(formatarData(d.dataPregao))}</td>
+               <td class="text-end">${escaparHtml(formatarMoeda(d.pnlRs ?? d.pnlDia, SEM))}</td>
+               <td class="text-end">${escaparHtml(formatarPercentual(d.retornoAcumPct ?? d.pnlAcumulado, 2, { sinal: true, vazio: SEM }))}</td>
+             </tr>`).join('')}</tbody>
+           </table>
+         </div></details>`
+      : status !== 'PENDENTE'
+        ? '<small class="text-muted d-block mt-2">O contrato atual ainda não publicou o acompanhamento pregão a pregão.</small>'
+        : '';
+
+    return `<article class="ficha-cartao mb-2">
+      <div class="d-flex flex-wrap justify-content-between gap-2">
+        <div>
+          <strong>${escaparHtml(o.simbolo || SEM)}</strong>
+          <span class="badge text-bg-secondary">${escaparHtml(status)}</span>
+          <div class="small">entrada ${escaparHtml(formatarData(o.dataEntrada))} · ${escaparHtml(formatarMoeda(o.capital, SEM))}</div>
+          <div class="small text-muted">${resumoStatus}</div>
+        </div>
+        <div class="text-end">
+          ${financeiro}
+          ${botaoAcao}
+        </div>
+      </div>
+      ${detalhe}
+    </article>`;
   }).join('');
-  return form + lista;
+
+  return form + filtros + itens;
 }
 
 export const htmlOperacoesManuais = htmlOperacoes;

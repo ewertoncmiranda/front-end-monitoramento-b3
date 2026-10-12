@@ -3,6 +3,8 @@ import {
   analisarIaSimulador,
   buscarResultadosSimulador,
   cenarioSimulador,
+  criarOperacaoSimulador,
+  deletarOperacaoSimulador,
   desativarAtivoSimulador,
   listarAtivosSimulador,
   listarOperacoesSimulador,
@@ -43,6 +45,7 @@ export class SimuladorPage extends BaseComponent {
     this.erroRetroativo = '';
     this.operacoes = null;
     this.erroOperacoes = '';
+    this.filtroStatusOperacoes = '';
     this.resumoOperabilidade = null;
     this.carregando = false;
     this.erro = null;
@@ -204,7 +207,7 @@ export class SimuladorPage extends BaseComponent {
         <p class="mb-0"><small>PENDENTE: aguardando data de entrada. ABERTA: em andamento. FECHADA: encerrada.</small></p>
       </div>
       ${this.erroOperacoes ? `<div class="alert alert-warning small">${escaparHtml(this.erroOperacoes)}</div>` : ''}
-      <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes)}</div>
+      <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes, this.ativos, this.filtroStatusOperacoes)}</div>
     `;
   }
 
@@ -332,6 +335,64 @@ export class SimuladorPage extends BaseComponent {
             await this.carregarAtivos();
           } catch (err) {
             alert(`Erro ao remover ativo: ${err.message}`);
+          }
+        }
+      });
+    });
+
+    // Filtro de status na aba Operações
+    this.querySelectorAll('[data-filtro-status]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        this.filtroStatusOperacoes = e.currentTarget.dataset.filtroStatus;
+        this.render();
+      });
+    });
+
+    // Criar operação manual
+    this.querySelector('#form-operacao')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const simbolo = this.querySelector('#operacao-ativo')?.value;
+      const dataEntrada = this.querySelector('#operacao-data')?.value;
+      const capital = this.querySelector('#operacao-capital')?.value;
+      const versaoEstrategia = this.querySelector('#operacao-versao')?.value;
+      if (!simbolo || !dataEntrada || !capital || !versaoEstrategia) return;
+      try {
+        await criarOperacaoSimulador(simbolo, dataEntrada, capital, versaoEstrategia);
+        await this.carregarOperacoes();
+        this.render();
+        this.querySelector('details')?.removeAttribute('open');
+      } catch (err) {
+        alert(`Erro ao criar operação: ${err.message}`);
+      }
+    });
+
+    // Excluir operação PENDENTE
+    this.querySelectorAll('[data-excluir-operacao]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.excluirOperacao;
+        if (confirm('Excluir esta operação?')) {
+          try {
+            await deletarOperacaoSimulador(id);
+            await this.carregarOperacoes();
+            this.render();
+          } catch (err) {
+            alert(`Erro ao excluir operação: ${err.message}`);
+          }
+        }
+      });
+    });
+
+    // Encerrar operação ABERTA
+    this.querySelectorAll('[data-encerrar-operacao]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.encerrarOperacao;
+        if (confirm('Encerrar (arquivar) esta operação?')) {
+          try {
+            await deletarOperacaoSimulador(id);
+            await this.carregarOperacoes();
+            this.render();
+          } catch (err) {
+            alert(`Erro ao encerrar operação: ${err.message}`);
           }
         }
       });
