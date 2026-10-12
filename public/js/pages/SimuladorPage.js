@@ -1,6 +1,22 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
-import { listarAtivosSimulador, registrarAtivoSimulador, desativarAtivoSimulador } from '../api/simuladorApi.js';
+import {
+  analisarIaSimulador,
+  buscarResultadosSimulador,
+  cenarioSimulador,
+  desativarAtivoSimulador,
+  listarAtivosSimulador,
+  listarOperacoesSimulador,
+  registrarAtivoSimulador,
+  retroativoSimulador,
+} from '../api/simuladorApi.js';
+import { buscarResumo } from '../api/operacionalApi.js';
 import { escaparHtml } from '../utils/html.js';
+import { htmlTabelaEstrategias, obterIaLivre } from '../components/simulador/TabelaEstrategias.js';
+import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../components/simulador/CenarioSimulador.js';
+import { htmlControlesRetroativo, htmlResultadoRetroativo } from '../components/simulador/Retroativo.js';
+import { htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
+import { htmlOperabilidadeParalela } from '../components/simulador/OperabilidadeParalela.js';
+import { campo, listaDe, validarSimboloAtivo } from '../components/simulador/utils.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -18,6 +34,16 @@ export class SimuladorPage extends BaseComponent {
     super();
     this.abaAtiva = 'estrategias';
     this.ativos = [];
+    this.resultadosPorAtivo = {};
+    this.iaPorAtivo = {};
+    this.carregandoIa = '';
+    this.resultadoCenario = null;
+    this.erroCenario = '';
+    this.resultadoRetroativo = null;
+    this.erroRetroativo = '';
+    this.operacoes = null;
+    this.erroOperacoes = '';
+    this.resumoOperabilidade = null;
     this.carregando = false;
     this.erro = null;
   }
@@ -28,6 +54,11 @@ export class SimuladorPage extends BaseComponent {
     this.render();
   }
 
+  render() {
+    this.innerHTML = this.template();
+    this.afterRender();
+  }
+
   async carregarAtivos() {
     this.carregando = true;
     this.erro = null;
@@ -35,13 +66,50 @@ export class SimuladorPage extends BaseComponent {
 
     try {
       const dados = await listarAtivosSimulador();
-      this.ativos = dados || [];
+      this.ativos = listaDe(dados);
+      await Promise.all([
+        this.carregarResultadosEstrategias(),
+        this.carregarOperacoes(),
+        this.carregarOperabilidadeParalela(),
+      ]);
     } catch (e) {
       console.error('Erro ao carregar ativos do simulador:', e);
       this.erro = e.message || 'Erro ao carregar ativos';
     } finally {
       this.carregando = false;
       this.render();
+    }
+  }
+
+  async carregarResultadosEstrategias() {
+    const pares = await Promise.all(this.ativos.map(async (ativo) => {
+      const simbolo = campo(ativo, ['simbolo', 'ticker'], '');
+      if (!simbolo) return null;
+      try {
+        return [simbolo, await buscarResultadosSimulador(simbolo)];
+      } catch {
+        return [simbolo, { resultados: [] }];
+      }
+    }));
+    this.resultadosPorAtivo = Object.fromEntries(pares.filter(Boolean));
+  }
+
+  async carregarOperacoes() {
+    try {
+      this.operacoes = await listarOperacoesSimulador();
+      this.erroOperacoes = '';
+    } catch (erro) {
+      this.operacoes = { itens: [] };
+      this.erroOperacoes = erro?.message || 'Não foi possível carregar operações.';
+    }
+  }
+
+  async carregarOperabilidadeParalela() {
+    if (this.resumoOperabilidade) return;
+    try {
+      this.resumoOperabilidade = await buscarResumo();
+    } catch {
+      this.resumoOperabilidade = null;
     }
   }
 
@@ -60,8 +128,13 @@ export class SimuladorPage extends BaseComponent {
       <p class="text-muted small mb-3">
         Simulação/paper trading; não é recomendação de investimento.
       </p>
-      <div class="d-flex gap-2 mb-3" role="group" aria-label="Abas do simulador">${chips}</div>
-      ${conteudoAba}
+      <div class="row g-3">
+        <div class="col-lg-9">
+          <div class="d-flex gap-2 mb-3" role="group" aria-label="Abas do simulador">${chips}</div>
+          ${conteudoAba}
+        </div>
+        <div class="col-lg-3">${htmlOperabilidadeParalela(this.resumoOperabilidade)}</div>
+      </div>
     `;
   }
 
@@ -89,146 +162,49 @@ export class SimuladorPage extends BaseComponent {
   }
 
   abaEstrategias() {
-    // SIM-PAI-2: Tabela 7+1 estratégias por ativo
-    if (this.ativos.length === 0) {
-      return `
-        <div class="alert alert-info">
-          <p class="mb-0">Nenhum ativo monitorado no simulador.</p>
-          <p class="mb-0">
-            <small>Adicione ativos usando o formulário abaixo ou pela tela de monitoramento.</small>
-          </p>
-        </div>
-        ${this.formularioAdicionarAtivo()}
-      `;
-    }
+    const remover = this.ativos.length ? `<div class="table-responsive mt-3">
+      <table class="table table-sm"><thead><tr><th>Ativo</th><th>Ações</th></tr></thead>
+      <tbody>${this.ativos.map((ativo) => `<tr><td>${escaparHtml(campo(ativo, ['simbolo', 'ticker'], ''))}</td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger btn-remover" data-simbolo="${escaparHtml(campo(ativo, ['simbolo', 'ticker'], ''))}">Remover</button></td></tr>`).join('')}</tbody></table>
+    </div>` : '';
 
-    const linhas = this.ativos.map((ativo) => `
-      <tr>
-        <td><strong>${escaparHtml(ativo.simbolo)}</strong></td>
-        <td>${ativo.janelaPregoes} pregões</td>
-        <td>R$ ${Number(ativo.capitalInicial).toLocaleString('pt-BR')}</td>
-        <td>
-          <button type="button" class="btn btn-sm btn-outline-danger btn-remover" data-simbolo="${escaparHtml(ativo.simbolo)}">
-            Remover
-          </button>
-        </td>
-      </tr>
-    `).join('');
-
-    return `
-      <div class="table-responsive">
-        <table class="table table-sm table-hover">
-          <thead>
-            <tr>
-              <th>Ativo</th>
-              <th>Janela</th>
-              <th>Capital Inicial</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>${linhas}</tbody>
-        </table>
-      </div>
+    return `${htmlTabelaEstrategias(this.ativos, this.resultadosPorAtivo, this.iaPorAtivo, this.carregandoIa)}
+      ${remover}
       <hr class="my-3">
       ${this.formularioAdicionarAtivo()}
     `;
   }
 
   abaCenario() {
-    // SIM-PAI-3: Cenário pontual (what-if)
     return `
       <div class="alert alert-info">
         <p class="mb-0">Cenário pontual: simule P&L para uma data e janela específicas.</p>
         <p class="mb-0"><small>Selecione um ativo, data de entrada, janela e capital para ver o resultado por estratégia.</small></p>
       </div>
-      <form id="form-cenario" class="row g-3">
-        <div class="col-md-3">
-          <label for="cenario-ativo" class="form-label">Ativo</label>
-          <select class="form-select form-select-sm" id="cenario-ativo" required>
-            <option value="">Selecione...</option>
-            ${this.ativos.map((a) => `<option value="${escaparHtml(a.simbolo)}">${escaparHtml(a.simbolo)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label for="cenario-data" class="form-label">Data de entrada</label>
-          <input type="date" class="form-control form-control-sm" id="cenario-data" required>
-        </div>
-        <div class="col-md-2">
-          <label for="cenario-janela" class="form-label">Janela (pregões)</label>
-          <select class="form-select form-select-sm" id="cenario-janela">
-            <option value="21">21</option>
-            <option value="63">63</option>
-            <option value="126">126</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label for="cenario-capital" class="form-label">Capital (R$)</label>
-          <input type="number" class="form-control form-control-sm" id="cenario-capital" value="10000" min="1000" step="1000" required>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">&nbsp;</label>
-          <button type="submit" class="btn btn-primary btn-sm w-100">Simular</button>
-        </div>
-      </form>
-      <div id="resultado-cenario" class="mt-3"></div>
+      ${htmlControlesCenario(this.ativos)}
+      <div id="resultado-cenario" class="mt-3">${this.erroCenario ? `<div class="alert alert-danger small">${escaparHtml(this.erroCenario)}</div>` : htmlResultadoCenario(this.resultadoCenario)}</div>
     `;
   }
 
   abaRetroativo() {
-    // SIM-PAI-4: Retroativo histórico
     return `
       <div class="alert alert-info">
         <p class="mb-0">Retroativo: valide estratégias históricas contra retornos reais.</p>
         <p class="mb-0"><small>Selecione estratégia, janela e período para ver taxa de acerto e retorno médio.</small></p>
-        <p class="mb-0"><small class="text-warning">Aviso: limitação in-sample - resultados históricos podem não se repetir no futuro.</small></p>
       </div>
-      <form id="form-retroativo" class="row g-3">
-        <div class="col-md-3">
-          <label for="retroativo-ativo" class="form-label">Ativo</label>
-          <select class="form-select form-select-sm" id="retroativo-ativo" required>
-            <option value="">Selecione...</option>
-            ${this.ativos.map((a) => `<option value="${escaparHtml(a.simbolo)}">${escaparHtml(a.simbolo)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label for="retroativo-estrategia" class="form-label">Estratégia</label>
-          <select class="form-select form-select-sm" id="retroativo-estrategia" required>
-            <option value="MOMENTO_PURO">MOMENTO_PURO</option>
-            <option value="BAIXO_SPREAD">BAIXO_SPREAD</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label for="retroativo-janela" class="form-label">Janela (pregões)</label>
-          <select class="form-select form-select-sm" id="retroativo-janela">
-            <option value="21">21</option>
-            <option value="63">63</option>
-            <option value="126">126</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label for="retroativo-inicio" class="form-label">Início</label>
-          <input type="date" class="form-control form-control-sm" id="retroativo-inicio" required>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">&nbsp;</label>
-          <button type="submit" class="btn btn-primary btn-sm w-100">Analisar</button>
-        </div>
-      </form>
-      <div id="resultado-retroativo" class="mt-3"></div>
+      ${htmlControlesRetroativo(this.ativos)}
+      <div id="resultado-retroativo" class="mt-3">${this.erroRetroativo ? `<div class="alert alert-danger small">${escaparHtml(this.erroRetroativo)}</div>` : htmlResultadoRetroativo(this.resultadoRetroativo)}</div>
     `;
   }
 
   abaOperacoes() {
-    // SIM-PAI-5: Lista de operações manuais
     return `
       <div class="alert alert-info">
         <p class="mb-0">Operações manuais: acompanhe suas operações simuladas.</p>
         <p class="mb-0"><small>PENDENTE: aguardando data de entrada. ABERTA: em andamento. FECHADA: encerrada.</small></p>
       </div>
-      <button type="button" class="btn btn-primary btn-sm mb-3" id="btn-nova-operacao">Nova Operação</button>
-      <div id="lista-operacoes">
-        <p class="text-muted">Carregando operações...</p>
-      </div>
+      ${this.erroOperacoes ? `<div class="alert alert-warning small">${escaparHtml(this.erroOperacoes)}</div>` : ''}
+      <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes)}</div>
     `;
   }
 
@@ -263,6 +239,63 @@ export class SimuladorPage extends BaseComponent {
       });
     });
 
+    this.querySelectorAll('[data-ia-livre], [data-analisar-ia]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const simbolo = btn.dataset.iaLivre || btn.dataset.analisarIa;
+        this.carregandoIa = simbolo;
+        this.render();
+        try {
+          this.iaPorAtivo[simbolo] = await obterIaLivre(simbolo, this.resultadosPorAtivo[simbolo], analisarIaSimulador);
+        } catch (erro) {
+          this.iaPorAtivo[simbolo] = { texto: erro?.message || 'Não foi possível gerar IA_LIVRE agora.' };
+        } finally {
+          this.carregandoIa = '';
+          this.render();
+        }
+      });
+    });
+
+    this.querySelector('#form-cenario')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const dados = {
+        simbolo: this.querySelector('#cenario-ativo')?.value,
+        dataEntrada: this.querySelector('#cenario-data')?.value,
+        janela: this.querySelector('#cenario-janela')?.value,
+        capital: this.querySelector('#cenario-capital')?.value,
+      };
+      const erro = validarCenario(dados);
+      if (erro) {
+        this.erroCenario = erro;
+        this.resultadoCenario = null;
+        this.render();
+        return;
+      }
+      try {
+        this.resultadoCenario = await cenarioSimulador(dados.simbolo, dados.dataEntrada, dados.janela, dados.capital);
+        this.erroCenario = '';
+      } catch (erroApi) {
+        this.erroCenario = erroApi?.message || 'Erro ao simular cenário.';
+      }
+      this.render();
+    });
+
+    this.querySelector('#form-retroativo')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        this.resultadoRetroativo = await retroativoSimulador(
+          this.querySelector('#retroativo-ativo')?.value,
+          this.querySelector('#retroativo-estrategia')?.value,
+          'v1',
+          this.querySelector('#retroativo-janela')?.value,
+          this.querySelector('#retroativo-inicio')?.value,
+        );
+        this.erroRetroativo = '';
+      } catch (erroApi) {
+        this.erroRetroativo = erroApi?.message || 'Erro ao analisar retroativo.';
+      }
+      this.render();
+    });
+
     // Botão atualizar
     this.querySelector('#btn-atualizar')?.addEventListener('click', () => {
       this.carregarAtivos();
@@ -274,6 +307,11 @@ export class SimuladorPage extends BaseComponent {
       const simbolo = this.querySelector('#novo-ativo').value.toUpperCase();
       const janela = parseInt(this.querySelector('#nova-janela').value, 10);
       const capital = this.querySelector('#novo-capital').value;
+      const erroAtivo = validarSimboloAtivo(simbolo);
+      if (erroAtivo) {
+        alert(erroAtivo);
+        return;
+      }
 
       try {
         await registrarAtivoSimulador(simbolo);

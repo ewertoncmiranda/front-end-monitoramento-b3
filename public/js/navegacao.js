@@ -28,6 +28,7 @@ export const GRUPOS = [
       { rotulo: 'Saúde e placar', rota: '#/avaliacao' },
       // Plano OPR (OPR-PAI-2): paper trading - status, retorno liquido x CDI, carteira e bloqueios.
       { rotulo: 'Operabilidade', rota: '#/operabilidade' },
+      { rotulo: 'Simulador', rota: '#/simulador' },
     ],
   },
   // TASK-CHAT-4: conversa geral com o servico de IA.

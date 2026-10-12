@@ -43,13 +43,13 @@ const REC_CLASSE = {
 export class OpcoesPainel extends BaseComponent {
   constructor() {
     super();
-    this._filtros = { vencimento: '', tipo: '', moneyness: '', minNegocios: 0 };
+    this._filtros = { vencimento: '', tipo: '', minNegocios: 0, minVolume: 0, minLiquidez: 0, maxDistancia: '' };
     this._dados = null;
   }
 
   setDados(dados) {
     this._dados = dados;
-    this._filtros = { vencimento: '', tipo: '', moneyness: '', minNegocios: 0 };
+    this._filtros = { vencimento: '', tipo: '', minNegocios: 0, minVolume: 0, minLiquidez: 0, maxDistancia: '' };
     this.innerHTML = dados ? this._template(dados) : '';
     this._bindFiltros();
   }
@@ -86,10 +86,12 @@ export class OpcoesPainel extends BaseComponent {
     if (!form) return;
     form.addEventListener('change', () => {
       this._filtros = {
-        vencimento:  form.querySelector('[data-filtro-vencimento]')?.value || '',
-        tipo:        form.querySelector('[data-filtro-tipo]')?.value || '',
-        moneyness:   form.querySelector('[data-filtro-moneyness]')?.value || '',
-        minNegocios: Number(form.querySelector('[data-filtro-min-negocios]')?.value || 0),
+        vencimento:   form.querySelector('[data-filtro-vencimento]')?.value || '',
+        tipo:         form.querySelector('[data-filtro-tipo]')?.value || '',
+        minNegocios:  Number(form.querySelector('[data-filtro-min-negocios]')?.value || 0),
+        minVolume:    Number(form.querySelector('[data-filtro-min-volume]')?.value || 0),
+        minLiquidez:  Number(form.querySelector('[data-filtro-min-liquidez]')?.value || 0),
+        maxDistancia: form.querySelector('[data-filtro-max-distancia]')?.value ?? '',
       };
       this._atualizarTabelas();
     });
@@ -215,18 +217,28 @@ function _barraFiltros(vencimentos) {
         </select>
       </div>
       <div class="col-auto">
-        <label class="form-label mb-1 small">Moneyness</label>
-        <select data-filtro-moneyness class="form-select form-select-sm">
-          <option value="">Todos</option>
-          <option value="ITM">ITM</option>
-          <option value="ATM">ATM</option>
-          <option value="OTM">OTM</option>
-        </select>
-      </div>
-      <div class="col-auto">
         <label class="form-label mb-1 small">Mín. negócios</label>
         <input data-filtro-min-negocios type="number" min="0" step="1" value="0"
-          class="form-control form-control-sm" style="width:90px">
+          class="form-control form-control-sm" style="width:90px"
+          title="Exibe apenas opções com pelo menos N negócios no pregão. Sem dado passa pelo filtro.">
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-1 small">Volume mín. (contratos)</label>
+        <input data-filtro-min-volume type="number" min="0" step="1" value="0"
+          class="form-control form-control-sm" style="width:110px"
+          title="Exibe apenas opções com volume de contratos ≥ N. Sem dado passa pelo filtro.">
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-1 small">Liquidez mín. (R$)</label>
+        <input data-filtro-min-liquidez type="number" min="0" step="1000" value="0"
+          class="form-control form-control-sm" style="width:120px"
+          title="Exibe apenas opções com volume financeiro ≥ R$ N. Sem dado passa pelo filtro.">
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-1 small">Distância máx. strike (%)</label>
+        <input data-filtro-max-distancia type="number" min="0" step="1" value=""
+          placeholder="—" class="form-control form-control-sm" style="width:110px"
+          title="Exibe apenas opções cujo strike está a no máximo N% do preço atual. Requer preço do ativo-objeto. Sem dado passa pelo filtro.">
       </div>
     </div>
   `;
@@ -235,25 +247,52 @@ function _barraFiltros(vencimentos) {
 function _renderTabelas(calls, puts, filtros, precoAtual) {
   const callsFilt = _filtrar(calls, 'CALL', filtros, precoAtual);
   const putsFilt  = _filtrar(puts,  'PUT',  filtros, precoAtual);
+
+  const total    = calls.length + puts.length;
+  const filtrado = callsFilt.length + putsFilt.length;
+  const contagem = `<p class="text-muted small mb-2">
+    <strong>${filtrado}</strong> de <strong>${total}</strong> opções
+  </p>`;
+
+  if (filtrado === 0) {
+    return contagem + `<div class="alert alert-secondary" role="status">
+      Nenhuma opção atende aos filtros selecionados.
+    </div>`;
+  }
+
   const semCall = filtros.tipo !== 'PUT' && !callsFilt.length
     ? '<p class="text-muted small">Sem CALLs para os filtros selecionados.</p>' : '';
   const semPut = filtros.tipo !== 'CALL' && !putsFilt.length
     ? '<p class="text-muted small">Sem PUTs para os filtros selecionados.</p>' : '';
   const tabelaCalls = callsFilt.length ? _tabelaOpcoes(callsFilt, 'CALL', precoAtual) : semCall;
   const tabelaPuts  = putsFilt.length  ? _tabelaOpcoes(putsFilt,  'PUT',  precoAtual) : semPut;
-  return tabelaCalls + tabelaPuts;
+  return contagem + tabelaCalls + tabelaPuts;
 }
 
 function _filtrar(opcoes, tipo, filtros, precoAtual) {
   if (filtros.tipo && filtros.tipo !== tipo) return [];
   return opcoes.filter((o) => {
     if (filtros.vencimento && o.data_vencimento !== filtros.vencimento) return false;
-    if (filtros.minNegocios > 0 && Number(o.numero_negocios ?? -1) < filtros.minNegocios) return false;
-    if (filtros.moneyness) {
-      const exercicio = Number(o.preco_exercicio ?? 0);
-      const medio     = Number(o.preco_medio ?? o.fechamento ?? 0);
-      if (_moneyness(tipo, exercicio, medio, precoAtual).rotulo !== filtros.moneyness) return false;
+
+    // null passes all numeric filters (shown as "sem dado" but not excluded)
+    if (filtros.minNegocios > 0 && o.numero_negocios != null
+        && Number(o.numero_negocios) < filtros.minNegocios) return false;
+
+    if (filtros.minVolume > 0 && o.volume != null
+        && Number(o.volume) < filtros.minVolume) return false;
+
+    if (filtros.minLiquidez > 0 && o.volume_financeiro != null
+        && Number(o.volume_financeiro) < filtros.minLiquidez) return false;
+
+    if (filtros.maxDistancia !== '' && filtros.maxDistancia !== null) {
+      const maxDist = Number(filtros.maxDistancia);
+      if (!isNaN(maxDist) && maxDist >= 0 && precoAtual && precoAtual > 0
+          && o.preco_exercicio != null) {
+        const dist = Math.abs(Number(o.preco_exercicio) - precoAtual) / precoAtual * 100;
+        if (dist > maxDist) return false;
+      }
     }
+
     return true;
   });
 }
