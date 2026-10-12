@@ -8,6 +8,7 @@ import {
   desativarAtivoSimulador,
   listarAtivosSimulador,
   listarOperacoesSimulador,
+  listarTodosAtivosBase,
   registrarAtivoSimulador,
   retroativoSimulador,
 } from '../api/simuladorApi.js';
@@ -18,7 +19,7 @@ import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../c
 import { htmlControlesRetroativo, htmlResultadoRetroativo, janelaEntreDatas } from '../components/simulador/Retroativo.js';
 import { htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
 import { htmlOperabilidadeParalela } from '../components/simulador/OperabilidadeParalela.js';
-import { campo, listaDe, validarSimboloAtivo, ESTRATEGIAS_PADRAO } from '../components/simulador/utils.js';
+import { campo, listaDe, validarSimboloAtivo, htmlComboboxAtivo, ESTRATEGIAS_PADRAO } from '../components/simulador/utils.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -36,6 +37,7 @@ export class SimuladorPage extends BaseComponent {
     super();
     this.abaAtiva = 'estrategias';
     this.ativos = [];
+    this.todosAtivos = [];
     this.resultadosPorAtivo = {};
     this.iaPorAtivo = {};
     this.carregandoIa = '';
@@ -68,8 +70,12 @@ export class SimuladorPage extends BaseComponent {
     this.render();
 
     try {
-      const dados = await listarAtivosSimulador();
+      const [dados, todos] = await Promise.all([
+        listarAtivosSimulador(),
+        listarTodosAtivosBase().catch(() => []),
+      ]);
       this.ativos = listaDe(dados);
+      this.todosAtivos = todos;
       await Promise.all([
         this.carregarResultadosEstrategias(),
         this.carregarOperacoes(),
@@ -184,7 +190,7 @@ export class SimuladorPage extends BaseComponent {
         <p class="mb-0">Cenário pontual: simule P&L para uma data e janela específicas.</p>
         <p class="mb-0"><small>Selecione um ativo, data de entrada, janela e capital para ver o resultado por estratégia.</small></p>
       </div>
-      ${htmlControlesCenario(this.ativos)}
+      ${htmlControlesCenario(this.todosAtivos)}
       <div id="resultado-cenario" class="mt-3">${this.erroCenario ? `<div class="alert alert-danger small">${escaparHtml(this.erroCenario)}</div>` : htmlResultadoCenario(this.resultadoCenario)}</div>
     `;
   }
@@ -195,7 +201,7 @@ export class SimuladorPage extends BaseComponent {
         <p class="mb-0">Retroativo: valide estratégias históricas contra retornos reais.</p>
         <p class="mb-0"><small>Selecione estratégia, janela e período para ver taxa de acerto e retorno médio.</small></p>
       </div>
-      ${htmlControlesRetroativo(this.ativos)}
+      ${htmlControlesRetroativo(this.todosAtivos)}
       <div id="resultado-retroativo" class="mt-3">${this.erroRetroativo ? `<div class="alert alert-danger small">${escaparHtml(this.erroRetroativo)}</div>` : htmlResultadoRetroativo(this.resultadoRetroativo)}</div>
     `;
   }
@@ -207,7 +213,7 @@ export class SimuladorPage extends BaseComponent {
         <p class="mb-0"><small>PENDENTE: aguardando data de entrada. ABERTA: em andamento. FECHADA: encerrada.</small></p>
       </div>
       ${this.erroOperacoes ? `<div class="alert alert-warning small">${escaparHtml(this.erroOperacoes)}</div>` : ''}
-      <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes, this.ativos, this.filtroStatusOperacoes)}</div>
+      <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes, this.todosAtivos, this.filtroStatusOperacoes)}</div>
     `;
   }
 
@@ -216,7 +222,7 @@ export class SimuladorPage extends BaseComponent {
       <form id="form-adicionar" class="row g-2 align-items-end">
         <div class="col-md-4">
           <label for="novo-ativo" class="form-label small">Adicionar ativo</label>
-          <input type="text" class="form-control form-control-sm" id="novo-ativo" placeholder="PETR4" required pattern="[A-Z]{4}[0-9]{1,2}" title="Formato: XXXX00">
+          ${htmlComboboxAtivo('novo-ativo', this.todosAtivos, { placeholder: 'PETR4' })}
         </div>
         <div class="col-md-2">
           <label for="nova-janela" class="form-label small">Janela</label>

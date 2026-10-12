@@ -46,9 +46,14 @@ export function htmlTabelaEstrategias(resultados = [], analises = {}, carregando
     const carregando = arguments[3];
     const achatados = ativos.flatMap((ativo) => {
       const simbolo = ativo?.simbolo || ativo?.ticker || '';
-      const dados = resultadosPorAtivo[simbolo]?.resultados || resultadosPorAtivo[simbolo]?.itens || [];
-      const base = dados.length ? dados : ESTRATEGIAS_PADRAO.map((versaoEstrategia) => ({ versaoEstrategia }));
-      return base.map((r) => ({ simbolo, ...r }));
+      const _raw = resultadosPorAtivo[simbolo];
+      const todos = Array.isArray(_raw) ? _raw : (_raw?.resultados || _raw?.itens || []);
+      const maisRecente = ESTRATEGIAS_PADRAO.map((prefixo) => {
+        const candidatos = todos.filter((r) => String(r?.versaoEstrategia || '').toUpperCase().startsWith(prefixo));
+        const melhor = candidatos.sort((a, b) => (b.dataPregao || '') > (a.dataPregao || '') ? 1 : -1)[0];
+        return melhor || { versaoEstrategia: prefixo };
+      });
+      return maisRecente.map((r) => ({ simbolo, ...r }));
     });
     return htmlTabelaEstrategias(achatados, iaPorAtivo, new Set(carregando ? [carregando] : []));
   }
