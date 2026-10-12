@@ -218,16 +218,13 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '', hi
       : '';
 
     // 14: atalho → Cenário pré-preenchido
-    const botaoCenario = temDesempenho
-      ? `<button class="btn btn-sm btn-outline-secondary mt-1 ms-1"
+    const botaoCenario = temDesempenho && o.simbolo && o.dataEntrada
+      ? `<button type="button" class="btn btn-sm btn-outline-secondary mt-1 ms-1"
            data-simular-cenario="${o.id}"
-           data-simbolo="${escaparHtml(o.simbolo || '')}"
-           data-data-entrada="${escaparHtml(String(o.dataEntrada || ''))}"
-           data-capital="${escaparHtml(String(o.capital || '10000'))}">→ Cenário</button>`
-      : '';
-
-    const botaoCenario = o.simbolo && o.dataEntrada && o.capital != null
-      ? `<button type="button" class="btn btn-sm btn-outline-primary mt-1 ms-1" data-simular-cenario data-simbolo="${escaparHtml(o.simbolo)}" data-data-entrada="${escaparHtml(o.dataEntrada)}" data-capital="${escaparHtml(o.capital)}" title="Usar esta entrada no Cenário">→ Simular no Cenário</button>`
+           data-simbolo="${escaparHtml(o.simbolo)}"
+           data-data-entrada="${escaparHtml(String(o.dataEntrada))}"
+           data-capital="${escaparHtml(String(o.capital || '10000'))}"
+           title="Usar esta entrada no Cenário">→ Cenário</button>`
       : '';
 
     // melhoria 6: thead com rótulos de coluna no histórico
@@ -265,7 +262,7 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '', hi
         </div>
         <div class="text-end">
           ${financeiro}
-          ${botaoAcao}${botaoPnl}${botaoCenario}${botaoCenario}
+          ${botaoAcao}${botaoPnl}${botaoCenario}
         </div>
       </div>
       ${detalhe}
