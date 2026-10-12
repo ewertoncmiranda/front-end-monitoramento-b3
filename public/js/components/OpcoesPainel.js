@@ -28,9 +28,18 @@ const STATUS_OPCOES = {
   },
 };
 
-// Unica responsabilidade: renderizar a tabela de opcoes de um ativo no ultimo
-// pregao disponivel. OPT-PAI-3: filtros interativos por vencimento, tipo,
-// moneyness e minimo de negocios. OPT-PAI-4: avisos pedagogicos de risco.
+const REC_CLASSE = {
+  COMPRA_FORTE: 'success', COMPRA_MODERADA: 'success',
+  MANTER: 'secondary', ALERTA_RISCO: 'warning', VENDA_VALUATION: 'danger',
+};
+
+// Responsabilidade: renderizar cadeia de opcoes com:
+//   OPT-PAI-1/2: estados explicados e saude
+//   OPT-PAI-3: filtros interativos (vencimento, tipo, moneyness, min negocios)
+//   OPT-PAI-4: avisos pedagogicos
+//   Cruzamento 1: moneyness real via precoAtual do ativo-objeto
+//   Cruzamento 2: card contexto (preco, range, Graham, recomendacao, volatilidade)
+//   Cruzamento 3: colunas Distancia e Break-even na tabela
 export class OpcoesPainel extends BaseComponent {
   constructor() {
     super();
@@ -46,13 +55,14 @@ export class OpcoesPainel extends BaseComponent {
   }
 
   _template(d) {
+    const ctx = d.contexto || null;
+
     if (!d.opcoes || d.opcoes.length === 0) {
-      return _estadoVazioOpcoes(d) + _avisosPedagogicos();
+      return _cardContexto(ctx) + _estadoVazioOpcoes(d) + _avisosPedagogicos();
     }
 
     const calls = d.opcoes.filter((o) => o.bdi === '12' || o.bdi === 12);
     const puts  = d.opcoes.filter((o) => o.bdi === '14' || o.bdi === 14);
-
     const vencimentos = [...new Set(d.opcoes.map((o) => o.data_vencimento).filter(Boolean))].sort();
 
     const dataPregao = d.opcoes[0]?.data_pregao
@@ -60,11 +70,12 @@ export class OpcoesPainel extends BaseComponent {
       : '';
 
     return `
+      ${_cardContexto(ctx)}
       ${d.status === 'TICKER_NORMALIZADO' ? _avisoStatus(d) : ''}
       <p class="text-muted small mb-2">Pregão: ${dataPregao} &nbsp;·&nbsp; ${d.opcoes.length} série(s)</p>
       ${_barraFiltros(vencimentos)}
       <div data-tabelas>
-        ${_renderTabelas(calls, puts, this._filtros)}
+        ${_renderTabelas(calls, puts, this._filtros, ctx?.precoAtual)}
       </div>
       ${_avisosPedagogicos()}
     `;
@@ -75,9 +86,9 @@ export class OpcoesPainel extends BaseComponent {
     if (!form) return;
     form.addEventListener('change', () => {
       this._filtros = {
-        vencimento: form.querySelector('[data-filtro-vencimento]')?.value || '',
-        tipo:       form.querySelector('[data-filtro-tipo]')?.value || '',
-        moneyness:  form.querySelector('[data-filtro-moneyness]')?.value || '',
+        vencimento:  form.querySelector('[data-filtro-vencimento]')?.value || '',
+        tipo:        form.querySelector('[data-filtro-tipo]')?.value || '',
+        moneyness:   form.querySelector('[data-filtro-moneyness]')?.value || '',
         minNegocios: Number(form.querySelector('[data-filtro-min-negocios]')?.value || 0),
       };
       this._atualizarTabelas();
@@ -90,11 +101,63 @@ export class OpcoesPainel extends BaseComponent {
     const calls = d.opcoes.filter((o) => o.bdi === '12' || o.bdi === 12);
     const puts  = d.opcoes.filter((o) => o.bdi === '14' || o.bdi === 14);
     const el = this.querySelector('[data-tabelas]');
-    if (el) el.innerHTML = _renderTabelas(calls, puts, this._filtros);
+    if (el) el.innerHTML = _renderTabelas(calls, puts, this._filtros, d.contexto?.precoAtual);
   }
 }
 
-// OPT-PAI-3: barra de filtros — vencimento, tipo, moneyness, minimo de negocios.
+// ── Cruzamento 2: card contexto do ativo-objeto ────────────────────────────────
+function _cardContexto(ctx) {
+  if (!ctx?.precoAtual) return '';
+
+  const preco = `R$ ${ctx.precoAtual.toFixed(2)}`;
+  const varSinal = (ctx.variacaoDia ?? 0) >= 0 ? '+' : '';
+  const varCls   = (ctx.variacaoDia ?? 0) >= 0 ? 'text-success' : 'text-danger';
+  const varStr = ctx.variacaoDia != null
+    ? `<span class="${varCls} small">${varSinal}${(ctx.variacaoDia * 100).toFixed(2)}%</span>`
+    : '';
+
+  // barra de posicao no range 63 dias
+  const rangePct = ctx.posicaoRange != null ? Math.min(100, Math.max(0, Math.round(ctx.posicaoRange * 100))) : null;
+  const rangeBar = rangePct != null ? `
+    <div class="d-flex align-items-center gap-2 mt-2 small text-muted">
+      <span title="mínima 63d">${_fmtMoeda(ctx.min63d)}</span>
+      <div class="progress flex-grow-1" style="height:5px" title="${rangePct}% no range 63d">
+        <div class="progress-bar" style="width:${rangePct}%"></div>
+      </div>
+      <span title="máxima 63d">${_fmtMoeda(ctx.max63d)}</span>
+      <span class="badge text-bg-secondary">${rangePct}%&nbsp;range&nbsp;63d</span>
+    </div>` : '';
+
+  const recCls = REC_CLASSE[ctx.recomendacao] || 'secondary';
+  const recBadge = ctx.recomendacao
+    ? `<span class="badge text-bg-${recCls}">${escaparHtml(ctx.recomendacao.replace(/_/g, ' '))}</span>`
+    : '';
+
+  const stats = [
+    ctx.lpa   != null ? `LPA R$${ctx.lpa.toFixed(2)}`                : null,
+    ctx.vpa   != null ? `VPA R$${ctx.vpa.toFixed(2)}`                : null,
+    ctx.pl    != null ? `P/L ${ctx.pl.toFixed(1)}×`                  : null,
+    ctx.graham!= null ? `Graham R$${ctx.graham.toFixed(2)}`          : null,
+    ctx.margem!= null ? `Margem ${ctx.margem.toFixed(1)}%`           : null,
+    ctx.vol21d!= null ? `Vol.21d ${(ctx.vol21d * 100).toFixed(1)}%`  : null,
+  ].filter(Boolean).map((s) => `<span class="text-muted small">${escaparHtml(s)}</span>`).join('');
+
+  return `
+    <div class="card mb-3 border-0 bg-light">
+      <div class="card-body py-2 px-3">
+        <div class="d-flex flex-wrap align-items-baseline gap-3">
+          <span class="fw-bold fs-5">${preco}</span>
+          ${varStr}
+          ${recBadge}
+          ${stats}
+        </div>
+        ${rangeBar}
+      </div>
+    </div>
+  `;
+}
+
+// ── OPT-PAI-3: barra de filtros ───────────────────────────────────────────────
 function _barraFiltros(vencimentos) {
   const optsVenc = vencimentos
     .map((v) => `<option value="${escaparHtml(v)}">${_fmtData(v)}</option>`)
@@ -134,35 +197,33 @@ function _barraFiltros(vencimentos) {
   `;
 }
 
-function _renderTabelas(calls, puts, filtros) {
-  const callsFilt = _filtrar(calls, 'CALL', filtros);
-  const putsFilt  = _filtrar(puts,  'PUT',  filtros);
+function _renderTabelas(calls, puts, filtros, precoAtual) {
+  const callsFilt = _filtrar(calls, 'CALL', filtros, precoAtual);
+  const putsFilt  = _filtrar(puts,  'PUT',  filtros, precoAtual);
   const semCall = filtros.tipo !== 'PUT' && !callsFilt.length
     ? '<p class="text-muted small">Sem CALLs para os filtros selecionados.</p>' : '';
   const semPut = filtros.tipo !== 'CALL' && !putsFilt.length
     ? '<p class="text-muted small">Sem PUTs para os filtros selecionados.</p>' : '';
-  const tabelaCalls = callsFilt.length ? _tabelaOpcoes(callsFilt, 'CALL') : semCall;
-  const tabelaPuts  = putsFilt.length  ? _tabelaOpcoes(putsFilt,  'PUT')  : semPut;
+  const tabelaCalls = callsFilt.length ? _tabelaOpcoes(callsFilt, 'CALL', precoAtual) : semCall;
+  const tabelaPuts  = putsFilt.length  ? _tabelaOpcoes(putsFilt,  'PUT',  precoAtual) : semPut;
   return tabelaCalls + tabelaPuts;
 }
 
-function _filtrar(opcoes, tipo, filtros) {
+function _filtrar(opcoes, tipo, filtros, precoAtual) {
   if (filtros.tipo && filtros.tipo !== tipo) return [];
   return opcoes.filter((o) => {
     if (filtros.vencimento && o.data_vencimento !== filtros.vencimento) return false;
     if (filtros.minNegocios > 0 && Number(o.numero_negocios ?? -1) < filtros.minNegocios) return false;
     if (filtros.moneyness) {
       const exercicio = Number(o.preco_exercicio ?? 0);
-      const medio = Number(o.preco_medio ?? o.fechamento ?? 0);
-      if (_moneyness(tipo, exercicio, medio).rotulo !== filtros.moneyness) return false;
+      const medio     = Number(o.preco_medio ?? o.fechamento ?? 0);
+      if (_moneyness(tipo, exercicio, medio, precoAtual).rotulo !== filtros.moneyness) return false;
     }
     return true;
   });
 }
 
-// OPT-PAI-4: avisos pedagogicos de risco e qualidade.
-// Explica os 6 fatores que opções exigem; colapso por padrão para não poluir.
-// A secao "cadeia incompleta bloqueia assertividade" e sempre visivel.
+// ── OPT-PAI-4: avisos pedagógicos ─────────────────────────────────────────────
 function _avisosPedagogicos() {
   return `
     <div class="mt-4 border rounded p-3 bg-light small">
@@ -238,18 +299,38 @@ function _avisoStatus(d = {}) {
   </div>`;
 }
 
-function _tabelaOpcoes(opcoes, tipo) {
+// ── Cruzamento 3: tabela com colunas Distância e Break-even ───────────────────
+function _tabelaOpcoes(opcoes, tipo, precoAtual) {
   const cor = tipo === 'CALL' ? 'text-success' : 'text-danger';
+  const temPreco = precoAtual != null && precoAtual > 0;
+
   const linhas = opcoes.map((o) => {
     const exercicio = Number(o.preco_exercicio ?? 0);
-    const medio = Number(o.preco_medio ?? o.fechamento ?? 0);
-    const moneyness = _moneyness(tipo, exercicio, medio);
+    const medio     = Number(o.preco_medio ?? o.fechamento ?? 0);
+    const premio    = Number(o.preco_medio ?? o.fechamento ?? 0);
+    const moneyness = _moneyness(tipo, exercicio, medio, precoAtual);
+
+    // Cruzamento 1: distancia real do strike ao preco do ativo-objeto
+    const distPerc = temPreco && exercicio
+      ? ((exercicio - precoAtual) / precoAtual) * 100
+      : null;
+    const distStr = distPerc != null
+      ? `<span class="${distPerc >= 0 ? 'text-danger' : 'text-success'}">${distPerc >= 0 ? '+' : ''}${distPerc.toFixed(1)}%</span>`
+      : '—';
+
+    // Cruzamento 3: break-even ao vencimento
+    const breakeven = exercicio && premio
+      ? (tipo === 'CALL' ? exercicio + premio : exercicio - premio)
+      : null;
+
     return `<tr class="${moneyness.classe}">
       <td class="fw-semibold">${escaparHtml(o.simbolo)}</td>
       <td>${_fmtData(o.data_vencimento)}</td>
       <td class="text-end">${_fmtMoeda(exercicio)}</td>
+      <td class="text-end">${distStr}</td>
       <td class="text-end">${_fmtMoeda(o.fechamento)}</td>
       <td class="text-end">${_fmtMoeda(medio)}</td>
+      <td class="text-end">${_fmtMoeda(breakeven)}</td>
       <td class="text-end">${_fmtInt(o.numero_negocios)}</td>
       <td><span class="badge ${moneyness.badgeCls}">${moneyness.rotulo}</span></td>
     </tr>`;
@@ -264,8 +345,10 @@ function _tabelaOpcoes(opcoes, tipo) {
             <th>Símbolo</th>
             <th>Vencimento</th>
             <th class="text-end">Exercício</th>
+            <th class="text-end" title="(Strike − Preço atual) / Preço atual">Distância</th>
             <th class="text-end">Fechamento</th>
-            <th class="text-end">Preço médio</th>
+            <th class="text-end">Prêmio médio</th>
+            <th class="text-end" title="Strike ± prêmio: ponto de equilíbrio ao vencimento">Break-even</th>
             <th class="text-end">Negócios</th>
             <th>Moneyness</th>
           </tr>
@@ -276,12 +359,27 @@ function _tabelaOpcoes(opcoes, tipo) {
   `;
 }
 
-function _moneyness(tipo, exercicio, premioOuFechamento) {
-  // Sem o spot, classificamos pelo preco_exercicio vs preco_medio da opcao
-  // apenas para dar uma referencia visual (nao e moneyness rigoroso sem o spot).
-  if (!exercicio || !premioOuFechamento) {
-    return { rotulo: '—', classe: '', badgeCls: 'bg-secondary' };
+// ── Cruzamento 1: moneyness real ───────────────────────────────────────────────
+// Usa precoAtual do ativo-objeto quando disponivel; fallback ao proxy anterior.
+function _moneyness(tipo, exercicio, premioOuFechamento, precoAtual) {
+  if (!exercicio) return { rotulo: '—', classe: '', badgeCls: 'bg-secondary' };
+
+  if (precoAtual) {
+    const diff = exercicio - precoAtual;
+    const atm = Math.abs(diff) / precoAtual < 0.02;
+    if (atm) return { rotulo: 'ATM', classe: '', badgeCls: 'bg-warning text-dark' };
+    if (tipo === 'CALL') {
+      return diff < 0
+        ? { rotulo: 'ITM', classe: 'table-success', badgeCls: 'bg-success' }
+        : { rotulo: 'OTM', classe: 'table-secondary', badgeCls: 'bg-secondary' };
+    }
+    return diff > 0
+      ? { rotulo: 'ITM', classe: 'table-success', badgeCls: 'bg-success' }
+      : { rotulo: 'OTM', classe: 'table-secondary', badgeCls: 'bg-secondary' };
   }
+
+  // Fallback: proxy via preco_medio da opcao
+  if (!premioOuFechamento) return { rotulo: '—', classe: '', badgeCls: 'bg-secondary' };
   const razao = Math.abs(exercicio - premioOuFechamento) / exercicio;
   if (razao < 0.05) return { rotulo: 'ATM', classe: '', badgeCls: 'bg-warning text-dark' };
   if (tipo === 'CALL') {
