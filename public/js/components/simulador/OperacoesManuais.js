@@ -7,6 +7,33 @@ const SEM = '—';
 
 const VERSOES_ESTRATEGIA = ESTRATEGIAS_PADRAO.map((e) => `${e}_v1`);
 
+// 12: tempo decorrido desde a data de entrada
+function diasDecorridos(dataEntrada) {
+  if (!dataEntrada) return '';
+  const diff = Math.round((Date.now() - new Date(dataEntrada)) / 86_400_000);
+  if (diff < 0) return `· abre em ${Math.abs(diff)} dia(s)`;
+  if (diff === 0) return '· hoje';
+  return `· há ${diff} dia(s)`;
+}
+
+// 13: mini sparkline SVG da curva de retorno acumulado
+function sparklineSvg(pontos, larg = 80, alt = 22) {
+  if (!pontos?.length || pontos.length < 2) return '';
+  const vals = pontos.map((p) => Number(p.retornoAcumPct || 0));
+  const minV = Math.min(...vals, 0);
+  const maxV = Math.max(...vals, 0);
+  const range = maxV - minV || 0.0001;
+  const xs = (i) => Math.round(i / (vals.length - 1) * larg);
+  const ys = (v) => Math.round((1 - (v - minV) / range) * (alt - 3)) + 1;
+  const pts = vals.map((v, i) => `${xs(i)},${ys(v)}`).join(' ');
+  const zerY = ys(0);
+  const cor = vals.at(-1) >= 0 ? '#28a745' : '#dc3545';
+  return `<svg width="${larg}" height="${alt}" viewBox="0 0 ${larg} ${alt}" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;overflow:visible">
+    <line x1="0" y1="${zerY}" x2="${larg}" y2="${zerY}" stroke="#ccc" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <polyline points="${pts}" fill="none" stroke="${cor}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
 export function htmlHistoricoOperacao(historico) {
   if (!historico) return '<p class="small text-muted">Sem dados de histórico.</p>';
 
@@ -127,7 +154,7 @@ function htmlFiltros(filtroStatus) {
   </div>`;
 }
 
-export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
+export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '', historicosPorOperacao = {}) {
   if (operacoes && !Array.isArray(operacoes)) operacoes = operacoes.itens || operacoes.operacoes || [];
 
   const form = htmlFormulario(ativos);
@@ -148,6 +175,8 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
     const pnl = diarios.at(-1)?.pnlRs ?? o.pnlRs;
     const acum = diarios.at(-1)?.retornoAcumPct ?? o.retornoAcumPct;
     const status = o.status || SEM;
+    // 11: historico auto-carregado para mostrar P&L inline
+    const historicoInline = historicosPorOperacao[o.id];
 
     const resumoStatus = status === 'PENDENTE'
       ? `Abertura estimada: ${escaparHtml(formatarData(o.dataAberturaEstimada || o.dataEntrada, SEM))}`
@@ -158,15 +187,26 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
     const hoje = new Date().toISOString().slice(0, 10);
     const temDesempenho = o.dataEntrada && String(o.dataEntrada) <= hoje;
 
-    // melhoria 3: PENDENTE sem data atingida explica; com data atingida avisa que dados disponíveis
+    // 11: P&L inline quando historico já foi carregado
+    const pnlInline = historicoInline
+      ? `<div class="d-flex align-items-center gap-2 mt-1">
+           <span class="small ${classeValor(historicoInline.totalRetornoPct)}">
+             ${escaparHtml(formatarPercentual(historicoInline.totalRetornoPct, 2, { sinal: true, vazio: SEM }))}
+           </span>
+           <span class="small ${classeValor(historicoInline.totalPnlRs)}">
+             ${escaparHtml(formatarMoeda(historicoInline.totalPnlRs, SEM))}
+           </span>
+           ${sparklineSvg(historicoInline.pontos)}
+         </div>`
+      : '';
+
     const financeiro = status === 'PENDENTE' && !temDesempenho
       ? `<div class="small text-muted">Aguardando data de entrada para calcular P&amp;L.</div>`
       : status === 'PENDENTE' && temDesempenho
-        ? `<div class="small text-muted">Data de entrada atingida — veja o desempenho.</div>`
+        ? `<div class="small text-muted">Data de entrada atingida — veja o desempenho.</div>${pnlInline}`
         : `<div>P&amp;L ${escaparHtml(formatarMoeda(pnl, SEM))}</div>
-           <div>acumulado ${escaparHtml(formatarPercentual(acum, 2, { sinal: true, vazio: SEM }))}</div>`;
+           <div>acumulado ${escaparHtml(formatarPercentual(acum, 2, { sinal: true, vazio: SEM }))}</div>${pnlInline}`;
 
-    // melhoria 4: ABERTA tem botão Encerrar; PENDENTE mantém Excluir
     const botaoAcao = status === 'PENDENTE'
       ? `<button class="btn btn-sm btn-outline-danger mt-1" data-excluir-operacao="${o.id}">Excluir</button>`
       : status === 'ABERTA'
@@ -175,6 +215,19 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
 
     const botaoPnl = temDesempenho
       ? `<button class="btn btn-sm btn-outline-info mt-1 ms-1" data-historico-operacao="${o.id}">Ver desempenho</button>`
+      : '';
+
+    // 14: atalho → Cenário pré-preenchido
+    const botaoCenario = temDesempenho
+      ? `<button class="btn btn-sm btn-outline-secondary mt-1 ms-1"
+           data-simular-cenario="${o.id}"
+           data-simbolo="${escaparHtml(o.simbolo || '')}"
+           data-data-entrada="${escaparHtml(String(o.dataEntrada || ''))}"
+           data-capital="${escaparHtml(String(o.capital || '10000'))}">→ Cenário</button>`
+      : '';
+
+    const botaoCenario = o.simbolo && o.dataEntrada && o.capital != null
+      ? `<button type="button" class="btn btn-sm btn-outline-primary mt-1 ms-1" data-simular-cenario data-simbolo="${escaparHtml(o.simbolo)}" data-data-entrada="${escaparHtml(o.dataEntrada)}" data-capital="${escaparHtml(o.capital)}" title="Usar esta entrada no Cenário">→ Simular no Cenário</button>`
       : '';
 
     // melhoria 6: thead com rótulos de coluna no histórico
@@ -207,12 +260,12 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
         <div>
           <strong>${escaparHtml(o.simbolo || SEM)}</strong>
           <span class="badge text-bg-secondary">${escaparHtml(status)}</span>
-          <div class="small">entrada ${escaparHtml(formatarData(o.dataEntrada))} · ${escaparHtml(formatarMoeda(o.capital, SEM))}</div>
+          <div class="small">entrada ${escaparHtml(formatarData(o.dataEntrada))} ${escaparHtml(diasDecorridos(o.dataEntrada))} · ${escaparHtml(formatarMoeda(o.capital, SEM))}</div>
           <div class="small text-muted">${resumoStatus}</div>
         </div>
         <div class="text-end">
           ${financeiro}
-          ${botaoAcao}${botaoPnl}
+          ${botaoAcao}${botaoPnl}${botaoCenario}${botaoCenario}
         </div>
       </div>
       ${detalhe}

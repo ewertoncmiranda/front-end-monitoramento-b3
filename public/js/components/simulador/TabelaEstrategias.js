@@ -1,10 +1,74 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarPercentual } from '../../utils/numero.js';
 import { formatarDataHora } from '../../utils/dataHora.js';
+import { htmlComboboxAtivo } from './utils.js';
 
 const SEM = '—';
 const ESTRATEGIAS_PADRAO = ['MOMENTO_PURO', 'MOMENTO_REVERSAO', 'BAIXO_SPREAD', 'VALOR_RELATIVO', 'QUALIDADE', 'DIVIDENDOS', 'DEFENSIVA'];
 const iaCache = new Map();
+
+// 2: quintil como badge colorido (Q1=vermelho … Q5=verde)
+function quintilBadge(q) {
+  if (q == null) return `<span class="text-muted">${SEM}</span>`;
+  const mapa = { 1: 'danger', 2: 'warning', 3: 'secondary', 4: 'success', 5: 'success' };
+  const cor = mapa[q] || 'secondary';
+  const extra = q === 4 ? ' opacity-75' : '';
+  return `<span class="badge text-bg-${cor}${extra}">Q${q}</span>`;
+}
+
+// 5: score como barra visual proporcional
+function scoreVisual(score) {
+  if (score == null) return `<span class="text-muted">${SEM}</span>`;
+  const pct = Math.min(100, Math.max(0, Math.round(Number(score) * 100)));
+  const cor = pct >= 60 ? 'success' : pct >= 40 ? 'warning' : 'danger';
+  return `<div style="min-width:60px">
+    <div class="progress mb-0" style="height:5px;border-radius:2px">
+      <div class="progress-bar bg-${cor}" style="width:${pct}%"></div>
+    </div>
+    <span style="font-size:10px" class="text-muted">${Number(score).toFixed(2)}</span>
+  </div>`;
+}
+
+// 4: resumo consolidado dos ativos monitorados
+export function resumoEstrategias(ativos, resultadosPorAtivo) {
+  if (!ativos.length) return '';
+  let q5 = 0, q4mais = 0;
+  ativos.forEach((ativo) => {
+    const simbolo = ativo?.simbolo || ativo?.ticker || '';
+    const raw = resultadosPorAtivo[simbolo];
+    const todos = Array.isArray(raw) ? raw : (raw?.resultados || raw?.itens || []);
+    const quintis = todos.map((r) => r?.quintil).filter((q) => q != null);
+    if (quintis.some((q) => q === 5)) q5++;
+    if (quintis.some((q) => q >= 4)) q4mais++;
+  });
+  return `<div class="d-flex flex-wrap gap-3 small mb-3 px-3 py-2 rounded"
+               style="background:var(--bs-secondary-bg,#f8f9fa)">
+    <span class="text-muted">Monitorados: <strong>${ativos.length}</strong></span>
+    <span class="text-success">Com Q5: <strong>${q5}</strong></span>
+    <span class="text-primary">Com Q≥4: <strong>${q4mais}</strong></span>
+  </div>`;
+}
+
+// 1: consulta rápida — qualquer ativo dos 264 sem precisar monitorar
+export function htmlConsultaRapida(todosAtivos) {
+  return `<div class="mt-3 pt-3 border-top">
+    <p class="small fw-semibold mb-1">Consulta rápida</p>
+    <p class="small text-muted mb-2">Veja as estratégias de qualquer ativo sem adicioná-lo ao monitoramento.</p>
+    <form id="form-consulta-rapida" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        ${htmlComboboxAtivo('consulta-ativo', todosAtivos, { placeholder: 'Ativo…', required: false })}
+      </div>
+      <div class="col-md-3">
+        <input type="date" id="consulta-data" class="form-control form-control-sm"
+               title="Data do pregão (vazio = mais recente)">
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Consultar</button>
+      </div>
+    </form>
+    <div id="resultado-consulta-rapida" class="mt-2"></div>
+  </div>`;
+}
 
 export function limparCacheIaLivre() {
   iaCache.clear();
@@ -61,11 +125,12 @@ export function htmlTabelaEstrategias(resultados = [], analises = {}, carregando
   if (!Object.keys(grupos).length) return '<p class="small text-muted">Ainda não há resultados de estratégias para os ativos monitorados.</p>';
   return Object.entries(grupos).map(([simbolo, itens]) => {
     const analise = analises[simbolo];
+    // 2 + 5: quintil como badge e score como barra
     const linhas = itens.map((r) => `<tr>
       <td>${escaparHtml(r.versaoEstrategia || SEM)}</td>
-      <td>${r.quintil ?? SEM}</td>
+      <td>${quintilBadge(r.quintil)}</td>
       <td>${escaparHtml(formatarPercentual(r.retornoPct, 2, { sinal: true, vazio: SEM }))}</td>
-      <td>${r.score ?? SEM}</td>
+      <td>${scoreVisual(r.score)}</td>
     </tr>`).join('');
     const salvo = analise?.salvoEm ? formatarDataHora(analise.salvoEm) : '';
     return `<section class="ficha-cartao mb-3" data-estrategias="${escaparHtml(simbolo)}">
