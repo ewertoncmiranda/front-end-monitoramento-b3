@@ -13,6 +13,8 @@ export const NOME_DA_VERSAO = {
 };
 
 export function nomeDaVersaoDoDiario(versao) {
+  if (String(versao || '').startsWith('TECNICO_MOMENTUM')) return 'técnico: momentum';
+  if (String(versao || '').startsWith('TECNICO_REVERSAO')) return 'técnico: reversão';
   return NOME_DA_VERSAO[versao] || versao;
 }
 

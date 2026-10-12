@@ -1,10 +1,11 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
-import { buscarOpcoes } from '../api/opcoesApi.js';
+import { buscarOpcoes, buscarSaudeOpcoes } from '../api/opcoesApi.js';
 import { escaparHtml } from '../utils/html.js';
 import '../components/OpcoesPainel.js';
 import '../components/SeletorDeAtivos.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
+import '../components/SaudeCadeiaOpcoes.js';
 
 // Extrai o ativo do hash: #/opcoes/PETR4 ou #/opcoes?ativo=PETR4
 function ativoDoHash() {
@@ -24,6 +25,7 @@ export class OpcaoPage extends BaseComponent {
         <h4 class="mb-0">Painel de opções</h4>
       </div>
       <seletor-de-ativos rotulo-botao="Ver opções" placeholder="Ex.: PETR4"></seletor-de-ativos>
+      <div id="opcao-saude" class="mt-3"><loading-spinner></loading-spinner></div>
       <div id="opcao-resultado" class="mt-3"></div>
     `;
   }
@@ -32,9 +34,22 @@ export class OpcaoPage extends BaseComponent {
     const seletor = this.querySelector('seletor-de-ativos');
     seletor.addEventListener('ativo-buscado', (e) => this._abrir(e.detail.simbolo));
 
+    this._carregarSaude();
+
     const inicial = ativoDoHash();
     if (inicial) {
       seletor.selecionar(inicial);
+    }
+  }
+
+  async _carregarSaude() {
+    const alvo = this.querySelector('#opcao-saude');
+    try {
+      const dados = await buscarSaudeOpcoes();
+      alvo.innerHTML = '<saude-cadeia-opcoes></saude-cadeia-opcoes>';
+      alvo.querySelector('saude-cadeia-opcoes').setDados(dados);
+    } catch (erro) {
+      alvo.innerHTML = `<status-alert variante="danger" mensagem="${escaparHtml(erro.message)}"></status-alert>`;
     }
   }
 
@@ -63,7 +78,8 @@ export class OpcaoPage extends BaseComponent {
 
     resultado.innerHTML = `
       <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-        <span class="fw-semibold">${escaparHtml(simbolo)}</span>
+        <span class="fw-semibold">${escaparHtml(dados.simboloCanonico || dados.simbolo || simbolo)}</span>
+        ${dados.aliasAplicado ? `<span class="badge text-bg-info">solicitado: ${escaparHtml(dados.simboloSolicitado || simbolo)}</span>` : ''}
         ${vencimentos.length > 0 ? `
           <label class="small text-muted mb-0" for="opcao-vencimento">Vencimento:</label>
           <select class="form-select form-select-sm w-auto" id="opcao-vencimento">

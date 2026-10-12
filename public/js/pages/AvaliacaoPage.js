@@ -16,58 +16,64 @@ const AVISO =
 const VEREDITOS = [
   {
     titulo: 'Uso recomendado hoje',
-    valor: 'Pesquisa, triagem e aprendizado',
+    valor: 'Pesquisa, triagem e auditoria',
     classe: 'text-bg-primary',
     texto:
-      'O painel junta fundamentos, comunicados, candles, opinião por horizonte, IA e validação. Serve para explicar o que olhar, não para executar ordem.',
+      'O painel junta fundamentos, comunicados, candles, opinião por horizonte, IA, operabilidade e validação. Serve para explicar evidências e lacunas, não para executar ordem.',
   },
   {
     titulo: 'Dinheiro real',
     valor: 'Ainda não',
     classe: 'text-bg-danger',
     texto:
-      'Antes disso o diário operacional precisa acumular amostra, vencer CDI líquido de custos, respeitar drawdown e passar pela trava de operabilidade.',
+      'Antes disso o diário operacional precisa acumular 3 a 6 meses de amostra, vencer CDI líquido de custos, respeitar drawdown e passar pela trava de operabilidade.',
   },
   {
     titulo: 'Sinal técnico',
     valor: 'Separado da recomendação',
     classe: 'text-bg-warning',
     texto:
-      'Momentum e reversão existem como contexto e placar próprio. Pela DEC-11, não entram na recomendação principal sem placar real com IC favorável.',
+      'Momentum e reversão já entram em placar próprio. Pela DEC-11, continuam contexto até haver placar real com IC favorável e decisão de nova versão.',
   },
   {
     titulo: 'Confiança',
     valor: 'Não calibrada',
     classe: 'text-bg-secondary',
     texto:
-      'O score já pode ter curva real extraída do diário, mas a UX deve tratá-lo como não calibrado até execução real e DEC de recalibração ou remoção.',
+      'A curva já é extraível do diário, mas a UX deve tratar o score como não calibrado até execução real e DEC de recalibração ou remoção.',
   },
 ];
 
 const PILARES = [
   {
     titulo: 'Dados',
-    nota: 7,
+    nota: 8,
     meta: 8,
-    status: 'Em observação',
+    status: 'Bom, ainda auditável',
     texto:
-      'CVM, COTAHIST, Banco Central, proventos e saúde das fontes aparecem em tela. A qualidade sobe quando cobertura, idade e divergências ficam verdes por vários ciclos.',
+      'CVM, COTAHIST amplo, Banco Central, proventos B3 + DVA/CVM e saúde das fontes aparecem em tela. A nota ainda depende de estabilidade por ciclos e de reduzir pendências por ticker antigo.',
+    proximo:
+      'Para subir: zerar aliases/tickers sem balanço, manter fontes verdes por várias rotinas e evidenciar cobertura por ano no painel.',
   },
   {
     titulo: 'Backtest',
-    nota: 6,
+    nota: 7,
     meta: 8,
-    status: 'Com IC',
+    status: 'Amplo, com IC',
     texto:
-      'O placar walk-forward mostra acerto, taxa-base, CDI, carteira e intervalo de confiança. Vantagem só conta quando o intervalo não cruza a base.',
+      'O walk-forward já usa universo amplo point-in-time, deslistadas, COTAHIST 2016–2026, proventos históricos e IC. O resultado atual é honesto: não há vantagem robusta distinguível.',
+    proximo:
+      'Para subir: publicar execuções recorrentes, comparar versões técnicas no banco real e registrar decisões só quando o IC ficar todo acima da base.',
   },
   {
     titulo: 'Ranking / LAC',
-    nota: 5,
+    nota: 6,
     meta: 8,
     status: 'Experimental',
     texto:
-      'O ranking mede ordenação por quintil e correlação. É uma evidência melhor que olhar só classes, mas ainda precisa repetição em janelas sucessivas.',
+      'O ranking mede ordenação por quintil e correlação, com hipótese registrada. É evidência melhor que olhar só classes, mas ainda precisa repetição real em janelas sucessivas.',
+    proximo:
+      'Para subir: validar depois do backfill completo, mostrar histórico de execuções e exigir correlação com IC acima de zero em mais de uma janela.',
   },
   {
     titulo: 'Diário real',
@@ -76,14 +82,18 @@ const PILARES = [
     status: 'Coletando',
     texto:
       'É a prova mais importante: sinais gravados antes do resultado. Enquanto a amostra for pequena, o painel deve preferir “inconclusivo”.',
+    proximo:
+      'Para subir: acumular 3 a 6 meses, exibir curva do score por faixa e provar excesso contra base/CDI sem cruzar o intervalo.',
   },
   {
     titulo: 'Operabilidade',
-    nota: 4,
+    nota: 5,
     meta: 8,
-    status: 'Paper trading',
+    status: 'Paper trading V2',
     texto:
-      'Já existe tela própria para status, retorno líquido, CDI, drawdown, operações, bloqueios e IR estimado. Falta maturidade operacional acumulada.',
+      'Já há OPR v1 no painel e V2 sendo integrado: status sistêmico separado da elegibilidade do ticker, bloqueios, timeline, consenso, tese, custos e IR estimado.',
+    proximo:
+      'Para subir: rodar a stack com migrations V25/V26, acumular diário, confirmar retorno líquido > CDI após custos e bloquear corretamente por liquidez/dado/evento.',
   },
   {
     titulo: 'IA',
@@ -92,13 +102,15 @@ const PILARES = [
     status: 'Assistente e card',
     texto:
       'O front consome chat, pacote do ativo, leitura e resumo de manchetes. A IA deve explicar fontes e limites; não gera opinião pelo painel.',
+    proximo:
+      'Para subir: validar com serviço real, mostrar fontes citadas de forma consistente e medir falhas/latência sem misturar IA com recomendação operacional.',
   },
 ];
 
 const CRITERIOS_PROMOCAO = [
-  'Backtest fora da amostra com limite inferior do IC acima da taxa-base ou do CDI, conforme o tipo de regra.',
-  'Diário de sinais com amostra mínima por horizonte e leitura acima da base sem cruzar o intervalo.',
-  'Operabilidade com janela mínima, retorno líquido acima do CDI, drawdown dentro do limite e zero violação crítica.',
+  'Backtest fora da amostra com limite inferior do IC acima da taxa-base, do CDI ou da carteira, conforme o tipo de regra.',
+  'Diário de sinais com amostra mínima por horizonte e leitura acima da base sem cruzar o intervalo por 3 a 6 meses.',
+  'Operabilidade com janela mínima, retorno líquido acima do CDI depois de custos/IR, drawdown dentro do limite e zero violação crítica.',
   'Versão de regra nova quando qualquer sinal passar a alterar recomendação, sizing ou status operacional.',
   'Aviso legal e texto conservador em todas as telas: sinal analítico não é ordem, operabilidade não é recomendação.',
 ];
@@ -108,13 +120,13 @@ const STATUS_TRILHAS = [
     trilha: 'Fundamentalista / valuation',
     estado: 'Principal, mas experimental',
     detalhe:
-      'Segue como regra de produção auditável, com backtest e diário. O universo amplo reduziu o risco de escolher limiar por ruído.',
+      'Segue como regra auditável, com backtest e diário. O universo amplo mostrou que ainda não há vantagem robusta para promover capital real.',
   },
   {
     trilha: 'Técnica',
     estado: 'Contexto separado',
     detalhe:
-      'Momentum e reversão ajudam a explicar cenário, mas não mexem na recomendação principal sem DEC e placar real.',
+      'Momentum e reversão têm versões próprias no placar, mas não mexem na recomendação principal sem DEC e evidência real favorável.',
   },
   {
     trilha: 'IA / Gemini',
@@ -126,7 +138,7 @@ const STATUS_TRILHAS = [
     trilha: 'OPR / paper trading',
     estado: 'Em observação',
     detalhe:
-      'A tela de Operabilidade mostra operações simuladas, custos, IR estimado, bloqueios e status do sistema.',
+      'A tela de Operabilidade mostra operações simuladas, custos, IR estimado, bloqueios e status do sistema; V2 adiciona visão por ticker.',
   },
   {
     trilha: 'Confiança do score',
@@ -156,7 +168,7 @@ export class AvaliacaoPage extends BaseComponent {
       ${secao('Notas por pilar', renderPilares(), `
         <p class="small text-muted">
           As notas abaixo são de maturidade da plataforma, não de retorno esperado. Elas só sobem com
-          evidência medida, contrato estável e execução real.
+          evidência medida, contrato estável e execução real. São editoriais e datadas, não notas automáticas.
         </p>`)}
 
       <div class="row g-3 mb-4">
@@ -258,6 +270,7 @@ function renderPilares() {
                 <div class="progress-bar bg-secondary-subtle" style="width: ${Math.max(0, p.meta - p.nota) * 10}%"></div>
               </div>
               <p class="small text-muted mb-0">${p.texto}</p>
+              <p class="small mb-0 mt-2"><strong>Próximo passo:</strong> ${p.proximo}</p>
             </div>
           </div>
         </div>`).join('')}
