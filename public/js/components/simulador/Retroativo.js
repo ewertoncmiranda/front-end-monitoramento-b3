@@ -154,7 +154,37 @@ function _htmlTabela(itens) {
     return summaryRow + expandRow;
   }).join('');
 
-  return `<div class="table-responsive mt-3">
+  // 4: frase-resumo automática: melhor e pior estratégia
+  const comTaxa = itens.filter(({ resultado }) => resultado?.taxaAcerto != null);
+  const ordenados = [...comTaxa].sort((a, b) => Number(b.resultado.taxaAcerto) - Number(a.resultado.taxaAcerto));
+  const melhorItem = ordenados[0];
+  const piorItem = ordenados.at(-1);
+  const fraseResumo = melhorItem && melhorItem !== piorItem
+    ? `<div class="d-flex flex-wrap gap-3 small px-3 py-2 rounded mb-3" style="background:var(--bs-secondary-bg,#f8f9fa)">
+        <span class="text-success">↑ <strong>${escaparHtml(melhorItem.estrategia)}</strong>: melhor acerto (${escaparHtml(formatarPercentual(Number(melhorItem.resultado.taxaAcerto) / 100, 1, { vazio: '—' }))})</span>
+        <span class="text-danger">↓ <strong>${escaparHtml(piorItem.estrategia)}</strong>: pior acerto (${escaparHtml(formatarPercentual(Number(piorItem.resultado.taxaAcerto) / 100, 1, { vazio: '—' }))})</span>
+       </div>`
+    : '';
+
+  // 9: histograma horizontal de taxa de acerto
+  const histograma = comTaxa.length
+    ? `<div class="mt-3 pt-2 border-top">
+        <p class="small fw-semibold mb-2">Taxa de acerto por estratégia (ranking)</p>
+        ${ordenados.map(({ estrategia, resultado }) => {
+          const pct = Number(resultado.taxaAcerto);
+          const cor = pct >= 60 ? 'success' : pct >= 45 ? 'warning' : 'danger';
+          return `<div class="d-flex align-items-center gap-2 mb-1">
+            <span class="small text-muted" style="min-width:130px;white-space:nowrap">${escaparHtml(estrategia)}</span>
+            <div class="flex-grow-1 progress" style="height:10px;border-radius:5px">
+              <div class="progress-bar bg-${cor}" style="width:${pct.toFixed(1)}%" role="progressbar"></div>
+            </div>
+            <span class="small fw-semibold" style="min-width:36px;text-align:right">${pct.toFixed(0)}%</span>
+          </div>`;
+        }).join('')}
+      </div>`
+    : '';
+
+  return `${fraseResumo}<div class="table-responsive mt-3">
     <table class="table table-sm table-hover">
       <thead>
         <tr>
@@ -167,5 +197,5 @@ function _htmlTabela(itens) {
       </thead>
       <tbody>${linhas}</tbody>
     </table>
-  </div>`;
+  </div>${histograma}`;
 }

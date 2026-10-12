@@ -2,6 +2,13 @@ import { escaparHtml } from '../../utils/html.js';
 import { formatarData, formatarDataHora } from '../../utils/dataHora.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 
+export const CAPITAIS_SIMULACAO = [10, 100, 1_000, 10_000];
+export const CAPITAL_BASE = 10_000;
+
+export function labelCapital(c) {
+  return c >= 1000 ? `R$${(c / 1000).toLocaleString('pt-BR')}k` : `R$${c}`;
+}
+
 export const ESTRATEGIAS_PADRAO = [
   'MOMENTO_PURO',
   'MOMENTO_REVERSAO',

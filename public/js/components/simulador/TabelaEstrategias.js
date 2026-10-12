@@ -7,6 +7,17 @@ const SEM = '—';
 const ESTRATEGIAS_PADRAO = ['MOMENTO_PURO', 'MOMENTO_REVERSAO', 'BAIXO_SPREAD', 'VALOR_RELATIVO', 'QUALIDADE', 'DIVIDENDOS', 'DEFENSIVA'];
 const iaCache = new Map();
 
+// 1: frescor do sinal baseado em dataPregao
+function frescoTag(dataPregao) {
+  if (!dataPregao) return '';
+  const hoje = new Date().toISOString().slice(0, 10);
+  const dias = Math.round((new Date(hoje) - new Date(String(dataPregao).slice(0, 10))) / 86_400_000);
+  if (dias <= 0) return '<span class="badge text-bg-success ms-1" style="font-size:9px">hoje</span>';
+  if (dias <= 3) return `<span class="badge text-bg-success ms-1" style="font-size:9px">${dias}d</span>`;
+  if (dias <= 7) return `<span class="badge text-bg-warning ms-1" style="font-size:9px">${dias}d</span>`;
+  return `<span class="badge text-bg-secondary ms-1" style="font-size:9px">${dias}d</span>`;
+}
+
 // 2: quintil como badge colorido (Q1=vermelho … Q5=verde)
 function quintilBadge(q) {
   if (q == null) return `<span class="text-muted">${SEM}</span>`;
@@ -127,7 +138,7 @@ export function htmlTabelaEstrategias(resultados = [], analises = {}, carregando
     const analise = analises[simbolo];
     // 2 + 5: quintil como badge e score como barra
     const linhas = itens.map((r) => `<tr>
-      <td>${escaparHtml(r.versaoEstrategia || SEM)}</td>
+      <td>${escaparHtml(r.versaoEstrategia || SEM)}${frescoTag(r.dataPregao)}</td>
       <td>${quintilBadge(r.quintil)}</td>
       <td>${escaparHtml(formatarPercentual(r.retornoPct, 2, { sinal: true, vazio: SEM }))}</td>
       <td>${scoreVisual(r.score)}</td>
@@ -139,6 +150,11 @@ export function htmlTabelaEstrategias(resultados = [], analises = {}, carregando
           ${carregandoIa.has(simbolo) ? 'Analisando…' : 'IA_LIVRE (7+1)'}</button></div>
       <div class="table-responsive"><table class="table table-sm tabela-cartoes mb-0"><thead><tr><th>Estratégia</th><th>Quintil</th><th>Retorno</th><th>Score</th></tr></thead><tbody>${linhas}</tbody></table></div>
       ${analise ? `<div class="alert alert-secondary small mt-3 mb-0" data-analise-ia><p class="mb-1">${escaparHtml(analise.analiseTexto || analise.texto || analise.analise || analise.resumo || SEM)}</p><span class="text-muted">${analise.emCache ? 'cache reutilizado · ' : ''}salvo em ${escaparHtml(salvo || SEM)}</span></div>` : ''}
+      <details class="mt-2">
+        <summary class="small text-muted" style="cursor:pointer;list-style:none"
+          data-carregar-diario="${escaparHtml(simbolo)}">▸ Histórico de sinais</summary>
+        <div id="diario-sinais-${escaparHtml(simbolo)}" class="mt-1"></div>
+      </details>
     </section>`;
   }).join('');
 }
