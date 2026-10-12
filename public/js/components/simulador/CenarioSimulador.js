@@ -17,12 +17,15 @@ export function validarCenario({ simbolo, dataEntrada, janela, capital }, hoje =
   return null;
 }
 
-export function htmlFormularioCenario(ativos = []) {
+export function htmlFormularioCenario(ativos = [], valores = {}) {
+  const dataEntrada = escaparHtml(valores.dataEntrada || '');
+  const janela = escaparHtml(valores.janela || 21);
+  const capital = escaparHtml(valores.capital || 10000);
   return `<form id="form-cenario" class="row g-3">
-    <div class="col-md-3"><label for="cenario-ativo" class="form-label">Ativo</label>${htmlComboboxAtivo('cenario-ativo', ativos)}</div>
-    <div class="col-md-3"><label for="cenario-data" class="form-label">Data de entrada</label><input type="date" max="${hojeIso()}" class="form-control form-control-sm" id="cenario-data" required></div>
-    <div class="col-md-2"><label for="cenario-janela" class="form-label">Janela (1–63)</label><input type="number" min="1" max="63" value="21" class="form-control form-control-sm" id="cenario-janela" required></div>
-    <div class="col-md-2"><label for="cenario-capital" class="form-label">Capital (R$)</label><input type="number" min="1" step="100" value="10000" class="form-control form-control-sm" id="cenario-capital" required></div>
+    <div class="col-md-3"><label for="cenario-ativo" class="form-label">Ativo</label>${htmlComboboxAtivo('cenario-ativo', ativos, { value: valores.simbolo || '' })}</div>
+    <div class="col-md-3"><label for="cenario-data" class="form-label">Data de entrada</label><input type="date" max="${hojeIso()}" value="${dataEntrada}" class="form-control form-control-sm" id="cenario-data" required></div>
+    <div class="col-md-2"><label for="cenario-janela" class="form-label">Janela (1–63)</label><input type="number" min="1" max="63" value="${janela}" class="form-control form-control-sm" id="cenario-janela" required></div>
+    <div class="col-md-2"><label for="cenario-capital" class="form-label">Capital (R$)</label><input type="number" min="1" step="100" value="${capital}" class="form-control form-control-sm" id="cenario-capital" required></div>
     <div class="col-md-2"><label class="form-label">&nbsp;</label><button class="btn btn-primary btn-sm w-100" type="submit">Simular</button></div>
   </form>`;
 }

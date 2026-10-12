@@ -56,6 +56,11 @@ export function htmlResultadoRetroativo(dado) {
 }
 
 function _htmlTabela(itens) {
+  // 7: identifica melhor taxa de acerto para destacar a linha
+  const melhorTaxa = Math.max(...itens
+    .filter(({ resultado }) => resultado?.taxaAcerto != null)
+    .map(({ resultado }) => Number(resultado.taxaAcerto)));
+
   const linhas = itens.map(({ estrategia, resultado, erro }) => {
     if (erro) {
       return `<tr>
@@ -74,19 +79,29 @@ function _htmlTabela(itens) {
     const ganhos = entradas.filter((e) => e.resultado === 'GANHO').length;
     const perdas = entradas.filter((e) => e.resultado === 'PERDA').length;
     const total = entradas.length;
+    // 8: neutros na barra G/N/P
+    const neutros = resultado?.neutros ?? (total - ganhos - perdas);
     const barraGanho = total ? Math.round(ganhos / total * 100) : 0;
+    const barraNeutro = total ? Math.round(neutros / total * 100) : 0;
+    const barraPerdas = total ? Math.round(perdas / total * 100) : 0;
 
-    const summaryRow = `<tr>
-      <td class="fw-500">${escaparHtml(estrategia)}</td>
+    // 7: destaque verde na melhor estratégia
+    const isMelhor = resultado?.taxaAcerto != null && Number(resultado.taxaAcerto) === melhorTaxa && melhorTaxa > 0;
+    const melhorBadge = isMelhor ? ' <span class="badge text-bg-success ms-1" style="font-size:9px">↑ melhor</span>' : '';
+
+    const summaryRow = `<tr class="${isMelhor ? 'table-success' : ''}">
+      <td class="fw-500">${escaparHtml(estrategia)}${melhorBadge}</td>
       <td class="text-end">${escaparHtml(taxaAcerto)}</td>
       <td class="text-end">${escaparHtml(retornoMedio)}</td>
       <td class="text-end">${total || SEM}</td>
       <td style="min-width:80px">
         <div class="progress" style="height:6px;border-radius:3px">
           <div class="progress-bar bg-success" style="width:${barraGanho}%"></div>
+          <div class="progress-bar bg-secondary opacity-50" style="width:${barraNeutro}%"></div>
+          <div class="progress-bar bg-danger" style="width:${barraPerdas}%"></div>
         </div>
         <div class="d-flex justify-content-between" style="font-size:10px;color:var(--bs-secondary-color,#666)">
-          <span>G ${ganhos}</span><span>P ${perdas}</span>
+          <span>G ${ganhos}</span><span class="text-muted">N ${neutros}</span><span>P ${perdas}</span>
         </div>
       </td>
     </tr>`;

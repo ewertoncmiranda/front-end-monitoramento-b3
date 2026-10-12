@@ -16,7 +16,7 @@ import {
 } from '../api/simuladorApi.js';
 import { buscarResumo } from '../api/operacionalApi.js';
 import { escaparHtml } from '../utils/html.js';
-import { htmlTabelaEstrategias, obterIaLivre } from '../components/simulador/TabelaEstrategias.js';
+import { htmlTabelaEstrategias, obterIaLivre, resumoEstrategias, htmlConsultaRapida } from '../components/simulador/TabelaEstrategias.js';
 import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../components/simulador/CenarioSimulador.js';
 import { htmlControlesRetroativo, htmlResultadoRetroativo, janelaEntreDatas } from '../components/simulador/Retroativo.js';
 import { htmlHistoricoOperacao, htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
@@ -34,10 +34,20 @@ const ABAS = [
   { id: 'operacoes', rotulo: 'Operações' },
 ];
 
+function abaSalva() {
+  try {
+    const aba = globalThis.sessionStorage?.getItem('simulador-aba');
+    return ABAS.some((item) => item.id === aba) ? aba : 'estrategias';
+  } catch {
+    return 'estrategias';
+  }
+}
+
 export class SimuladorPage extends BaseComponent {
   constructor() {
     super();
-    this.abaAtiva = 'estrategias';
+    this.abaAtiva = abaSalva();
+    this.cenarioPreenchido = null;
     this.ativos = [];
     this.todosAtivos = [];
     this.resultadosPorAtivo = {};
@@ -55,6 +65,21 @@ export class SimuladorPage extends BaseComponent {
     this.resumoOperabilidade = null;
     this.carregando = false;
     this.erro = null;
+    // 11: historicos auto-carregados por operação
+    this.historicosPorOperacoes = {};
+    // 3: data de referência para estratégias
+    this.dataEstrategias = '';
+    // 15: persiste aba ativa entre navegações
+    try { this.abaAtiva = sessionStorage.getItem('simulador-aba') || 'estrategias'; } catch { this.abaAtiva = 'estrategias'; }
+    // 9: restaura último resultado retroativo
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('simulador-retroativo') || 'null');
+      if (saved) {
+        this.resultadoRetroativo = saved.resultadoRetroativo ?? null;
+        this.historicoRetroativo = saved.historicoRetroativo ?? null;
+        this.retroativoParams = saved.retroativoParams ?? null;
+      }
+    } catch { /* ignore */ }
   }
 
   async connectedCallback() {
@@ -99,12 +124,28 @@ export class SimuladorPage extends BaseComponent {
       const simbolo = campo(ativo, ['simbolo', 'ticker'], '');
       if (!simbolo) return null;
       try {
-        return [simbolo, await buscarResultadosSimulador(simbolo)];
+        return [simbolo, await buscarResultadosSimulador(simbolo, this.dataEstrategias || null)];
       } catch {
         return [simbolo, { resultados: [] }];
       }
     }));
     this.resultadosPorAtivo = Object.fromEntries(pares.filter(Boolean));
+  }
+
+  // 11: carrega historicos para operações com dataEntrada <= hoje
+  async autoCarregarHistoricos() {
+    const ops = Array.isArray(this.operacoes) ? this.operacoes : (this.operacoes?.itens || []);
+    const hoje = new Date().toISOString().slice(0, 10);
+    const pendentes = ops.filter((o) =>
+      o.dataEntrada && String(o.dataEntrada) <= hoje &&
+      !Object.prototype.hasOwnProperty.call(this.historicosPorOperacoes, o.id)
+    );
+    if (!pendentes.length) return;
+    await Promise.all(pendentes.map(async (o) => {
+      try { this.historicosPorOperacoes[o.id] = await buscarHistoricoOperacao(o.id); }
+      catch { this.historicosPorOperacoes[o.id] = null; }
+    }));
+    if (this.abaAtiva === 'operacoes') this.render();
   }
 
   async carregarOperacoes() {
@@ -181,10 +222,21 @@ export class SimuladorPage extends BaseComponent {
         <td><button type="button" class="btn btn-sm btn-outline-danger btn-remover" data-simbolo="${escaparHtml(campo(ativo, ['simbolo', 'ticker'], ''))}">Remover</button></td></tr>`).join('')}</tbody></table>
     </div>` : '';
 
-    return `${htmlTabelaEstrategias(this.ativos, this.resultadosPorAtivo, this.iaPorAtivo, this.carregandoIa)}
+    // 3: date picker para sinais históricos
+    const datePicker = `<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+      <span class="small text-muted">Sinais de:</span>
+      <input type="date" id="data-estrategias" class="form-control form-control-sm w-auto"
+             value="${escaparHtml(this.dataEstrategias)}" title="Data do pregão (vazio = mais recente)">
+      ${this.dataEstrategias ? `<button type="button" class="btn btn-sm btn-outline-secondary" id="btn-hoje-estrategias">Hoje</button>` : ''}
+    </div>`;
+
+    return `${datePicker}
+      ${resumoEstrategias(this.ativos, this.resultadosPorAtivo)}
+      ${htmlTabelaEstrategias(this.ativos, this.resultadosPorAtivo, this.iaPorAtivo, this.carregandoIa)}
       ${remover}
       <hr class="my-3">
       ${this.formularioAdicionarAtivo()}
+      ${htmlConsultaRapida(this.todosAtivos)}
     `;
   }
 
@@ -194,20 +246,32 @@ export class SimuladorPage extends BaseComponent {
         <p class="mb-0">Cenário pontual: simule P&L para uma data e janela específicas.</p>
         <p class="mb-0"><small>Selecione um ativo, data de entrada, janela e capital para ver o resultado por estratégia.</small></p>
       </div>
-      ${htmlControlesCenario(this.todosAtivos)}
+      ${htmlControlesCenario(this.todosAtivos, this.cenarioPreenchido || {})}
       <div id="resultado-cenario" class="mt-3">${this.erroCenario ? `<div class="alert alert-danger small">${escaparHtml(this.erroCenario)}</div>` : htmlResultadoCenario(this.resultadoCenario)}</div>
     `;
   }
 
   abaRetroativo() {
     const { simbolo, inicio, fim } = this.retroativoParams || {};
+    // 6: janela visível
+    const janelaChip = inicio && fim
+      ? `<p class="small text-muted mt-1 mb-0">Janela estimada: <strong>${janelaEntreDatas(inicio, fim)}</strong> pregões</p>`
+      : '';
+
     const tituloHistorico = simbolo
       ? `Pregão a pregão — ${escaparHtml(simbolo)} (${escaparHtml(inicio || '')} → ${escaparHtml(fim || '')})`
       : 'Pregão a pregão';
 
+    // 10: botão CSV
+    const btnCsv = this.historicoRetroativo?.pontos?.length
+      ? `<button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="btn-csv-retroativo">⬇ CSV</button>`
+      : '';
+
     const secaoHistorico = this.historicoRetroativo
       ? `<div class="mt-4">
-           <h6 class="text-muted mb-2">${tituloHistorico}</h6>
+           <div class="d-flex align-items-center gap-2 mb-2">
+             <h6 class="text-muted mb-0">${tituloHistorico}</h6>${btnCsv}
+           </div>
            ${htmlHistoricoOperacao(this.historicoRetroativo)}
          </div>`
       : '';
@@ -218,6 +282,7 @@ export class SimuladorPage extends BaseComponent {
         <p class="mb-0"><small>Selecione estratégia, janela e período para ver taxa de acerto e retorno médio.</small></p>
       </div>
       ${htmlControlesRetroativo(this.todosAtivos)}
+      ${janelaChip}
       <div id="resultado-retroativo" class="mt-3">${this.erroRetroativo ? `<div class="alert alert-danger small">${escaparHtml(this.erroRetroativo)}</div>` : htmlResultadoRetroativo(this.resultadoRetroativo)}</div>
       ${secaoHistorico}
     `;
@@ -230,7 +295,7 @@ export class SimuladorPage extends BaseComponent {
         <p class="mb-0"><small>PENDENTE: aguardando data de entrada. ABERTA: em andamento. FECHADA: encerrada.</small></p>
       </div>
       ${this.erroOperacoes ? `<div class="alert alert-warning small">${escaparHtml(this.erroOperacoes)}</div>` : ''}
-      <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes, this.todosAtivos, this.filtroStatusOperacoes)}</div>
+      <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes, this.todosAtivos, this.filtroStatusOperacoes, this.historicosPorOperacoes)}</div>
     `;
   }
 
@@ -259,9 +324,21 @@ export class SimuladorPage extends BaseComponent {
   afterRender() {
     // Eventos das abas
     this.querySelectorAll('[data-aba]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        this.abaAtiva = e.target.dataset.aba;
-        this.render();
+      btn.addEventListener('click', (evento) => {
+        this.trocarAba(evento.currentTarget.dataset.aba);
+      });
+    });
+
+    this.querySelectorAll('[data-simular-cenario]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.cenarioPreenchido = {
+          simbolo: btn.dataset.simbolo,
+          dataEntrada: btn.dataset.dataEntrada,
+          capital: btn.dataset.capital,
+        };
+        this.resultadoCenario = null;
+        this.erroCenario = '';
+        this.trocarAba('cenario');
       });
     });
 
@@ -337,6 +414,14 @@ export class SimuladorPage extends BaseComponent {
         ]);
         this.resultadoRetroativo = resultados;
         this.historicoRetroativo = historico;
+        // 9: persiste resultado para restaurar ao trocar de aba
+        try {
+          sessionStorage.setItem('simulador-retroativo', JSON.stringify({
+            resultadoRetroativo: resultados,
+            historicoRetroativo: historico,
+            retroativoParams: this.retroativoParams,
+          }));
+        } catch { /* ignore */ }
       } catch (erroApi) {
         this.erroRetroativo = erroApi?.message || 'Erro ao analisar retroativo.';
       }
@@ -442,6 +527,69 @@ export class SimuladorPage extends BaseComponent {
       });
     });
 
+    // 11: auto-carrega historicos quando a aba Operações é mostrada
+    if (this.abaAtiva === 'operacoes') this.autoCarregarHistoricos();
+
+    // 3: date picker de sinais históricos (Estratégias)
+    this.querySelector('#data-estrategias')?.addEventListener('change', async (e) => {
+      this.dataEstrategias = e.target.value;
+      await this.carregarResultadosEstrategias();
+      this.render();
+    });
+    this.querySelector('#btn-hoje-estrategias')?.addEventListener('click', async () => {
+      this.dataEstrategias = '';
+      await this.carregarResultadosEstrategias();
+      this.render();
+    });
+
+    // 1: consulta rápida de qualquer ativo
+    this.querySelector('#form-consulta-rapida')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const simbolo = (this.querySelector('#consulta-ativo')?.value || '').toUpperCase();
+      const data = this.querySelector('#consulta-data')?.value || null;
+      const container = this.querySelector('#resultado-consulta-rapida');
+      if (!simbolo || !container) return;
+      container.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+      try {
+        const resultado = await buscarResultadosSimulador(simbolo, data);
+        const lista = Array.isArray(resultado) ? resultado : (resultado?.resultados || []);
+        if (!lista.length) {
+          container.innerHTML = '<p class="small text-muted mt-1">Nenhum sinal encontrado para este ativo.</p>';
+          return;
+        }
+        container.innerHTML = htmlTabelaEstrategias([{ simbolo }], { [simbolo]: lista }, {}, '');
+      } catch (err) {
+        container.innerHTML = `<p class="small text-danger mt-1">${escaparHtml(err.message || 'Erro ao consultar')}</p>`;
+      }
+    });
+
+    // 9: salva retroativo em sessionStorage após análise
+    // (feito dentro do handler do form-retroativo abaixo)
+
+    // 10: CSV da tabela "Pregão a pregão"
+    this.querySelector('#btn-csv-retroativo')?.addEventListener('click', () => {
+      const { pontos = [], simbolo = 'ativo', dataEntrada = '' } = this.historicoRetroativo || {};
+      if (!pontos.length) return;
+      const estrategias = [...new Set(pontos.flatMap((p) => Object.keys(p.quintilPorEstrategia || {})))].sort();
+      const cabecalho = ['Data', 'Preco', 'RetornoDia_pct', 'RetornoAcum_pct', 'PnL_R$', ...estrategias].join(';');
+      const linhas = pontos.map((p) => [
+        p.dataPregao,
+        p.preco,
+        (Number(p.retornoDiaPct) * 100).toFixed(4),
+        (Number(p.retornoAcumPct) * 100).toFixed(4),
+        p.pnlRs,
+        ...estrategias.map((e) => p.quintilPorEstrategia?.[e] ?? ''),
+      ].join(';'));
+      const csv = [cabecalho, ...linhas].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `retroativo_${simbolo}_${dataEntrada || 'periodo'}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
     // P&L completo — carrega on-demand e alterna visibilidade
     this.querySelectorAll('[data-historico-operacao]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -506,6 +654,17 @@ export class SimuladorPage extends BaseComponent {
         btn.textContent = 'Ocultar';
       });
     });
+  }
+
+  trocarAba(aba) {
+    if (!ABAS.some((item) => item.id === aba)) return;
+    this.abaAtiva = aba;
+    try {
+      globalThis.sessionStorage?.setItem('simulador-aba', aba);
+    } catch {
+      // O simulador continua funcionando sem armazenamento de sessão.
+    }
+    this.render();
   }
 }
 
