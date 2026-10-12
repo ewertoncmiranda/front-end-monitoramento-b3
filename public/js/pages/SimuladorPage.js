@@ -14,7 +14,9 @@ import {
   registrarAtivoSimulador,
   retroativoSimulador,
 } from '../api/simuladorApi.js';
-import { buscarResumo } from '../api/operacionalApi.js';
+import { buscarResumo, buscarBloqueios } from '../api/operacionalApi.js';
+import { buscarIndiceMacro } from '../api/indicesMacroApi.js';
+import { buscarDiarioDeSinais } from '../api/validacaoApi.js';
 import { escaparHtml } from '../utils/html.js';
 import { htmlTabelaEstrategias, obterIaLivre, resumoEstrategias, htmlConsultaRapida } from '../components/simulador/TabelaEstrategias.js';
 import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../components/simulador/CenarioSimulador.js';
@@ -82,6 +84,10 @@ export class SimuladorPage extends BaseComponent {
     this.dataEstrategias = '';
     // capital selecionado para escalar P&L no retroativo (pregão a pregão)
     this.capitalRetroativo = CAPITAL_BASE;
+    // 3: taxa SELIC anual para contexto
+    this.selicAtual = null;
+    // 8: bloqueios do dia na aba Operações
+    this.bloqueiosHoje = null;
     // 9: restaura último resultado retroativo
     try {
       const saved = JSON.parse(sessionStorage.getItem('simulador-retroativo') || 'null');
@@ -110,10 +116,13 @@ export class SimuladorPage extends BaseComponent {
     this.render();
 
     try {
-      const [dados, todos] = await Promise.all([
+      const [dados, todos, selic] = await Promise.all([
         listarAtivosSimulador(),
         listarTodosAtivosBase().catch(() => []),
+        buscarIndiceMacro('SELIC').catch(() => null),
       ]);
+      const selicPontos = Array.isArray(selic) ? selic : [];
+      this.selicAtual = selicPontos[0]?.valor != null ? Number(selicPontos[0].valor) : null;
       this.ativos = listaDe(dados);
       this.todosAtivos = todos;
       await Promise.all([
@@ -141,6 +150,18 @@ export class SimuladorPage extends BaseComponent {
       }
     }));
     this.resultadosPorAtivo = Object.fromEntries(pares.filter(Boolean));
+  }
+
+  // 8: carrega bloqueios do dia para exibir na aba Operações
+  async carregarBloqueiosHoje() {
+    if (this.bloqueiosHoje !== null) return;
+    try {
+      const hoje = new Date().toISOString().slice(0, 10);
+      const resp = await buscarBloqueios({ data: hoje });
+      this.bloqueiosHoje = resp?.indisponivel ? [] : (resp?.itens || []);
+    } catch {
+      this.bloqueiosHoje = [];
+    }
   }
 
   // 11: carrega historicos para operações com dataEntrada <= hoje
@@ -233,12 +254,16 @@ export class SimuladorPage extends BaseComponent {
         <td><button type="button" class="btn btn-sm btn-outline-danger btn-remover" data-simbolo="${escaparHtml(campo(ativo, ['simbolo', 'ticker'], ''))}">Remover</button></td></tr>`).join('')}</tbody></table>
     </div>` : '';
 
-    // 3: date picker para sinais históricos
+    // 3: date picker + taxa SELIC para contexto
+    const selicChip = this.selicAtual != null
+      ? `<span class="badge text-bg-secondary ms-2" title="Selic meta anual — referência de custo de oportunidade">Selic ${this.selicAtual.toFixed(2)}% a.a.</span>`
+      : '';
     const datePicker = `<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
       <span class="small text-muted">Sinais de:</span>
       <input type="date" id="data-estrategias" class="form-control form-control-sm w-auto"
              value="${escaparHtml(this.dataEstrategias)}" title="Data do pregão (vazio = mais recente)">
       ${this.dataEstrategias ? `<button type="button" class="btn btn-sm btn-outline-secondary" id="btn-hoje-estrategias">Hoje</button>` : ''}
+      ${selicChip}
     </div>`;
 
     return `${datePicker}
@@ -264,8 +289,12 @@ export class SimuladorPage extends BaseComponent {
 
   abaRetroativo() {
     const { simbolo, inicio, fim } = this.retroativoParams || {};
+    // 3: contexto de taxa para comparação
+    const selicRetroChip = this.selicAtual != null
+      ? `<span class="badge text-bg-secondary ms-2" title="Selic meta — use como benchmark">Selic ${this.selicAtual.toFixed(2)}% a.a.</span>`
+      : '';
     const janelaChip = inicio && fim
-      ? `<p class="small text-muted mt-1 mb-0">Janela estimada: <strong>${janelaEntreDatas(inicio, fim)}</strong> pregões</p>`
+      ? `<p class="small text-muted mt-1 mb-0">Janela estimada: <strong>${janelaEntreDatas(inicio, fim)}</strong> pregões${selicRetroChip}</p>`
       : '';
 
     const tituloHistorico = simbolo
@@ -309,11 +338,29 @@ export class SimuladorPage extends BaseComponent {
   }
 
   abaOperacoes() {
+    // 8: painel de bloqueios do dia (sinais que não viraram operação)
+    const itensBloc = this.bloqueiosHoje || [];
+    const bloqueiosHtml = itensBloc.length
+      ? `<details class="mb-3">
+           <summary class="small text-muted" style="cursor:pointer;list-style:none">
+             ⚠ ${itensBloc.length} sinal(is) bloqueado(s) hoje — clique para ver
+           </summary>
+           <ul class="list-unstyled small mt-1 mb-0 ps-2">
+             ${itensBloc.map((b) => `<li class="text-muted">
+               <strong>${escaparHtml(b.simbolo || '—')}</strong>
+               ${escaparHtml(b.motivo || b.tipoMotivo || b.descricao || 'motivo não informado')}
+               ${b.estrategia ? ` · ${escaparHtml(b.estrategia)}` : ''}
+             </li>`).join('')}
+           </ul>
+         </details>`
+      : '';
+
     return `
       <div class="alert alert-info">
         <p class="mb-0">Operações manuais: acompanhe suas operações simuladas.</p>
         <p class="mb-0"><small>PENDENTE: aguardando data de entrada. ABERTA: em andamento. FECHADA: encerrada.</small></p>
       </div>
+      ${bloqueiosHtml}
       ${this.erroOperacoes ? `<div class="alert alert-warning small">${escaparHtml(this.erroOperacoes)}</div>` : ''}
       <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes, this.todosAtivos, this.filtroStatusOperacoes, this.historicosPorOperacoes)}</div>
     `;
@@ -546,7 +593,41 @@ export class SimuladorPage extends BaseComponent {
     });
 
     // 11: auto-carrega historicos quando a aba Operações é mostrada
-    if (this.abaAtiva === 'operacoes') this.autoCarregarHistoricos();
+    if (this.abaAtiva === 'operacoes') {
+      this.autoCarregarHistoricos();
+      // 8: carrega bloqueios do dia uma vez por sessão
+      this.carregarBloqueiosHoje().then(() => {
+        if (this.abaAtiva === 'operacoes' && (this.bloqueiosHoje?.length ?? 0) > 0) this.render();
+      });
+    }
+
+    // 10: diário de sinais inline — carrega ao abrir o <details>
+    this.querySelectorAll('[data-carregar-diario]').forEach((summary) => {
+      const details = summary.closest('details');
+      if (!details) return;
+      details.addEventListener('toggle', async () => {
+        if (!details.open) return;
+        const simbolo = summary.dataset.carregarDiario;
+        const container = this.querySelector(`#diario-sinais-${CSS.escape(simbolo)}`);
+        if (!container || container.dataset.carregado) return;
+        container.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        try {
+          const dados = await buscarDiarioDeSinais({ simbolo, limite: 15 });
+          const sinais = Array.isArray(dados) ? dados : (dados?.itens || []);
+          if (!sinais.length) {
+            container.innerHTML = '<p class="text-muted mb-0">Sem sinais registrados para este ativo.</p>';
+          } else {
+            container.innerHTML = `<div class="d-flex flex-wrap gap-1 mt-1">${sinais.slice(0, 15).map((s) => {
+              const cor = s.sinal === 'COMPRA' ? 'success' : s.sinal === 'VENDA' ? 'danger' : 'secondary';
+              return `<span class="badge text-bg-${cor}" title="${escaparHtml(s.estrategia || '')}">${escaparHtml(String(s.dataPregao || s.data || '').slice(0, 10))} ${escaparHtml(s.sinal || s.tipo || '—')}</span>`;
+            }).join('')}</div>`;
+          }
+          container.dataset.carregado = '1';
+        } catch {
+          container.innerHTML = '<p class="text-muted small mb-0">Diário indisponível.</p>';
+        }
+      }, { once: true });
+    });
 
     // 3: date picker de sinais históricos (Estratégias)
     this.querySelector('#data-estrategias')?.addEventListener('change', async (e) => {
@@ -635,7 +716,10 @@ export class SimuladorPage extends BaseComponent {
           container.style.display = 'block';
           try {
             const historico = await buscarHistoricoOperacao(id);
-            container.innerHTML = htmlHistoricoOperacao(historico);
+            // 7: passa versaoEstrategia para destacar a coluna certa na tabela
+            const ops = Array.isArray(this.operacoes) ? this.operacoes : (this.operacoes?.itens || []);
+            const op = ops.find((o) => String(o.id) === String(id));
+            container.innerHTML = htmlHistoricoOperacao(historico, op?.versaoEstrategia || null);
             container.dataset.carregado = '1';
           } catch (err) {
             container.innerHTML = `<p class="small text-danger">Erro ao carregar histórico: ${escaparHtml(err.message || 'indisponível')}</p>`;

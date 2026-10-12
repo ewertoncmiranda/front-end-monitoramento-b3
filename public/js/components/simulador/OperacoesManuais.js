@@ -34,7 +34,7 @@ function sparklineSvg(pontos, larg = 80, alt = 22) {
   </svg>`;
 }
 
-export function htmlHistoricoOperacao(historico) {
+export function htmlHistoricoOperacao(historico, versaoEstrategia = null) {
   if (!historico) return '<p class="small text-muted">Sem dados de histórico.</p>';
 
   const { precoEntrada, totalRetornoPct, totalPnlRs, pontos = [] } = historico;
@@ -52,16 +52,18 @@ export function htmlHistoricoOperacao(historico) {
   // Coleta todas as estratégias presentes no histórico
   const estrategias = [...new Set(pontos.flatMap((p) => Object.keys(p.quintilPorEstrategia || {})))].sort();
 
-  const thEstrategias = estrategias.map((e) =>
-    `<th class="small fw-normal text-muted text-center">${escaparHtml(e.replace(/_v\d+$/, '').replace(/_/g, ' '))}</th>`
-  ).join('');
+  const thEstrategias = estrategias.map((e) => {
+    const destaque = versaoEstrategia && e === versaoEstrategia;
+    return `<th class="small ${destaque ? 'text-primary fw-semibold' : 'fw-normal text-muted'} text-center">${escaparHtml(e.replace(/_v\d+$/, '').replace(/_/g, ' '))}${destaque ? ' ◀' : ''}</th>`;
+  }).join('');
 
   const linhas = pontos.map((p) => {
     const classeDia = classeValor(p.retornoDiaPct);
     const classeAcum = classeValor(p.retornoAcumPct);
     const tdQuintis = estrategias.map((e) => {
       const q = p.quintilPorEstrategia?.[e];
-      return `<td class="text-center small">${q != null ? q : SEM}</td>`;
+      const destaque = versaoEstrategia && e === versaoEstrategia;
+      return `<td class="text-center small${destaque ? ' fw-bold text-primary' : ''}">${q != null ? q : SEM}</td>`;
     }).join('');
     return `<tr>
       <td class="text-nowrap small">${escaparHtml(formatarData(p.dataPregao))}</td>
@@ -187,6 +189,22 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '', hi
     const hoje = new Date().toISOString().slice(0, 10);
     const temDesempenho = o.dataEntrada && String(o.dataEntrada) <= hoje;
 
+    // 2: badge da estratégia de entrada
+    const versao = o.versaoEstrategia || '';
+    const estrategiaBadge = versao
+      ? `<span class="badge text-bg-primary ms-1" style="font-size:9px">${escaparHtml(versao.replace(/_v(\d+)$/, ' v$1').replace(/_/g, ' '))}</span>`
+      : '';
+
+    // 5: janela se disponível
+    const janelaInfo = o.janela ? ` · ${o.janela}p` : '';
+
+    // 6: alerta de reversão quando quintil da estratégia de entrada caiu para Q1/Q2
+    const ultPonto = historicoInline?.pontos?.at(-1);
+    const quintilAtual = versao && ultPonto?.quintilPorEstrategia?.[versao];
+    const alertaReversao = historicoInline && quintilAtual != null && quintilAtual <= 2
+      ? `<span class="badge text-bg-warning ms-1" title="Quintil atual Q${quintilAtual} — sinal reverteu">⚠ Q${quintilAtual} reverteu</span>`
+      : '';
+
     // 11: P&L inline quando historico já foi carregado
     const pnlInline = historicoInline
       ? `<div class="d-flex align-items-center gap-2 mt-1">
@@ -256,8 +274,8 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '', hi
       <div class="d-flex flex-wrap justify-content-between gap-2">
         <div>
           <strong>${escaparHtml(o.simbolo || SEM)}</strong>
-          <span class="badge text-bg-secondary">${escaparHtml(status)}</span>
-          <div class="small">entrada ${escaparHtml(formatarData(o.dataEntrada))} ${escaparHtml(diasDecorridos(o.dataEntrada))} · ${escaparHtml(formatarMoeda(o.capital, SEM))}</div>
+          <span class="badge text-bg-secondary">${escaparHtml(status)}</span>${estrategiaBadge}${alertaReversao}
+          <div class="small">entrada ${escaparHtml(formatarData(o.dataEntrada))} ${escaparHtml(diasDecorridos(o.dataEntrada))} · ${escaparHtml(formatarMoeda(o.capital, SEM))}${janelaInfo}</div>
           <div class="small text-muted">${resumoStatus}</div>
         </div>
         <div class="text-end">
