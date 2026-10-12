@@ -27,6 +27,7 @@ const rotas = {
   '#/opcoes': 'opcao-page',
   '#/assistente': 'assistente-page',
   '#/operabilidade': 'operabilidade-page',
+  '#/ficha': 'gestao-page',
 };
 
 const ROTA_PADRAO = '#/inicio';
@@ -44,6 +45,7 @@ export function iniciarRouter(outletSelector) {
     const tagName = rotas[hash]
       || (hash.startsWith('#/gestao/') ? rotas['#/gestao'] : null)
       || (hash.startsWith('#/opcoes/') ? rotas['#/opcoes'] : null)
+    || (hash.startsWith('#/ficha/') ? rotas['#/ficha'] : null)
       || rotas[ROTA_PADRAO];
     outlet.innerHTML = `<${tagName}></${tagName}>`;
   }

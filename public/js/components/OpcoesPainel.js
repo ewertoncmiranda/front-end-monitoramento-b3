@@ -140,7 +140,12 @@ function _cardContexto(ctx) {
     ctx.graham!= null ? `Graham R$${ctx.graham.toFixed(2)}`          : null,
     ctx.margem!= null ? `Margem ${ctx.margem.toFixed(1)}%`           : null,
     ctx.vol21d!= null ? `Vol.21d ${(ctx.vol21d * 100).toFixed(1)}%`  : null,
+    ctx.atr14 != null ? `ATR14 R$${ctx.atr14.toFixed(2)}`           : null,
+    ctx.volRelativo != null ? `Vol.rel. ${ctx.volRelativo.toFixed(2)}×` : null,
   ].filter(Boolean).map((s) => `<span class="text-muted small">${escaparHtml(s)}</span>`).join('');
+
+  const avisoSaltos = _avisoSaltos(ctx.saltos);
+  const avisoProventos = _avisoProventos(ctx.exDividendos);
 
   return `
     <div class="card mb-3 border-0 bg-light">
@@ -152,9 +157,39 @@ function _cardContexto(ctx) {
           ${stats}
         </div>
         ${rangeBar}
+        ${avisoSaltos}
+        ${avisoProventos}
       </div>
     </div>
   `;
+}
+
+// ── Aviso: saltos de desdobramento/grupamento na série ────────────────────────
+function _avisoSaltos(saltos) {
+  if (!saltos?.length) return '';
+  const fmt = saltos.map((s) => {
+    const [ano, mes, dia] = String(s.data).split('-');
+    const pct = s.variacao != null ? ` (${(s.variacao * 100).toFixed(1)}%)` : '';
+    return `${dia}/${mes}/${ano}${escaparHtml(pct)}`;
+  }).join(', ');
+  return `<div class="alert alert-info py-1 px-2 mt-2 mb-0 small" role="alert">
+    <strong>Atenção: série histórica com salto(s)</strong> em ${fmt}.
+    Desdobramento ou grupamento detectado — a série de preços brutos não está ajustada.
+  </div>`;
+}
+
+// ── Aviso: ex-dividendo antes do vencimento de opções ─────────────────────────
+function _avisoProventos(exDividendos) {
+  if (!exDividendos?.length) return '';
+  const itens = exDividendos.map((p) => {
+    const [ano, mes, dia] = String(p.data).split('-');
+    const val = p.valor > 0 ? ` R$${p.valor.toFixed(4)}` : '';
+    return `${escaparHtml(p.tipo)}${escaparHtml(val)} em ${dia}/${mes}/${ano}`;
+  }).join('; ');
+  return `<div class="alert alert-warning py-1 px-2 mt-2 mb-0 small" role="alert">
+    <strong>Ex-dividendo recente/futuro:</strong> ${itens}.
+    Proventos antes do vencimento reduzem o preço do ativo-objeto e distorcem o prêmio das CALLs.
+  </div>`;
 }
 
 // ── OPT-PAI-3: barra de filtros ───────────────────────────────────────────────
