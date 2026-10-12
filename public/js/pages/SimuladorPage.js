@@ -46,6 +46,8 @@ export class SimuladorPage extends BaseComponent {
     this.resultadoCenario = null;
     this.erroCenario = '';
     this.resultadoRetroativo = null;
+    this.historicoRetroativo = null;
+    this.retroativoParams = null;
     this.erroRetroativo = '';
     this.operacoes = null;
     this.erroOperacoes = '';
@@ -198,6 +200,18 @@ export class SimuladorPage extends BaseComponent {
   }
 
   abaRetroativo() {
+    const { simbolo, inicio, fim } = this.retroativoParams || {};
+    const tituloHistorico = simbolo
+      ? `Pregão a pregão — ${escaparHtml(simbolo)} (${escaparHtml(inicio || '')} → ${escaparHtml(fim || '')})`
+      : 'Pregão a pregão';
+
+    const secaoHistorico = this.historicoRetroativo
+      ? `<div class="mt-4">
+           <h6 class="text-muted mb-2">${tituloHistorico}</h6>
+           ${htmlHistoricoOperacao(this.historicoRetroativo)}
+         </div>`
+      : '';
+
     return `
       <div class="alert alert-info">
         <p class="mb-0">Retroativo: valide estratégias históricas contra retornos reais.</p>
@@ -205,6 +219,7 @@ export class SimuladorPage extends BaseComponent {
       </div>
       ${htmlControlesRetroativo(this.todosAtivos)}
       <div id="resultado-retroativo" class="mt-3">${this.erroRetroativo ? `<div class="alert alert-danger small">${escaparHtml(this.erroRetroativo)}</div>` : htmlResultadoRetroativo(this.resultadoRetroativo)}</div>
+      ${secaoHistorico}
     `;
   }
 
@@ -303,19 +318,25 @@ export class SimuladorPage extends BaseComponent {
       const janela = janelaEntreDatas(inicio, fim);
       this.erroRetroativo = '';
       this.resultadoRetroativo = null;
+      this.historicoRetroativo = null;
+      this.retroativoParams = { simbolo, inicio, fim };
       this.render();
       try {
-        const resultados = await Promise.all(
-          ESTRATEGIAS_PADRAO.map(async (estrategia) => {
-            try {
-              const resultado = await retroativoSimulador(simbolo, estrategia, 'v1', janela, inicio);
-              return { estrategia, resultado, erro: null };
-            } catch (err) {
-              return { estrategia, resultado: null, erro: err?.message || 'indisponível' };
-            }
-          })
-        );
+        const [resultados, historico] = await Promise.all([
+          Promise.all(
+            ESTRATEGIAS_PADRAO.map(async (estrategia) => {
+              try {
+                const resultado = await retroativoSimulador(simbolo, estrategia, 'v1', janela, inicio);
+                return { estrategia, resultado, erro: null };
+              } catch (err) {
+                return { estrategia, resultado: null, erro: err?.message || 'indisponível' };
+              }
+            })
+          ),
+          buscarHistoricoPeriodo(simbolo, inicio, fim).catch(() => null),
+        ]);
         this.resultadoRetroativo = resultados;
+        this.historicoRetroativo = historico;
       } catch (erroApi) {
         this.erroRetroativo = erroApi?.message || 'Erro ao analisar retroativo.';
       }
