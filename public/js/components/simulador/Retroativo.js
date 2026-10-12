@@ -1,23 +1,110 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
+import { ESTRATEGIAS_PADRAO } from './utils.js';
 
 const SEM = '—';
-export function htmlFormularioRetroativo(ativos = []) {
-  return `<form id="form-retroativo" class="row g-3"><div class="col-md-3"><label class="form-label" for="retroativo-ativo">Ativo</label><select id="retroativo-ativo" class="form-select form-select-sm" required><option value="">Selecione…</option>${ativos.map((a) => `<option>${escaparHtml(a.simbolo)}</option>`).join('')}</select></div>
-  <div class="col-md-3"><label class="form-label" for="retroativo-estrategia">Estratégia</label><input id="retroativo-estrategia" class="form-control form-control-sm" value="MOMENTO_PURO" required></div>
-  <div class="col-md-2"><label class="form-label" for="retroativo-janela">Janela</label><input id="retroativo-janela" type="number" min="1" max="63" value="21" class="form-control form-control-sm" required></div>
-  <div class="col-md-2"><label class="form-label" for="retroativo-inicio">Início</label><input id="retroativo-inicio" type="date" class="form-control form-control-sm" required></div>
-  <div class="col-md-2"><label class="form-label">&nbsp;</label><button class="btn btn-primary btn-sm w-100">Analisar</button></div></form>`;
+
+// Calcula janela em pregões aproximada a partir de dois ISO dates.
+// Usa proporção 252 pregões / 365 dias como estimativa.
+export function janelaEntreDatas(inicioIso, fimIso) {
+  const dias = Math.max(1, Math.round(
+    (new Date(fimIso) - new Date(inicioIso)) / 86_400_000
+  ));
+  return Math.max(1, Math.round(dias * 252 / 365));
 }
+
+export function htmlFormularioRetroativo(ativos = []) {
+  const opcoesAtivos = ativos.map((a) => `<option>${escaparHtml(a.simbolo)}</option>`).join('');
+  const hoje = new Date().toISOString().slice(0, 10);
+  const umAnoAtras = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
+  return `
+    <form id="form-retroativo" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label" for="retroativo-ativo">Ativo</label>
+        <select id="retroativo-ativo" class="form-select form-select-sm" required>
+          <option value="">Selecione…</option>${opcoesAtivos}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="retroativo-inicio">Início</label>
+        <input id="retroativo-inicio" type="date" class="form-control form-control-sm"
+               value="${umAnoAtras}" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="retroativo-fim">Fim</label>
+        <input id="retroativo-fim" type="date" class="form-control form-control-sm"
+               value="${hoje}" required>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Analisar</button>
+      </div>
+    </form>`;
+}
+
 export const htmlControlesRetroativo = htmlFormularioRetroativo;
 
+// dado = array de { estrategia, resultado: SimuladorRetroativoDTO, erro }
 export function htmlResultadoRetroativo(dado) {
-  if (dado && Array.isArray(dado.itens) && !dado.itens.length) return '<p class="small text-muted mt-3">Sem dados no período selecionado. Ajuste a janela, o ativo ou o intervalo histórico.</p>';
-  const entradas = dado?.entradas || [];
-  if (!dado || !entradas.length) return '<p class="small text-muted mt-3">Nenhuma entrada com resultado real foi encontrada no período.</p>';
-  const ordenadas = entradas.filter((e) => e.resultadoPercentual != null).sort((a, b) => Number(a.resultadoPercentual) - Number(b.resultadoPercentual));
-  const pior = ordenadas[0]; const melhor = ordenadas.at(-1);
-  const barras = ['GANHO', 'PERDA', 'NEUTRO'].map((tipo) => { const n = entradas.filter((e) => e.resultado === tipo).length; const pct = entradas.length ? n / entradas.length * 100 : 0; return `<div class="mb-2"><div class="d-flex justify-content-between small"><span>${tipo}</span><span>${n}</span></div><div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div></div>`; }).join('');
-  return `<section class="mt-3"><div class="row g-2"><div class="col-md-3"><div class="opr-kpi"><span>Taxa de acerto</span><strong>${escaparHtml(formatarPercentual(dado.taxaAcerto == null ? null : Number(dado.taxaAcerto) / 100, 2, { vazio: SEM }))}</strong></div></div><div class="col-md-3"><div class="opr-kpi"><span>Retorno médio</span><strong>${escaparHtml(formatarPercentual(dado.retornoMedio, 2, { sinal: true, vazio: SEM }))}</strong></div></div><div class="col-md-3"><div class="opr-kpi"><span>Melhor entrada</span><strong>${melhor ? escaparHtml(formatarData(melhor.dataPregao)) : SEM}</strong></div></div><div class="col-md-3"><div class="opr-kpi"><span>Pior entrada</span><strong>${pior ? escaparHtml(formatarData(pior.dataPregao)) : SEM}</strong></div></div></div><div class="mt-3">${barras}</div></section>`;
+  // compatibilidade com chamada antiga (objeto único) ou vazio
+  if (!dado) return '<p class="small text-muted mt-3">Preencha o formulário e clique em Analisar.</p>';
+  if (!Array.isArray(dado)) {
+    // formato legado: objeto único — exibe como antes
+    const entradas = dado.entradas || [];
+    if (!entradas.length) return '<p class="small text-muted mt-3">Nenhuma entrada com resultado real foi encontrada no período.</p>';
+    return _htmlTabela([{ estrategia: dado.estrategia || '—', resultado: dado, erro: null }]);
+  }
+  if (!dado.length) return '<p class="small text-muted mt-3">Nenhuma estratégia retornou dados.</p>';
+  return _htmlTabela(dado);
+}
+
+function _htmlTabela(itens) {
+  const linhas = itens.map(({ estrategia, resultado, erro }) => {
+    if (erro) {
+      return `<tr>
+        <td>${escaparHtml(estrategia)}</td>
+        <td colspan="4" class="text-muted small">${escaparHtml(erro)}</td>
+      </tr>`;
+    }
+    const entradas = resultado?.entradas || [];
+    const taxaAcerto = resultado?.taxaAcerto != null
+      ? formatarPercentual(Number(resultado.taxaAcerto) / 100, 1, { vazio: SEM })
+      : SEM;
+    const retornoMedio = resultado?.retornoMedio != null
+      ? formatarPercentual(resultado.retornoMedio, 2, { sinal: true, vazio: SEM })
+      : SEM;
+    const ganhos = entradas.filter((e) => e.resultado === 'GANHO').length;
+    const perdas = entradas.filter((e) => e.resultado === 'PERDA').length;
+    const total = entradas.length;
+    const barraGanho = total ? Math.round(ganhos / total * 100) : 0;
+    return `<tr>
+      <td class="fw-500">${escaparHtml(estrategia)}</td>
+      <td class="text-end">${escaparHtml(taxaAcerto)}</td>
+      <td class="text-end">${escaparHtml(retornoMedio)}</td>
+      <td class="text-end">${total || SEM}</td>
+      <td style="min-width:80px">
+        <div class="progress" style="height:6px;border-radius:3px">
+          <div class="progress-bar bg-success" style="width:${barraGanho}%"></div>
+        </div>
+        <div class="d-flex justify-content-between" style="font-size:10px;color:var(--bs-secondary-color,#666)">
+          <span>G ${ganhos}</span><span>P ${perdas}</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="table-responsive mt-3">
+    <table class="table table-sm table-hover">
+      <thead>
+        <tr>
+          <th>Estratégia</th>
+          <th class="text-end">Taxa acerto</th>
+          <th class="text-end">Retorno médio</th>
+          <th class="text-end">Entradas</th>
+          <th>G / P</th>
+        </tr>
+      </thead>
+      <tbody>${linhas}</tbody>
+    </table>
+  </div>`;
 }
