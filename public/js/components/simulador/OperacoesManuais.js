@@ -155,11 +155,16 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
         ? `Retorno vs CDI: ${escaparHtml(formatarPercentual(o.retornoVsCdi ?? o.excessoCdi, 2, { sinal: true, vazio: SEM }))}`
         : 'Em andamento';
 
-    // melhoria 3: PENDENTE não mostra travessões — explica que ainda não há P&L
-    const financeiro = status === 'PENDENTE'
+    const hoje = new Date().toISOString().slice(0, 10);
+    const temDesempenho = o.dataEntrada && String(o.dataEntrada) <= hoje;
+
+    // melhoria 3: PENDENTE sem data atingida explica; com data atingida avisa que dados disponíveis
+    const financeiro = status === 'PENDENTE' && !temDesempenho
       ? `<div class="small text-muted">Aguardando data de entrada para calcular P&amp;L.</div>`
-      : `<div>P&amp;L ${escaparHtml(formatarMoeda(pnl, SEM))}</div>
-         <div>acumulado ${escaparHtml(formatarPercentual(acum, 2, { sinal: true, vazio: SEM }))}</div>`;
+      : status === 'PENDENTE' && temDesempenho
+        ? `<div class="small text-muted">Data de entrada atingida — veja o desempenho.</div>`
+        : `<div>P&amp;L ${escaparHtml(formatarMoeda(pnl, SEM))}</div>
+           <div>acumulado ${escaparHtml(formatarPercentual(acum, 2, { sinal: true, vazio: SEM }))}</div>`;
 
     // melhoria 4: ABERTA tem botão Encerrar; PENDENTE mantém Excluir
     const botaoAcao = status === 'PENDENTE'
@@ -168,8 +173,8 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
         ? `<button class="btn btn-sm btn-outline-warning mt-1" data-encerrar-operacao="${o.id}">Encerrar</button>`
         : '';
 
-    const botaoPnl = status !== 'PENDENTE'
-      ? `<button class="btn btn-sm btn-outline-info mt-1 ms-1" data-historico-operacao="${o.id}">P&amp;L completo</button>`
+    const botaoPnl = temDesempenho
+      ? `<button class="btn btn-sm btn-outline-info mt-1 ms-1" data-historico-operacao="${o.id}">Ver desempenho</button>`
       : '';
 
     // melhoria 6: thead com rótulos de coluna no histórico
