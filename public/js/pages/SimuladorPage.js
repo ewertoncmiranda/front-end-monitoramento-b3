@@ -1,6 +1,7 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
 import {
   analisarIaSimulador,
+  buscarHistoricoOperacao,
   buscarResultadosSimulador,
   cenarioSimulador,
   criarOperacaoSimulador,
@@ -17,7 +18,7 @@ import { escaparHtml } from '../utils/html.js';
 import { htmlTabelaEstrategias, obterIaLivre } from '../components/simulador/TabelaEstrategias.js';
 import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../components/simulador/CenarioSimulador.js';
 import { htmlControlesRetroativo, htmlResultadoRetroativo, janelaEntreDatas } from '../components/simulador/Retroativo.js';
-import { htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
+import { htmlHistoricoOperacao, htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
 import { htmlOperabilidadeParalela } from '../components/simulador/OperabilidadeParalela.js';
 import { campo, listaDe, validarSimboloAtivo, htmlComboboxAtivo, ESTRATEGIAS_PADRAO } from '../components/simulador/utils.js';
 import '../components/LoadingSpinner.js';
@@ -416,6 +417,37 @@ export class SimuladorPage extends BaseComponent {
             alert(`Erro ao encerrar operação: ${err.message}`);
           }
         }
+      });
+    });
+
+    // P&L completo — carrega on-demand e alterna visibilidade
+    this.querySelectorAll('[data-historico-operacao]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.historicoOperacao;
+        const container = this.querySelector(`#historico-${id}`);
+        if (!container) return;
+
+        if (container.style.display !== 'none') {
+          container.style.display = 'none';
+          btn.textContent = 'P&L completo';
+          return;
+        }
+
+        if (!container.dataset.carregado) {
+          container.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Carregando…';
+          container.style.display = 'block';
+          try {
+            const historico = await buscarHistoricoOperacao(id);
+            container.innerHTML = htmlHistoricoOperacao(historico);
+            container.dataset.carregado = '1';
+          } catch (err) {
+            container.innerHTML = `<p class="small text-danger">Erro ao carregar histórico: ${escaparHtml(err.message || 'indisponível')}</p>`;
+          }
+        } else {
+          container.style.display = 'block';
+        }
+
+        btn.textContent = 'Ocultar P&L';
       });
     });
   }

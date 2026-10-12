@@ -45,6 +45,10 @@ export async function deletarOperacaoSimulador(id) {
   return httpDelete(`/simulador/operacoes/${id}`);
 }
 
+export async function buscarHistoricoOperacao(id) {
+  return httpGet(`/simulador/operacoes/${id}/historico`);
+}
+
 // SIM-PAI-2: Análise IA sob demanda
 export async function analisarIaSimulador(simbolo, payload) {
   const body = payload ? new URLSearchParams({ resultados: JSON.stringify(payload.resultados || []) }) : undefined;

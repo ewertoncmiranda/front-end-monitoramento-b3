@@ -1,11 +1,68 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
-import { ESTRATEGIAS_PADRAO, htmlComboboxAtivo } from './utils.js';
+import { ESTRATEGIAS_PADRAO, htmlComboboxAtivo, classeValor } from './utils.js';
 
 const SEM = '—';
 
 const VERSOES_ESTRATEGIA = ESTRATEGIAS_PADRAO.map((e) => `${e}_v1`);
+
+export function htmlHistoricoOperacao(historico) {
+  if (!historico) return '<p class="small text-muted">Sem dados de histórico.</p>';
+
+  const { precoEntrada, totalRetornoPct, totalPnlRs, pontos = [] } = historico;
+  const classeTotal = classeValor(totalRetornoPct);
+  const resumo = `
+    <div class="d-flex flex-wrap gap-3 mb-2 small">
+      <span>Entrada: <strong>${escaparHtml(formatarMoeda(precoEntrada, SEM))}</strong></span>
+      <span>Retorno: <strong class="${classeTotal}">${escaparHtml(formatarPercentual(totalRetornoPct, 2, { sinal: true, vazio: SEM }))}</strong></span>
+      <span>P&amp;L: <strong class="${classeTotal}">${escaparHtml(formatarMoeda(totalPnlRs, SEM))}</strong></span>
+      <span>${pontos.length} pregão(ões)</span>
+    </div>`;
+
+  if (!pontos.length) return resumo + '<p class="small text-muted">Nenhuma cotação disponível para o período.</p>';
+
+  // Coleta todas as estratégias presentes no histórico
+  const estrategias = [...new Set(pontos.flatMap((p) => Object.keys(p.quintilPorEstrategia || {})))].sort();
+
+  const thEstrategias = estrategias.map((e) =>
+    `<th class="small fw-normal text-muted text-center">${escaparHtml(e.replace(/_v\d+$/, '').replace(/_/g, ' '))}</th>`
+  ).join('');
+
+  const linhas = pontos.map((p) => {
+    const classeDia = classeValor(p.retornoDiaPct);
+    const classeAcum = classeValor(p.retornoAcumPct);
+    const tdQuintis = estrategias.map((e) => {
+      const q = p.quintilPorEstrategia?.[e];
+      return `<td class="text-center small">${q != null ? q : SEM}</td>`;
+    }).join('');
+    return `<tr>
+      <td class="text-nowrap small">${escaparHtml(formatarData(p.dataPregao))}</td>
+      <td class="text-end small">${escaparHtml(formatarMoeda(p.preco, SEM))}</td>
+      <td class="text-end small ${classeDia}">${escaparHtml(formatarPercentual(p.retornoDiaPct, 2, { sinal: true, vazio: SEM }))}</td>
+      <td class="text-end small ${classeAcum}">${escaparHtml(formatarPercentual(p.retornoAcumPct, 2, { sinal: true, vazio: SEM }))}</td>
+      <td class="text-end small ${classeAcum}">${escaparHtml(formatarMoeda(p.pnlRs, SEM))}</td>
+      ${tdQuintis}
+    </tr>`;
+  }).join('');
+
+  return `${resumo}
+    <div class="table-responsive" style="max-height:300px;overflow-y:auto">
+      <table class="table table-sm table-hover mb-0">
+        <thead style="position:sticky;top:0;background:var(--bs-body-bg,#fff)">
+          <tr>
+            <th class="small fw-normal text-muted">Data</th>
+            <th class="small fw-normal text-muted text-end">Preço</th>
+            <th class="small fw-normal text-muted text-end">Dia %</th>
+            <th class="small fw-normal text-muted text-end">Acum %</th>
+            <th class="small fw-normal text-muted text-end">P&amp;L R$</th>
+            ${thEstrategias}
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`;
+}
 
 const STATUS_LISTA = ['PENDENTE', 'ABERTA', 'FECHADA'];
 
@@ -111,6 +168,10 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
         ? `<button class="btn btn-sm btn-outline-warning mt-1" data-encerrar-operacao="${o.id}">Encerrar</button>`
         : '';
 
+    const botaoPnl = status !== 'PENDENTE'
+      ? `<button class="btn btn-sm btn-outline-info mt-1 ms-1" data-historico-operacao="${o.id}">P&amp;L completo</button>`
+      : '';
+
     // melhoria 6: thead com rótulos de coluna no histórico
     const thead = `<thead><tr>
       <th class="small fw-normal text-muted" style="white-space:nowrap">Data</th>
@@ -146,10 +207,11 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '') {
         </div>
         <div class="text-end">
           ${financeiro}
-          ${botaoAcao}
+          ${botaoAcao}${botaoPnl}
         </div>
       </div>
       ${detalhe}
+      <div id="historico-${o.id}" class="mt-2" style="display:none"></div>
     </article>`;
   }).join('');
 
