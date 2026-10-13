@@ -338,4 +338,50 @@ caso('card contexto mostra negocios acumulados 21d no formato compacto K', () =>
   assert.match(html, /Neg\.21d 15K/);
 });
 
+// ── Melhorias UX: dados trafegados mas não exibidos ───────────────────────────
+
+caso('range bar min tem title com data da minima quando dataMinima presente', () => {
+  const ctx = { ...CTX_BASE, dataMinima: '2026-08-12', dataMaxima: '2026-09-03' };
+  const html = render({ ...dados_base, contexto: ctx });
+  assert.match(html, /m[ií]nima 63d.*08\/2026/i);
+});
+
+caso('range bar max tem title com data da maxima quando dataMaxima presente', () => {
+  const ctx = { ...CTX_BASE, dataMaxima: '2026-09-03' };
+  const html = render({ ...dados_base, contexto: ctx });
+  assert.match(html, /m[aá]xima 63d.*09\/2026/i);
+});
+
+caso('card contexto mostra variacao do periodo com sinal positivo', () => {
+  const html = render({ ...dados_base, contexto: { ...CTX_BASE, variacaoPeriodo: 0.082 } });
+  assert.match(html, /Var\.63d \+8\.2%/);
+});
+
+caso('card contexto mostra variacao do periodo com sinal negativo', () => {
+  const html = render({ ...dados_base, contexto: { ...CTX_BASE, variacaoPeriodo: -0.034 } });
+  assert.match(html, /Var\.63d -3\.4%/);
+});
+
+caso('card contexto mostra data da analise quando dataAnalise presente', () => {
+  const html = render({ ...dados_base, contexto: { ...CTX_BASE, dataAnalise: '2026-10-10T14:32:00' } });
+  assert.match(html, /análise 10\/10\/2026/);
+});
+
+caso('aviso de saltos mostra preco antes e depois quando disponivel', () => {
+  const ctx = { ...CTX_BASE, saltos: [{ data: '2026-08-15', variacao: -0.45, fechamentoAnterior: 54.0, abertura: 27.0 }] };
+  const html = render({ ...dados_base, contexto: ctx });
+  assert.match(html, /R\$54\.00/);
+  assert.match(html, /R\$27\.00/);
+  assert.match(html, /-45\.0%/);
+  assert.match(html, /15\/08\/2026/);
+});
+
+caso('aviso de saltos sem preco ainda mostra data e percentual', () => {
+  const ctx = { ...CTX_BASE, saltos: [{ data: '2026-08-15', variacao: -0.45 }] };
+  const html = render({ ...dados_base, contexto: ctx });
+  assert.match(html, /-45\.0%/);
+  assert.match(html, /15\/08\/2026/);
+  assert.doesNotMatch(html, /→/);
+});
+
 console.log(`opcoes.test.mjs ok (${casos} casos)`);

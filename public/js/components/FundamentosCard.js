@@ -205,7 +205,13 @@ function secaoPerfilOperacao(f) {
       ${campo('Risco de comprar agora', badgeRisco(f.riscoCompraAgora))}
       ${campo('Risco de vender agora', badgeRisco(f.riscoVendaAgora))}
     </div>
-    ${f.confluenciaSinais ? `<p class="small text-muted mb-3">${f.confluenciaSinais.resumo}</p>` : ''}
+    ${f.confluenciaSinais ? `
+      <div class="d-flex flex-wrap gap-2 mb-1 align-items-center">
+        <span class="badge bg-success">${f.confluenciaSinais.compra ?? 0} compra</span>
+        <span class="badge bg-danger">${f.confluenciaSinais.venda ?? 0} venda</span>
+        <span class="badge bg-secondary">${f.confluenciaSinais.neutro ?? 0} neutro</span>
+      </div>
+      <p class="small text-muted mb-3">${f.confluenciaSinais.resumo}</p>` : ''}
   `;
 }
 

@@ -120,19 +120,24 @@ function _cardContexto(ctx) {
 
   // barra de posicao no range 63 dias
   const rangePct = ctx.posicaoRange != null ? Math.min(100, Math.max(0, Math.round(ctx.posicaoRange * 100))) : null;
+  const minTitle = ctx.dataMinima ? `mínima 63d — ${_fmtData(ctx.dataMinima)}` : 'mínima 63d';
+  const maxTitle = ctx.dataMaxima ? `máxima 63d — ${_fmtData(ctx.dataMaxima)}` : 'máxima 63d';
   const rangeBar = rangePct != null ? `
     <div class="d-flex align-items-center gap-2 mt-2 small text-muted">
-      <span title="mínima 63d">${_fmtMoeda(ctx.min63d)}</span>
+      <span title="${minTitle}">${_fmtMoeda(ctx.min63d)}</span>
       <div class="progress flex-grow-1" style="height:5px" title="${rangePct}% no range 63d">
         <div class="progress-bar" style="width:${rangePct}%"></div>
       </div>
-      <span title="máxima 63d">${_fmtMoeda(ctx.max63d)}</span>
+      <span title="${maxTitle}">${_fmtMoeda(ctx.max63d)}</span>
       <span class="badge text-bg-secondary">${rangePct}%&nbsp;range&nbsp;63d</span>
     </div>` : '';
 
   const recCls = REC_CLASSE[ctx.recomendacao] || 'secondary';
   const recBadge = ctx.recomendacao
     ? `<span class="badge text-bg-${recCls}">${escaparHtml(ctx.recomendacao.replace(/_/g, ' '))}</span>`
+    : '';
+  const dataAnaliseStr = ctx.dataAnalise
+    ? `<span class="text-muted small" title="data da análise">análise ${escaparHtml(_fmtData(String(ctx.dataAnalise).slice(0, 10)))}</span>`
     : '';
 
   const stats = [
@@ -151,6 +156,7 @@ function _cardContexto(ctx) {
     ctx.posicaoRangeDia != null ? `Pos.dia ${Math.round(ctx.posicaoRangeDia * 100)}%` : null,
     ctx.volumeContratos21d != null ? `Contr.21d ${_fmtK(ctx.volumeContratos21d)}` : null,
     ctx.negocios21d != null ? `Neg.21d ${_fmtK(ctx.negocios21d)}` : null,
+    ctx.variacaoPeriodo != null ? `Var.63d ${ctx.variacaoPeriodo >= 0 ? '+' : ''}${(ctx.variacaoPeriodo * 100).toFixed(1)}%` : null,
   ].filter(Boolean).map((s) => `<span class="text-muted small">${escaparHtml(s)}</span>`).join('');
 
   const avisoSaltos = _avisoSaltos(ctx.saltos);
@@ -163,6 +169,7 @@ function _cardContexto(ctx) {
           <span class="fw-bold fs-5">${preco}</span>
           ${varStr}
           ${recBadge}
+          ${dataAnaliseStr}
           ${stats}
         </div>
         ${rangeBar}
@@ -179,10 +186,14 @@ function _avisoSaltos(saltos) {
   const fmt = saltos.map((s) => {
     const [ano, mes, dia] = String(s.data).split('-');
     const pct = s.variacao != null ? ` (${(s.variacao * 100).toFixed(1)}%)` : '';
-    return `${dia}/${mes}/${ano}${escaparHtml(pct)}`;
-  }).join(', ');
+    const precos = (s.fechamentoAnterior != null && s.abertura != null)
+      ? `R$${s.fechamentoAnterior.toFixed(2)} → R$${s.abertura.toFixed(2)}`
+      : '';
+    const item = precos ? `${precos}${pct} em ${dia}/${mes}/${ano}` : `${pct} em ${dia}/${mes}/${ano}`.trim();
+    return escaparHtml(item);
+  }).join('; ');
   return `<div class="alert alert-info py-1 px-2 mt-2 mb-0 small" role="alert">
-    <strong>Atenção: série histórica com salto(s)</strong> em ${fmt}.
+    <strong>Atenção: série histórica com salto(s)</strong> — ${fmt}.
     Desdobramento ou grupamento detectado — a série de preços brutos não está ajustada.
   </div>`;
 }
