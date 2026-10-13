@@ -21,7 +21,7 @@ import { listarAtivosPainel, listarSetoresBase } from '../api/baseAtivosApi.js';
 import { htmlTabelaAtivos } from '../analise/listagemAtivos.js';
 import { escaparHtml } from '../utils/html.js';
 import { htmlTabelaEstrategias, obterIaLivre, resumoEstrategias, htmlConsultaRapida } from '../components/simulador/TabelaEstrategias.js';
-import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../components/simulador/CenarioSimulador.js';
+import { htmlControlesCenario, htmlResultadoCenario, htmlCardCenario, htmlComparacaoCenarios, validarCenario } from '../components/simulador/CenarioSimulador.js';
 import { htmlControlesRetroativo, htmlResultadoRetroativo, janelaEntreDatas } from '../components/simulador/Retroativo.js';
 import { htmlHistoricoOperacao, htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
 import { htmlOperabilidadeParalela } from '../components/simulador/OperabilidadeParalela.js';
@@ -70,6 +70,7 @@ export class SimuladorPage extends BaseComponent {
     this.carregandoIa = '';
     this.resultadoCenario = null;
     this.erroCenario = '';
+    this.cardsCenario = this._carregarCardsCenario();
     this.resultadoRetroativo = null;
     this.historicoRetroativo = null;
     this.retroativoParams = null;
@@ -103,6 +104,18 @@ export class SimuladorPage extends BaseComponent {
         this.retroativoParams = saved.retroativoParams ?? null;
       }
     } catch { /* ignore */ }
+  }
+
+  _carregarCardsCenario() {
+    try {
+      return JSON.parse(sessionStorage.getItem('simulador-cenario-cards') || '[]');
+    } catch { return []; }
+  }
+
+  _salvarCardsCenario() {
+    try {
+      sessionStorage.setItem('simulador-cenario-cards', JSON.stringify(this.cardsCenario));
+    } catch { /* ignora */ }
   }
 
   async connectedCallback() {
@@ -319,13 +332,19 @@ export class SimuladorPage extends BaseComponent {
   }
 
   abaCenario() {
+    const temCards = this.cardsCenario.length > 0;
     return `
       <div class="alert alert-info">
         <p class="mb-0">Cenário pontual: simule P&L para uma data e janela específicas.</p>
-        <p class="mb-0"><small>Selecione um ativo, data de entrada, janela e capital para ver o resultado por estratégia.</small></p>
+        <p class="mb-0"><small>Escolha a estratégia — cada simulação vira um card para comparação lado a lado.</small></p>
       </div>
       ${htmlControlesCenario(this.todosAtivos, this.cenarioPreenchido || {})}
-      <div id="resultado-cenario" class="mt-3">${this.erroCenario ? `<div class="alert alert-danger small">${escaparHtml(this.erroCenario)}</div>` : htmlResultadoCenario(this.resultadoCenario)}</div>
+      <div id="resultado-cenario" class="mt-2">${this.erroCenario ? `<div class="alert alert-danger small">${escaparHtml(this.erroCenario)}</div>` : ''}</div>
+      ${temCards ? `<div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+        <span class="small text-muted">${this.cardsCenario.length} simulação(ões)</span>
+        <button type="button" class="btn btn-sm btn-outline-danger" id="btn-limpar-cards">Limpar tudo</button>
+      </div>
+      ${htmlComparacaoCenarios(this.cardsCenario)}` : ''}
     `;
   }
 
@@ -511,16 +530,44 @@ export class SimuladorPage extends BaseComponent {
       const erro = validarCenario(dados);
       if (erro) {
         this.erroCenario = erro;
-        this.resultadoCenario = null;
         this.render();
         return;
       }
+      const estrategia = this.querySelector('#cenario-estrategia')?.value || '';
+      const btnSimular = this.querySelector('#form-cenario button[type="submit"]');
+      if (btnSimular) { btnSimular.disabled = true; btnSimular.textContent = 'Simulando…'; }
       try {
-        this.resultadoCenario = await cenarioSimulador(dados.simbolo, dados.dataEntrada, dados.janela, CAPITAL_BASE);
+        const resultado = await cenarioSimulador(dados.simbolo, dados.dataEntrada, dados.janela, CAPITAL_BASE);
         this.erroCenario = '';
+        this.cardsCenario.unshift({
+          id: Date.now(),
+          simbolo: dados.simbolo,
+          dataEntrada: dados.dataEntrada,
+          janela: Number(dados.janela),
+          estrategia: estrategia || null,
+          resultado,
+          dataSimulacao: new Date().toISOString(),
+        });
+        this._salvarCardsCenario();
+        this.cenarioPreenchido = { simbolo: dados.simbolo, dataEntrada: dados.dataEntrada, janela: dados.janela, estrategia };
       } catch (erroApi) {
         this.erroCenario = erroApi?.message || 'Erro ao simular cenário.';
       }
+      this.render();
+    });
+
+    // remover card individual e limpar todos
+    this.querySelectorAll('[data-remover-card]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = Number(btn.dataset.removerCard);
+        this.cardsCenario = this.cardsCenario.filter((c) => c.id !== id);
+        this._salvarCardsCenario();
+        this.render();
+      });
+    });
+    this.querySelector('#btn-limpar-cards')?.addEventListener('click', () => {
+      this.cardsCenario = [];
+      this._salvarCardsCenario();
       this.render();
     });
 
