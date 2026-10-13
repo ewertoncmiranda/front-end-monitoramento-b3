@@ -39,10 +39,11 @@ export class SeletorDeAtivos extends BaseComponent {
         .slice(0, 8);
       if (!filtrados.length) { lista.classList.remove('show'); return; }
       lista.innerHTML = filtrados.map((a) =>
-        `<li><button type="button" class="dropdown-item small py-1"
+        `<li><button type="button" class="dropdown-item seletor-chip small py-1"
              data-simbolo="${escaparHtml(a.simbolo)}">
            <strong>${escaparHtml(a.simbolo)}</strong>
            ${a.nome ? `<span class="text-muted ms-1">${escaparHtml(a.nome)}</span>` : ''}
+           ${a.setor ? `<span class="seletor-chip-setor">${escaparHtml(a.setor)}</span>` : ''}
          </button></li>`
       ).join('');
       lista.classList.add('show');

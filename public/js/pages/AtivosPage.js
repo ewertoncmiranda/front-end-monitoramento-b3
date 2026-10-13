@@ -3,6 +3,7 @@ import { listarAtivosPainel, listarSetoresBase } from '../api/baseAtivosApi.js';
 import { desfavoritar, favoritar } from '../api/favoritosApi.js';
 import { hashDaBase, lerFiltrosBase } from '../analise/filtrosBase.js';
 import { filtrosDaVisao, htmlTabelaAtivos } from '../analise/listagemAtivos.js';
+import { aplicarOrdenacao } from '../utils/sortTable.js';
 import { escaparHtml } from '../utils/html.js';
 import { htmlSelo } from '../utils/selos.js';
 import { buscarFiltrosOperacionais, buscarTickers } from '../api/operacionalV2Api.js';
@@ -204,6 +205,7 @@ export class AtivosPage extends BaseComponent {
         }
       }
       resultado.innerHTML = htmlTabelaAtivos(this.pagePayload.content || [], { visao: this.visao });
+      resultado.querySelectorAll('table').forEach(aplicarOrdenacao);
       this.renderPaginacao(this.pagePayload);
     } catch (erro) {
       resultado.innerHTML = `<status-alert mensagem="${escaparHtml(erro.message)}" variante="danger"></status-alert>`;

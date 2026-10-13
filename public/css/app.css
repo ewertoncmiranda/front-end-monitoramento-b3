@@ -416,3 +416,39 @@ tema-toggle[modo="bottom"] {
 .operabilidade-pagina .table-responsive { max-height: none; overflow-y: hidden; }
 .operabilidade-pagina .table th, .operabilidade-pagina .table td { white-space: nowrap; }
 .operabilidade-pagina .tabela-diario { max-height: 22rem; overflow-y: auto; }
+
+/* --- Tabelas ordenáveis ------------------------------------------------------- */
+th[data-sort] { user-select: none; white-space: nowrap; }
+th[data-sort]:hover { background: var(--bs-tertiary-bg); }
+th[data-sort].sort-asc, th[data-sort].sort-desc { background: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis); }
+.sort-icon { font-size: .7rem; opacity: .45; margin-left: .2rem; vertical-align: middle; }
+th[data-sort].sort-asc .sort-icon, th[data-sort].sort-desc .sort-icon { opacity: 1; }
+
+/* --- Card contexto de opções -------------------------------------------------- */
+.opc-stats-grid { display: flex; flex-wrap: wrap; gap: .3rem; }
+.opc-stat {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: .3rem;
+  border: 1px solid var(--bs-border-color-translucent);
+  background: var(--bs-body-bg);
+  font-size: .78rem;
+  white-space: nowrap;
+}
+.opc-range-datas { display: flex; justify-content: space-between; font-size: .7rem; color: var(--bs-secondary-color); margin-top: .15rem; }
+.opc-confluencia {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .15rem .55rem; border-radius: .3rem; font-size: .78rem; font-weight: 600;
+  cursor: help;
+}
+.opc-confluencia-alta   { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); border: 1px solid var(--bs-success-border-subtle); }
+.opc-confluencia-media  { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); border: 1px solid var(--bs-warning-border-subtle); }
+.opc-confluencia-baixa  { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px solid var(--bs-border-color); }
+.opc-crossref { font-size: .65rem !important; vertical-align: middle; }
+
+/* --- Chips de seletor de ativo com setor -------------------------------------- */
+.seletor-chip { line-height: 1.25 !important; text-align: left !important; }
+.seletor-chip-setor {
+  display: block; font-size: .65rem; opacity: .65;
+  white-space: nowrap; overflow: hidden; max-width: 9rem; text-overflow: ellipsis;
+}

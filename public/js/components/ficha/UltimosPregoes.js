@@ -2,6 +2,7 @@ import { BaseComponent } from '../base/BaseComponent.js';
 import { escaparHtml } from '../../utils/html.js';
 import { formatarMoeda, formatarNumero } from '../../utils/numero.js';
 import { ticketMedioDaSerie, ticketMedioDaVela } from '../../analise/pregoes.js';
+import { aplicarOrdenacao } from '../../utils/sortTable.js';
 
 const LINHAS = 10;
 const DICA = 'Ticket médio = volume financeiro ÷ número de negócios do pregão (quanto cada negócio movimenta, em média). '
@@ -18,7 +19,10 @@ export class UltimosPregoes extends BaseComponent {
   setVelas(velas) {
     this._velas = velas || [];
     const corpo = this.querySelector('[data-corpo]');
-    if (corpo) corpo.innerHTML = renderizar(this._velas);
+    if (corpo) {
+      corpo.innerHTML = renderizar(this._velas);
+      corpo.querySelectorAll('table').forEach(aplicarOrdenacao);
+    }
   }
 }
 
@@ -48,16 +52,23 @@ export function renderizar(velas) {
     : `<p class="mb-2 text-muted">Ticket médio indisponível neste período (sem número de negócios). <span title="${escaparHtml(DICA)}">ⓘ</span></p>`;
   return `${resumo}
     <div class="table-responsive tabela-rolavel"><table class="table table-sm align-middle small mb-0 tabela-cartoes">
-      <thead><tr><th>Data</th><th class="text-end">Fechamento</th><th class="text-end">Negócios</th>
-        <th class="text-end">Volume</th><th class="text-end" title="${escaparHtml(DICA)}">Ticket médio ⓘ</th>
+      <thead><tr>
+        <th data-sort="data">Data <span class="sort-icon">⇅</span></th>
+        <th class="text-end" data-sort="fechamento">Fechamento <span class="sort-icon">⇅</span></th>
+        <th class="text-end" data-sort="negocios">Negócios <span class="sort-icon">⇅</span></th>
+        <th class="text-end" data-sort="volume">Volume <span class="sort-icon">⇅</span></th>
+        <th class="text-end" data-sort="ticket" title="${escaparHtml(DICA)}">Ticket médio ⓘ <span class="sort-icon">⇅</span></th>
         <th>Fonte</th></tr></thead>
-      <tbody>${recentes.map((v) => `<tr>
-        <td data-label="Data">${escaparHtml(v.dataFormatada || v.dataIso)}</td>
-        <td data-label="Fechamento" class="text-end">${escaparHtml(formatarMoeda(v.close))}</td>
-        <td data-label="Negócios" class="text-end">${v.numeroNegocios > 0 ? escaparHtml(formatarNumero(v.numeroNegocios, 0)) : '—'}</td>
-        <td data-label="Volume" class="text-end">${v.volume > 0 ? escaparHtml(formatarNumero(v.volume, 0)) : '—'}</td>
-        <td data-label="Ticket médio" class="text-end">${escaparHtml(celulaTicket(v))}</td>
-        <td data-label="Fonte">${_celularFonte(v.fonte)}</td></tr>`).join('')}</tbody>
+      <tbody>${recentes.map((v) => {
+        const t = ticketMedioDaVela(v);
+        return `<tr>
+        <td data-label="Data" data-sort-value="${escaparHtml(v.dataIso || '')}">${escaparHtml(v.dataFormatada || v.dataIso)}</td>
+        <td data-label="Fechamento" class="text-end" data-sort-value="${v.close ?? ''}">${escaparHtml(formatarMoeda(v.close))}</td>
+        <td data-label="Negócios" class="text-end" data-sort-value="${v.numeroNegocios > 0 ? v.numeroNegocios : ''}">${v.numeroNegocios > 0 ? escaparHtml(formatarNumero(v.numeroNegocios, 0)) : '—'}</td>
+        <td data-label="Volume" class="text-end" data-sort-value="${v.volume > 0 ? v.volume : ''}">${v.volume > 0 ? escaparHtml(formatarNumero(v.volume, 0)) : '—'}</td>
+        <td data-label="Ticket médio" class="text-end" data-sort-value="${t ? t.valor.toFixed(2) : ''}">${escaparHtml(celulaTicket(v))}</td>
+        <td data-label="Fonte">${_celularFonte(v.fonte)}</td></tr>`;
+      }).join('')}</tbody>
     </table></div>`;
 }
 
