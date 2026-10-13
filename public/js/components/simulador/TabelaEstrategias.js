@@ -61,13 +61,17 @@ export function resumoEstrategias(ativos, resultadosPorAtivo) {
 }
 
 // 1: consulta rápida — qualquer ativo dos 264 sem precisar monitorar
-export function htmlConsultaRapida(todosAtivos) {
+// O combobox filtra por símbolo OU nome conforme o usuário digita (handler em SimuladorPage.afterRender).
+export function htmlConsultaRapida() {
   return `<div class="mt-3 pt-3 border-top">
     <p class="small fw-semibold mb-1">Consulta rápida</p>
     <p class="small text-muted mb-2">Veja as estratégias de qualquer ativo sem adicioná-lo ao monitoramento.</p>
     <form id="form-consulta-rapida" class="row g-2 align-items-end">
-      <div class="col-md-5">
-        ${htmlComboboxAtivo('consulta-ativo', todosAtivos, { placeholder: 'Ativo…', required: false })}
+      <div class="col-md-5 position-relative">
+        <input type="text" id="consulta-ativo" class="form-control form-control-sm"
+               placeholder="Símbolo ou nome da empresa…" autocomplete="off">
+        <ul class="dropdown-menu w-100 py-0" id="consulta-ativo-sugestoes"
+            style="max-height:220px;overflow-y:auto"></ul>
       </div>
       <div class="col-md-3">
         <input type="date" id="consulta-data" class="form-control form-control-sm"

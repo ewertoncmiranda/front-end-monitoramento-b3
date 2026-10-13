@@ -295,4 +295,47 @@ caso('aviso de ex-dividendo ausente quando exDividendos e array vazio', () => {
   assert.doesNotMatch(html, /Ex-dividendo/);
 });
 
+// ── Métricas intraday e acumuladas ───────────────────────────────────────────
+
+const dados_base = { simboloSolicitado: 'PETR4', simboloCanonico: 'PETR4', aliasAplicado: false, status: 'OK', motivo: '', vencimentos: [], opcoes: [OPCAO_CALL] };
+
+caso('card contexto mostra ticket medio R$', () => {
+  const ctx = { ...CTX_BASE, ticketMedio: 250.50 };
+  const html = render({ ...dados_base, contexto: ctx });
+  assert.match(html, /Ticket R\$250\.50/);
+});
+
+caso('card contexto mostra amplitude intraday como percentual', () => {
+  const ctx = { ...CTX_BASE, amplitudeDia: 0.023 };
+  const html = render({ ...dados_base, contexto: ctx });
+  assert.match(html, /Amp\. 2\.3%/);
+});
+
+caso('card contexto mostra retorno intraday com sinal positivo e negativo', () => {
+  const htmlPos = render({ ...dados_base, contexto: { ...CTX_BASE, retornoIntraday: 0.012 } });
+  assert.match(htmlPos, /Intraday \+1\.2%/);
+  const htmlNeg = render({ ...dados_base, contexto: { ...CTX_BASE, retornoIntraday: -0.008 } });
+  assert.match(htmlNeg, /Intraday -0\.8%/);
+});
+
+caso('card contexto mostra gap de abertura com sinal', () => {
+  const html = render({ ...dados_base, contexto: { ...CTX_BASE, gapAbertura: 0.005 } });
+  assert.match(html, /Gap \+0\.5%/);
+});
+
+caso('card contexto mostra posicao no range do dia como percentual', () => {
+  const html = render({ ...dados_base, contexto: { ...CTX_BASE, posicaoRangeDia: 0.75 } });
+  assert.match(html, /Pos\.dia 75%/);
+});
+
+caso('card contexto mostra volume de contratos 21d no formato compacto M', () => {
+  const html = render({ ...dados_base, contexto: { ...CTX_BASE, volumeContratos21d: 2_500_000 } });
+  assert.match(html, /Contr\.21d 2\.5M/);
+});
+
+caso('card contexto mostra negocios acumulados 21d no formato compacto K', () => {
+  const html = render({ ...dados_base, contexto: { ...CTX_BASE, negocios21d: 15_000 } });
+  assert.match(html, /Neg\.21d 15K/);
+});
+
 console.log(`opcoes.test.mjs ok (${casos} casos)`);

@@ -56,10 +56,20 @@ function _montarContexto(fundamentos, cvm, pregoes, proventos) {
   const saltos = (pregoes?.saltos || []).map((s) => ({ data: s.data, variacao: s.variacao }));
   const exDividendos = _extrairExDividendos(proventos);
 
+  const ticketMedio = _calcTicketMedio(velas);
+  const amplitudeDia = _calcAmplitudeDia(velas);
+  const retornoIntraday = _calcRetornoIntraday(velas);
+  const gapAbertura = _calcGapAbertura(velas);
+  const posicaoRangeDia = _calcPosicaoRangeDia(velas);
+  const volumeContratos21d = _calcVolumeContratos21d(velas);
+  const negocios21d = _calcNegocios21d(velas);
+
   return {
     precoAtual, variacaoDia, max63d, min63d, posicaoRange,
     lpa, vpa, pl, graham, recomendacao, margem,
     vol21d, atr14, volRelativo, saltos, exDividendos,
+    ticketMedio, amplitudeDia, retornoIntraday, gapAbertura,
+    posicaoRangeDia, volumeContratos21d, negocios21d,
   };
 }
 
@@ -116,6 +126,58 @@ function _calcVol21d(velas) {
   const mean = logRets.reduce((a, b) => a + b, 0) / logRets.length;
   const variance = logRets.reduce((s, r) => s + (r - mean) ** 2, 0) / (logRets.length - 1);
   return Math.sqrt(variance * 252);
+}
+
+// Ticket médio = volume financeiro / número de negócios do último pregão.
+function _calcTicketMedio(velas) {
+  if (!velas.length) return null;
+  const v = velas[velas.length - 1];
+  const vf = Number(v.volumeFinanceiro ?? 0), neg = Number(v.numeroNegocios ?? 0);
+  return vf > 0 && neg > 0 ? vf / neg : null;
+}
+
+// Amplitude intraday = (máxima − mínima) / fechamento.
+function _calcAmplitudeDia(velas) {
+  if (!velas.length) return null;
+  const v = velas[velas.length - 1];
+  const h = Number(v.maxima), l = Number(v.minima), c = Number(v.fechamento);
+  return h && l && c ? (h - l) / c : null;
+}
+
+// Retorno intraday = (fechamento − abertura) / abertura.
+function _calcRetornoIntraday(velas) {
+  if (!velas.length) return null;
+  const v = velas[velas.length - 1];
+  const o = Number(v.abertura), c = Number(v.fechamento);
+  return o > 0 && c > 0 ? (c - o) / o : null;
+}
+
+// Gap de abertura = (abertura[t] − fechamento[t−1]) / fechamento[t−1].
+function _calcGapAbertura(velas) {
+  if (velas.length < 2) return null;
+  const prev = Number(velas[velas.length - 2].fechamento);
+  const aber = Number(velas[velas.length - 1].abertura);
+  return prev > 0 && aber > 0 ? (aber - prev) / prev : null;
+}
+
+// Posição no range do dia = (fechamento − mínima) / (máxima − mínima).
+function _calcPosicaoRangeDia(velas) {
+  if (!velas.length) return null;
+  const v = velas[velas.length - 1];
+  const h = Number(v.maxima), l = Number(v.minima), c = Number(v.fechamento);
+  return h && l && c && h !== l ? (c - l) / (h - l) : null;
+}
+
+// Soma de contratos (QUATOT) nos últimos 21 pregões.
+function _calcVolumeContratos21d(velas) {
+  const vals = velas.slice(-21).map((v) => Number(v.volume ?? 0)).filter((x) => x > 0);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
+}
+
+// Soma de negócios (TOTNEG) nos últimos 21 pregões.
+function _calcNegocios21d(velas) {
+  const vals = velas.slice(-21).map((v) => Number(v.numeroNegocios ?? 0)).filter((x) => x > 0);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
 }
 
 // Unica responsabilidade: painel de opcoes de um ativo.

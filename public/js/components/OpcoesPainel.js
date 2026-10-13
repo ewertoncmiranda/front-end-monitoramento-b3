@@ -144,6 +144,13 @@ function _cardContexto(ctx) {
     ctx.vol21d!= null ? `Vol.21d ${(ctx.vol21d * 100).toFixed(1)}%`  : null,
     ctx.atr14 != null ? `ATR14 R$${ctx.atr14.toFixed(2)}`           : null,
     ctx.volRelativo != null ? `Vol.rel. ${ctx.volRelativo.toFixed(2)}×` : null,
+    ctx.ticketMedio != null ? `Ticket R$${ctx.ticketMedio.toFixed(2)}` : null,
+    ctx.amplitudeDia != null ? `Amp. ${(ctx.amplitudeDia * 100).toFixed(1)}%` : null,
+    ctx.retornoIntraday != null ? `Intraday ${ctx.retornoIntraday >= 0 ? '+' : ''}${(ctx.retornoIntraday * 100).toFixed(1)}%` : null,
+    ctx.gapAbertura != null ? `Gap ${ctx.gapAbertura >= 0 ? '+' : ''}${(ctx.gapAbertura * 100).toFixed(1)}%` : null,
+    ctx.posicaoRangeDia != null ? `Pos.dia ${Math.round(ctx.posicaoRangeDia * 100)}%` : null,
+    ctx.volumeContratos21d != null ? `Contr.21d ${_fmtK(ctx.volumeContratos21d)}` : null,
+    ctx.negocios21d != null ? `Neg.21d ${_fmtK(ctx.negocios21d)}` : null,
   ].filter(Boolean).map((s) => `<span class="text-muted small">${escaparHtml(s)}</span>`).join('');
 
   const avisoSaltos = _avisoSaltos(ctx.saltos);
@@ -474,6 +481,14 @@ function _fmtMoeda(v) {
 function _fmtInt(v) {
   if (v == null) return '—';
   return Number(v).toLocaleString('pt-BR');
+}
+
+function _fmtK(v) {
+  if (v == null) return '—';
+  const n = Number(v);
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${Math.round(n / 1e3)}K`;
+  return String(n);
 }
 
 function _fmtData(iso) {
