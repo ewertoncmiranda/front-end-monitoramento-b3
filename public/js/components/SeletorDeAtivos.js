@@ -1,119 +1,94 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { listarAtivosMonitorados } from '../api/ativosMonitoradosApi.js';
-import './AtivoSearchForm.js';
-import './StatusAlert.js';
+import { escaparHtml } from '../utils/html.js';
 
-// Unica responsabilidade: deixar escolher um ativo, por busca OU por clique
-// na carteira ja cadastrada. Nao sabe o que sera feito com o simbolo.
-//
-// Envolve o AtivoSearchForm existente em vez de reimplementar o campo, e
-// reemite o mesmo evento `ativo-buscado`. Por isso qualquer pagina que hoje
-// usa <ativo-search-form> passa a listar os cadastrados trocando so a tag,
-// sem mexer no resto da logica.
-//
-// Atributos: rotulo-botao, placeholder (repassados ao form) e
-// auto-selecionar (seleciona o primeiro ativo assim que a lista chega).
 export class SeletorDeAtivos extends BaseComponent {
   template() {
     const rotulo = this.getAttribute('rotulo-botao') || 'Buscar';
     const placeholder = this.getAttribute('placeholder') || 'Ex.: PETR4';
 
     return `
-      <ativo-search-form rotulo-botao="${rotulo}" placeholder="${placeholder}"></ativo-search-form>
-      <div id="seletor-carteira" class="mt-2"></div>
+      <form id="seletor-form" class="row g-2 align-items-center">
+        <div class="col-8 col-sm-9 position-relative">
+          <label class="visually-hidden" for="seletor-input">Símbolo ou nome do ativo</label>
+          <input id="seletor-input" type="text" class="form-control text-uppercase"
+                 placeholder="${placeholder}" autocomplete="off" maxlength="10" required>
+          <ul id="seletor-sugestoes" class="dropdown-menu w-100 py-0"
+              style="max-height:280px;overflow-y:auto"></ul>
+        </div>
+        <div class="col-4 col-sm-3">
+          <button type="submit" class="btn btn-primary w-100">${escaparHtml(rotulo)}</button>
+        </div>
+      </form>
     `;
   }
 
   afterRender() {
+    this._ativos = [];
     this._selecionado = null;
 
-    // O form interno ja emite `ativo-buscado` e o evento borbulha; aqui so
-    // marcamos qual ficou ativo para dar retorno visual.
-    this.addEventListener('ativo-buscado', (evento) => {
-      this._selecionado = evento.detail.simbolo;
-      this.marcarSelecionado();
+    const form = this.querySelector('#seletor-form');
+    const input = this.querySelector('#seletor-input');
+    const lista = this.querySelector('#seletor-sugestoes');
+
+    const mostrarSugestoes = () => {
+      const q = input.value.trim().toUpperCase();
+      if (!q || !this._ativos.length) { lista.classList.remove('show'); return; }
+      const filtrados = this._ativos
+        .filter((a) => a.simbolo.startsWith(q) || (a.nome || '').toUpperCase().includes(q))
+        .slice(0, 8);
+      if (!filtrados.length) { lista.classList.remove('show'); return; }
+      lista.innerHTML = filtrados.map((a) =>
+        `<li><button type="button" class="dropdown-item small py-1"
+             data-simbolo="${escaparHtml(a.simbolo)}">
+           <strong>${escaparHtml(a.simbolo)}</strong>
+           ${a.nome ? `<span class="text-muted ms-1">${escaparHtml(a.nome)}</span>` : ''}
+         </button></li>`
+      ).join('');
+      lista.classList.add('show');
+    };
+
+    input.addEventListener('input', mostrarSugestoes);
+    input.addEventListener('focus', mostrarSugestoes);
+    input.addEventListener('blur', () => setTimeout(() => lista.classList.remove('show'), 150));
+
+    lista.addEventListener('mousedown', (e) => {
+      const btn = e.target.closest('[data-simbolo]');
+      if (!btn) return;
+      e.preventDefault();
+      input.value = btn.dataset.simbolo;
+      lista.classList.remove('show');
+      this._emitir(btn.dataset.simbolo);
     });
 
-    this.carregarCarteira();
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const simbolo = input.value.trim().toUpperCase();
+      if (simbolo) this._emitir(simbolo);
+    });
+
+    this._carregarAtivos(input);
   }
 
-  async carregarCarteira() {
-    const area = this.querySelector('#seletor-carteira');
-    area.innerHTML = '<span class="text-muted small">Carregando carteira...</span>';
-
-    let ativos;
+  async _carregarAtivos(input) {
     try {
-      ativos = await listarAtivosMonitorados();
+      this._ativos = (await listarAtivosMonitorados()) || [];
     } catch {
-      // A carteira e conveniencia: se o backend nao responder, o campo de
-      // busca continua funcionando e a tela nao vira um erro.
-      area.innerHTML =
-        '<span class="text-muted small">Carteira indisponivel no momento; use a busca acima.</span>';
-      return;
+      this._ativos = [];
     }
 
-    this._ativos = ativos || [];
-
-    if (this._ativos.length === 0) {
-      area.innerHTML = `
-        <div class="small text-muted">
-          Nenhum ativo cadastrado ainda. Registre um na aba
-          <a href="#/gestao">Gestão &rsaquo; Cadastro</a> e ele aparece aqui.
-        </div>
-      `;
-      return;
+    if (this.hasAttribute('auto-selecionar') && this._ativos.length) {
+      this._emitir(this._ativos[0].simbolo);
     }
 
-    area.innerHTML = this.templateCarteira();
-    area.querySelectorAll('[data-simbolo]').forEach((botao) => {
-      botao.addEventListener('click', () => this.selecionar(botao.dataset.simbolo));
-    });
-    // Selecao feita antes de a carteira chegar (link direto com ?simbolo=)
-    // ja esta em _selecionado; os chips acabaram de nascer e precisam refleti-la.
-    this.marcarSelecionado();
-
-    if (this.hasAttribute('auto-selecionar')) {
-      this.selecionar(this._ativos[0].simbolo);
-    }
+    // Pré-selecção via atributo value (ex.: link direto ?simbolo=PETR4)
+    const val = this.getAttribute('value');
+    if (val) { input.value = val.toUpperCase(); this._emitir(val.toUpperCase()); }
   }
 
-  templateCarteira() {
-    const chips = this._ativos
-      .map(
-        (a) => `
-        <button type="button"
-                class="btn btn-outline-secondary btn-sm"
-                data-simbolo="${a.simbolo}">${a.simbolo}</button>`,
-      )
-      .join('');
-
-    return `
-      <div class="d-flex align-items-center flex-wrap gap-2">
-        <span class="text-muted small">Cadastrados:</span>
-        ${chips}
-      </div>
-    `;
-  }
-
-  selecionar(simbolo) {
+  _emitir(simbolo) {
     this._selecionado = simbolo;
-    this.marcarSelecionado();
-
-    // Mesmo evento do form: quem escuta nao precisa saber a origem.
-    this.dispatchEvent(
-      new CustomEvent('ativo-buscado', {
-        detail: { simbolo },
-        bubbles: true,
-      }),
-    );
-  }
-
-  marcarSelecionado() {
-    this.querySelectorAll('[data-simbolo]').forEach((botao) => {
-      const ativo = botao.dataset.simbolo === this._selecionado;
-      botao.classList.toggle('btn-primary', ativo);
-      botao.classList.toggle('btn-outline-secondary', !ativo);
-    });
+    this.dispatchEvent(new CustomEvent('ativo-buscado', { detail: { simbolo }, bubbles: true }));
   }
 }
 
