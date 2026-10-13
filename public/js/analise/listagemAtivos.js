@@ -37,9 +37,13 @@ export function htmlTabelaAtivos(itens, { visao = 'todos' } = {}) {
       <table class="table table-sm table-hover align-middle tabela-cartoes">
         <thead>
           <tr>
-            <th>Símbolo</th><th>Empresa</th>
-            <th class="text-end">Fechamento</th><th class="text-end">Variação</th>
-            <th>20 pregões</th><th>Sinal</th><th>Operabilidade</th><th>Último comunicado</th><th>Selos</th><th class="text-end">Ação</th>
+            <th data-sort="simbolo">Símbolo <span class="sort-icon">⇅</span></th>
+            <th data-sort="empresa">Empresa <span class="sort-icon">⇅</span></th>
+            <th class="text-end" data-sort="fechamento">Fechamento <span class="sort-icon">⇅</span></th>
+            <th class="text-end" data-sort="variacao">Variação <span class="sort-icon">⇅</span></th>
+            <th>20 pregões</th>
+            <th data-sort="sinal">Sinal <span class="sort-icon">⇅</span></th>
+            <th>Operabilidade</th><th>Último comunicado</th><th>Selos</th><th class="text-end">Ação</th>
           </tr>
         </thead>
         <tbody>${linhas}</tbody>
@@ -59,11 +63,11 @@ export function htmlLinhaAtivo(item, { permitirRemoverFavorito = false } = {}) {
         ${htmlBadgeStatusCvm(item.situacaoRegistro)}
         <div class="small text-muted">${escaparHtml(item.setor ?? 'Setor não informado')}</div>
       </td>
-      <td data-label="Fechamento" class="text-end">
+      <td data-label="Fechamento" class="text-end" data-sort-value="${item.ultimoFechamento ?? ''}">
         <div>${formatarMoeda(item.ultimoFechamento)}</div>
         <div class="small text-muted">${formatarData(item.dataUltimoFechamento, 'sem pregão')}</div>
       </td>
-      <td data-label="Variação" class="text-end ${classeVariacao(item.variacaoPercentual)}">${formatarVariacao(item.variacaoPercentual)}</td>
+      <td data-label="Variação" class="text-end ${classeVariacao(item.variacaoPercentual)}" data-sort-value="${item.variacaoPercentual ?? ''}">${formatarVariacao(item.variacaoPercentual)}</td>
       <td data-label="20 pregões">${htmlSparkline(item.serieFechamentos, item.simbolo)}</td>
       <td data-label="Sinal">${htmlSinal(item.sinal)}</td>
       <td data-label="Operabilidade">${htmlOperacionalTicker(item.operacional)}</td>

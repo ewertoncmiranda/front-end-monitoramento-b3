@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 // Mock HTMLElement com querySelector retornando null para _bindFiltros sair cedo.
 globalThis.HTMLElement = class {
   querySelector() { return null; }
+  querySelectorAll() { return []; }
 };
 globalThis.customElements = { define() {} };
 
@@ -382,6 +383,87 @@ caso('aviso de saltos sem preco ainda mostra data e percentual', () => {
   assert.match(html, /-45\.0%/);
   assert.match(html, /15\/08\/2026/);
   assert.doesNotMatch(html, /→/);
+});
+
+// ── Cruzamentos 1-ext a 5: badge 63d, diasATR, ex-div, hedge%, confluência ────
+
+caso('badge 63d checkmark quando breakeven call dentro do range 63d', () => {
+  // CALL: strike 42 + premio 1.1 = 43.10 | max63d = 41.0 → fora → ✗
+  const html = render({ ...dados_base, contexto: CTX_BASE, opcoes: [OPCAO_CALL] });
+  assert.match(html, /63d ✗/);
+});
+
+caso('badge 63d checkmark quando breakeven put dentro do range 63d', () => {
+  // PUT: strike 35 - premio 0.7 = 34.30 | min63d = 35.2 → fora → ✗
+  const html = render({ ...dados_base, contexto: CTX_BASE, opcoes: [OPCAO_PUT] });
+  assert.match(html, /63d ✗/);
+});
+
+caso('badge 63d tick quando breakeven dentro do range 63d', () => {
+  // CALL strike 37, premio 1.0 → breakeven 38.0 | range [35.2, 41.0] → dentro ✓
+  const opcaoDentro = { simbolo: 'PETRK37', bdi: '12', data_pregao: '2026-10-09', data_vencimento: '2026-11-20', preco_exercicio: 37, fechamento: 1.0, preco_medio: 1.0, numero_negocios: 5 };
+  const html = render({ ...dados_base, contexto: CTX_BASE, opcoes: [opcaoDentro] });
+  assert.match(html, /63d ✓/);
+});
+
+caso('coluna ATR presente e calcula diasATR quando atr14 disponivel', () => {
+  // strike 42, preco 38.50, ATR14 1.45 → |42-38.50|/1.45 ≈ 2.4d
+  const ctx = { ...CTX_BASE, atr14: 1.45 };
+  const html = render({ ...dados_base, contexto: ctx, opcoes: [OPCAO_CALL] });
+  assert.match(html, /~ATR/);
+  assert.match(html, /~2\.\d+d/);
+});
+
+caso('coluna ATR mostra travessao quando atr14 ausente', () => {
+  const html = render({ ...dados_base, contexto: CTX_BASE, opcoes: [OPCAO_CALL] });
+  assert.match(html, /~ATR/);
+});
+
+caso('badge ex-div na celula de vencimento quando exDividendo antes do vencimento', () => {
+  // ex-div 2026-11-05, vencimento 2026-11-20 → ex-div ≤ vencimento → badge
+  const ctx = { ...CTX_BASE, exDividendos: [{ data: '2026-11-05', tipo: 'DIVIDENDO', valor: 1.5 }] };
+  const html = render({ ...dados_base, contexto: ctx, opcoes: [OPCAO_CALL] });
+  assert.match(html, /ex-div/);
+});
+
+caso('badge ex-div ausente quando exDividendo depois do vencimento', () => {
+  // ex-div 2026-12-01, vencimento 2026-11-20 → ex-div > vencimento → sem badge
+  const ctx = { ...CTX_BASE, exDividendos: [{ data: '2026-12-01', tipo: 'DIVIDENDO', valor: 1.5 }] };
+  const html = render({ ...dados_base, contexto: ctx, opcoes: [OPCAO_CALL] });
+  assert.doesNotMatch(html, /ex-div/);
+});
+
+caso('coluna Hedge% presente e calculada para PUTs', () => {
+  // premio 0.7, preco 38.50 → 0.7/38.50*100 ≈ 1.8%
+  const html = render({ ...dados_base, contexto: CTX_BASE, opcoes: [OPCAO_PUT] });
+  assert.match(html, /Hedge%/);
+  assert.match(html, /1\.\d+%/);
+});
+
+caso('coluna Hedge% ausente para CALLs', () => {
+  const html = render({ ...dados_base, contexto: CTX_BASE, opcoes: [OPCAO_CALL] });
+  assert.doesNotMatch(html, /Hedge%/);
+});
+
+caso('badge confluencia aparece quando recomendacao e posicaoRange disponíveis', () => {
+  // CTX_BASE: COMPRA_MODERADA → compra ok; posicaoRange 0.50 → não < 0.25; volRelativo ausente; gapAbertura ausente
+  // pontos: 1/2
+  const html = render({ ...dados_base, contexto: CTX_BASE, opcoes: [OPCAO_CALL] });
+  assert.match(html, /confluentes/);
+});
+
+caso('badge confluencia alta (3+/4) quando todos os sinais alinham', () => {
+  const ctx = { ...CTX_BASE, posicaoRange: 0.20, volRelativo: 2.0, gapAbertura: 0.01 };
+  const html = render({ ...dados_base, contexto: ctx, opcoes: [OPCAO_CALL] });
+  assert.match(html, /opc-confluencia-alta/);
+});
+
+caso('tabelas com headers data-sort presentes', () => {
+  const html = render({ ...dados_base, contexto: CTX_BASE, opcoes: [OPCAO_CALL, OPCAO_PUT] });
+  assert.match(html, /data-sort="vencimento"/);
+  assert.match(html, /data-sort="exercicio"/);
+  assert.match(html, /data-sort="breakeven"/);
+  assert.match(html, /data-sort="negocios"/);
 });
 
 console.log(`opcoes.test.mjs ok (${casos} casos)`);

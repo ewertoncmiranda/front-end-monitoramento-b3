@@ -1,5 +1,6 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { escaparHtml } from '../utils/html.js';
+import { aplicarOrdenacao } from '../utils/sortTable.js';
 
 // BDI 12 = call, 14 = put (B3 COTAHIST).
 const BDI_TIPO = { '12': 'CALL', '14': 'PUT' };
@@ -52,6 +53,7 @@ export class OpcoesPainel extends BaseComponent {
     this._filtros = { vencimento: '', tipo: '', minNegocios: 0, minVolume: 0, minLiquidez: 0, maxDistancia: '' };
     this.innerHTML = dados ? this._template(dados) : '';
     this._bindFiltros();
+    this.querySelectorAll('table').forEach(aplicarOrdenacao);
   }
 
   _template(d) {
@@ -75,7 +77,7 @@ export class OpcoesPainel extends BaseComponent {
       <p class="text-muted small mb-2">Pregão: ${dataPregao} &nbsp;·&nbsp; ${d.opcoes.length} série(s)</p>
       ${_barraFiltros(vencimentos)}
       <div data-tabelas>
-        ${_renderTabelas(calls, puts, this._filtros, ctx?.precoAtual)}
+        ${_renderTabelas(calls, puts, this._filtros, ctx)}
       </div>
       ${_avisosPedagogicos()}
     `;
@@ -103,7 +105,10 @@ export class OpcoesPainel extends BaseComponent {
     const calls = d.opcoes.filter((o) => o.bdi === '12' || o.bdi === 12);
     const puts  = d.opcoes.filter((o) => o.bdi === '14' || o.bdi === 14);
     const el = this.querySelector('[data-tabelas]');
-    if (el) el.innerHTML = _renderTabelas(calls, puts, this._filtros, d.contexto?.precoAtual);
+    if (el) {
+      el.innerHTML = _renderTabelas(calls, puts, this._filtros, d.contexto || null);
+      el.querySelectorAll('table').forEach(aplicarOrdenacao);
+    }
   }
 }
 
@@ -115,22 +120,8 @@ function _cardContexto(ctx) {
   const varSinal = (ctx.variacaoDia ?? 0) >= 0 ? '+' : '';
   const varCls   = (ctx.variacaoDia ?? 0) >= 0 ? 'text-success' : 'text-danger';
   const varStr = ctx.variacaoDia != null
-    ? `<span class="${varCls} small">${varSinal}${(ctx.variacaoDia * 100).toFixed(2)}%</span>`
+    ? `<span class="${varCls} small fw-semibold">${varSinal}${(ctx.variacaoDia * 100).toFixed(2)}%</span>`
     : '';
-
-  // barra de posicao no range 63 dias
-  const rangePct = ctx.posicaoRange != null ? Math.min(100, Math.max(0, Math.round(ctx.posicaoRange * 100))) : null;
-  const minTitle = ctx.dataMinima ? `mínima 63d — ${_fmtData(ctx.dataMinima)}` : 'mínima 63d';
-  const maxTitle = ctx.dataMaxima ? `máxima 63d — ${_fmtData(ctx.dataMaxima)}` : 'máxima 63d';
-  const rangeBar = rangePct != null ? `
-    <div class="d-flex align-items-center gap-2 mt-2 small text-muted">
-      <span title="${minTitle}">${_fmtMoeda(ctx.min63d)}</span>
-      <div class="progress flex-grow-1" style="height:5px" title="${rangePct}% no range 63d">
-        <div class="progress-bar" style="width:${rangePct}%"></div>
-      </div>
-      <span title="${maxTitle}">${_fmtMoeda(ctx.max63d)}</span>
-      <span class="badge text-bg-secondary">${rangePct}%&nbsp;range&nbsp;63d</span>
-    </div>` : '';
 
   const recCls = REC_CLASSE[ctx.recomendacao] || 'secondary';
   const recBadge = ctx.recomendacao
@@ -140,6 +131,11 @@ function _cardContexto(ctx) {
     ? `<span class="text-muted small" title="data da análise">análise ${escaparHtml(_fmtData(String(ctx.dataAnalise).slice(0, 10)))}</span>`
     : '';
 
+  // Cruzamento 5: confluência técnica
+  const conf = _calcConfluencia(ctx);
+  const confBadge = conf ? _badgeConfluencia(conf) : '';
+
+  // Stats como pills visuais (texto preservado para testes)
   const stats = [
     ctx.lpa   != null ? `LPA R$${ctx.lpa.toFixed(2)}`                : null,
     ctx.vpa   != null ? `VPA R$${ctx.vpa.toFixed(2)}`                : null,
@@ -157,27 +153,67 @@ function _cardContexto(ctx) {
     ctx.volumeContratos21d != null ? `Contr.21d ${_fmtK(ctx.volumeContratos21d)}` : null,
     ctx.negocios21d != null ? `Neg.21d ${_fmtK(ctx.negocios21d)}` : null,
     ctx.variacaoPeriodo != null ? `Var.63d ${ctx.variacaoPeriodo >= 0 ? '+' : ''}${(ctx.variacaoPeriodo * 100).toFixed(1)}%` : null,
-  ].filter(Boolean).map((s) => `<span class="text-muted small">${escaparHtml(s)}</span>`).join('');
+  ].filter(Boolean).map((s) => `<span class="opc-stat">${escaparHtml(s)}</span>`).join('');
+
+  // Range bar com datas abaixo
+  const rangePct = ctx.posicaoRange != null ? Math.min(100, Math.max(0, Math.round(ctx.posicaoRange * 100))) : null;
+  const minTitle = ctx.dataMinima ? `mínima 63d — ${_fmtData(ctx.dataMinima)}` : 'mínima 63d';
+  const maxTitle = ctx.dataMaxima ? `máxima 63d — ${_fmtData(ctx.dataMaxima)}` : 'máxima 63d';
+  const rangeBar = rangePct != null ? `
+    <div class="d-flex align-items-center gap-2 mt-2 small text-muted">
+      <span title="${minTitle}">${_fmtMoeda(ctx.min63d)}</span>
+      <div class="progress flex-grow-1" style="height:5px" title="${rangePct}% no range 63d">
+        <div class="progress-bar" style="width:${rangePct}%"></div>
+      </div>
+      <span title="${maxTitle}">${_fmtMoeda(ctx.max63d)}</span>
+      <span class="badge text-bg-secondary">${rangePct}%&nbsp;range&nbsp;63d</span>
+    </div>
+    ${(ctx.dataMinima || ctx.dataMaxima) ? `<div class="opc-range-datas">
+      <span>${ctx.dataMinima ? `mín ${escaparHtml(_fmtData(ctx.dataMinima))}` : ''}</span>
+      <span>${ctx.dataMaxima ? `máx ${escaparHtml(_fmtData(ctx.dataMaxima))}` : ''}</span>
+    </div>` : ''}` : '';
 
   const avisoSaltos = _avisoSaltos(ctx.saltos);
   const avisoProventos = _avisoProventos(ctx.exDividendos);
 
+  // Borda esquerda colorida conforme recomendação (sinal visual imediato)
+  const borderCls = `border-start border-3 border-${recCls}`;
+
   return `
-    <div class="card mb-3 border-0 bg-light">
+    <div class="card mb-3 border-0 bg-light ${borderCls}">
       <div class="card-body py-2 px-3">
-        <div class="d-flex flex-wrap align-items-baseline gap-3">
+        <div class="d-flex flex-wrap align-items-baseline gap-2 mb-1">
           <span class="fw-bold fs-5">${preco}</span>
           ${varStr}
           ${recBadge}
           ${dataAnaliseStr}
-          ${stats}
+          ${confBadge}
         </div>
+        ${stats ? `<div class="opc-stats-grid mb-2">${stats}</div>` : ''}
         ${rangeBar}
         ${avisoSaltos}
         ${avisoProventos}
       </div>
     </div>
   `;
+}
+
+// Cruzamento 5: calcula quantos dos 4 indicadores alinham para compra
+function _calcConfluencia(ctx) {
+  const checks = [
+    ctx.recomendacao != null ? ['COMPRA_FORTE', 'COMPRA_MODERADA'].includes(ctx.recomendacao) : null,
+    ctx.posicaoRange != null ? ctx.posicaoRange < 0.25 : null,
+    ctx.volRelativo  != null ? ctx.volRelativo > 1.5   : null,
+    ctx.gapAbertura  != null ? ctx.gapAbertura > 0     : null,
+  ].filter((c) => c !== null);
+  if (checks.length < 2) return null;
+  return { pontos: checks.filter(Boolean).length, total: checks.length };
+}
+
+function _badgeConfluencia({ pontos, total }) {
+  const cls = pontos >= 3 ? 'opc-confluencia-alta' : pontos >= 2 ? 'opc-confluencia-media' : 'opc-confluencia-baixa';
+  const titulo = escaparHtml('Compra·range·volume·gap — quantos alinham (indicativo, não recomendação)');
+  return `<span class="opc-confluencia ${cls}" title="${titulo}">${pontos}/${total} confluentes</span>`;
 }
 
 // ── Aviso: saltos de desdobramento/grupamento na série ────────────────────────
@@ -262,7 +298,8 @@ function _barraFiltros(vencimentos) {
   `;
 }
 
-function _renderTabelas(calls, puts, filtros, precoAtual) {
+function _renderTabelas(calls, puts, filtros, ctx) {
+  const precoAtual = ctx?.precoAtual ?? null;
   const callsFilt = _filtrar(calls, 'CALL', filtros, precoAtual);
   const putsFilt  = _filtrar(puts,  'PUT',  filtros, precoAtual);
 
@@ -282,8 +319,8 @@ function _renderTabelas(calls, puts, filtros, precoAtual) {
     ? '<p class="text-muted small">Sem CALLs para os filtros selecionados.</p>' : '';
   const semPut = filtros.tipo !== 'CALL' && !putsFilt.length
     ? '<p class="text-muted small">Sem PUTs para os filtros selecionados.</p>' : '';
-  const tabelaCalls = callsFilt.length ? _tabelaOpcoes(callsFilt, 'CALL', precoAtual) : semCall;
-  const tabelaPuts  = putsFilt.length  ? _tabelaOpcoes(putsFilt,  'PUT',  precoAtual) : semPut;
+  const tabelaCalls = callsFilt.length ? _tabelaOpcoes(callsFilt, 'CALL', ctx) : semCall;
+  const tabelaPuts  = putsFilt.length  ? _tabelaOpcoes(putsFilt,  'PUT',  ctx) : semPut;
   return contagem + tabelaCalls + tabelaPuts;
 }
 
@@ -391,18 +428,24 @@ function _avisoStatus(d = {}) {
   </div>`;
 }
 
-// ── Cruzamento 3: tabela com colunas Distância e Break-even ───────────────────
-function _tabelaOpcoes(opcoes, tipo, precoAtual) {
-  const cor = tipo === 'CALL' ? 'text-success' : 'text-danger';
-  const temPreco = precoAtual != null && precoAtual > 0;
+// ── Cruzamento 3: tabela com colunas Distância, Break-even + 4 cruzamentos ────
+function _tabelaOpcoes(opcoes, tipo, ctx) {
+  const precoAtual = ctx?.precoAtual ?? null;
+  const atr14      = ctx?.atr14      ?? null;
+  const max63d     = ctx?.max63d     ?? null;
+  const min63d     = ctx?.min63d     ?? null;
+  const exDivs     = ctx?.exDividendos ?? [];
+  const cor        = tipo === 'CALL' ? 'text-success' : 'text-danger';
+  const temPreco   = precoAtual != null && precoAtual > 0;
+  const isPut      = tipo === 'PUT';
 
   const linhas = opcoes.map((o) => {
     const exercicio = Number(o.preco_exercicio ?? 0);
     const medio     = Number(o.preco_medio ?? o.fechamento ?? 0);
-    const premio    = Number(o.preco_medio ?? o.fechamento ?? 0);
+    const premio    = medio;
     const moneyness = _moneyness(tipo, exercicio, medio, precoAtual);
 
-    // Cruzamento 1: distancia real do strike ao preco do ativo-objeto
+    // Cruzamento 1: distância real do strike ao preço do ativo-objeto
     const distPerc = temPreco && exercicio
       ? ((exercicio - precoAtual) / precoAtual) * 100
       : null;
@@ -412,21 +455,63 @@ function _tabelaOpcoes(opcoes, tipo, precoAtual) {
 
     // Cruzamento 3: break-even ao vencimento
     const breakeven = exercicio && premio
-      ? (tipo === 'CALL' ? exercicio + premio : exercicio - premio)
+      ? (isPut ? exercicio - premio : exercicio + premio)
       : null;
 
+    // Cruzamento 1-ext: badge "63d ✓/✗" — break-even cabe no range 63d?
+    let badge63d = '';
+    if (breakeven != null && max63d != null && min63d != null) {
+      const dentro = breakeven >= min63d && breakeven <= max63d;
+      badge63d = dentro
+        ? `<span class="opc-crossref badge text-bg-success ms-1" title="Break-even dentro do range 63d">63d ✓</span>`
+        : `<span class="opc-crossref badge text-bg-secondary ms-1" title="Break-even fora do range 63d">63d ✗</span>`;
+    }
+
+    // Cruzamento 2: Dias ATR — quantas ATR14 do preço atual até o strike
+    let diasAtrStr = '—';
+    let diasAtrVal = '';
+    if (temPreco && atr14 != null && atr14 > 0 && exercicio) {
+      const d = Math.abs(exercicio - precoAtual) / atr14;
+      diasAtrStr = `~${d.toFixed(1)}d`;
+      diasAtrVal = d.toFixed(2);
+    }
+
+    // Cruzamento 3-ext: ex-div antes do vencimento → badge na célula de vencimento
+    let badgeExDiv = '';
+    if (o.data_vencimento && exDivs.length) {
+      const temExDiv = exDivs.some((ex) => ex.data <= o.data_vencimento);
+      if (temExDiv) {
+        badgeExDiv = `<span class="opc-crossref badge text-bg-warning ms-1" title="Ex-dividendo antes do vencimento — distorce prêmio CALL">ex-div</span>`;
+      }
+    }
+
+    // Cruzamento 4: Hedge % para PUTs — prêmio como % do preço atual
+    let hedgeStr = '—';
+    let hedgeVal = '';
+    if (isPut && temPreco && premio > 0) {
+      const h = (premio / precoAtual) * 100;
+      hedgeStr = `${h.toFixed(1)}%`;
+      hedgeVal = h.toFixed(2);
+    }
+
+    const beVal = breakeven != null ? breakeven.toFixed(2) : '';
     return `<tr class="${moneyness.classe}">
       <td class="fw-semibold">${escaparHtml(o.simbolo)}</td>
-      <td>${_fmtData(o.data_vencimento)}</td>
-      <td class="text-end">${_fmtMoeda(exercicio)}</td>
-      <td class="text-end">${distStr}</td>
-      <td class="text-end">${_fmtMoeda(o.fechamento)}</td>
-      <td class="text-end">${_fmtMoeda(medio)}</td>
-      <td class="text-end">${_fmtMoeda(breakeven)}</td>
-      <td class="text-end">${_fmtInt(o.numero_negocios)}</td>
+      <td data-sort-value="${escaparHtml(o.data_vencimento ?? '')}">${_fmtData(o.data_vencimento)}${badgeExDiv}</td>
+      <td class="text-end" data-sort-value="${exercicio || ''}">${_fmtMoeda(exercicio)}</td>
+      <td class="text-end" data-sort-value="${distPerc != null ? distPerc.toFixed(2) : ''}">${distStr}</td>
+      <td class="text-end" data-sort-value="${o.fechamento ?? ''}">${_fmtMoeda(o.fechamento)}</td>
+      <td class="text-end" data-sort-value="${medio || ''}">${_fmtMoeda(medio)}</td>
+      <td class="text-end" data-sort-value="${beVal}">${_fmtMoeda(breakeven)}${badge63d}</td>
+      <td class="text-end" data-sort-value="${diasAtrVal}">${diasAtrStr}</td>
+      ${isPut ? `<td class="text-end" data-sort-value="${hedgeVal}">${hedgeStr}</td>` : ''}
+      <td class="text-end" data-sort-value="${o.numero_negocios ?? ''}">${_fmtInt(o.numero_negocios)}</td>
       <td><span class="badge ${moneyness.badgeCls}">${moneyness.rotulo}</span></td>
     </tr>`;
   }).join('');
+
+  const thSort = (label, key, extra = '') =>
+    `<th class="text-end${extra}" data-sort="${key}">${escaparHtml(label)} <span class="sort-icon">⇅</span></th>`;
 
   return `
     <h6 class="${cor} mt-3">${tipo}</h6>
@@ -434,14 +519,16 @@ function _tabelaOpcoes(opcoes, tipo, precoAtual) {
       <table class="table table-sm table-hover small align-middle">
         <thead>
           <tr>
-            <th>Símbolo</th>
-            <th>Vencimento</th>
-            <th class="text-end">Exercício</th>
-            <th class="text-end" title="(Strike − Preço atual) / Preço atual">Distância</th>
-            <th class="text-end">Fechamento</th>
-            <th class="text-end">Prêmio médio</th>
-            <th class="text-end" title="Strike ± prêmio: ponto de equilíbrio ao vencimento">Break-even</th>
-            <th class="text-end">Negócios</th>
+            <th data-sort="simbolo">Símbolo <span class="sort-icon">⇅</span></th>
+            <th data-sort="vencimento">Vencimento <span class="sort-icon">⇅</span></th>
+            ${thSort('Exercício', 'exercicio')}
+            <th class="text-end" data-sort="distancia" title="(Strike − Preço atual) / Preço atual">Distância <span class="sort-icon">⇅</span></th>
+            ${thSort('Fechamento', 'fechamento')}
+            ${thSort('Prêmio médio', 'premio')}
+            <th class="text-end" data-sort="breakeven" title="Strike ± prêmio: ponto de equilíbrio ao vencimento">Break-even <span class="sort-icon">⇅</span></th>
+            <th class="text-end" data-sort="diasatr" title="Distância strike/ATR14: quantas ATR14 até o strike">~ATR <span class="sort-icon">⇅</span></th>
+            ${isPut ? `<th class="text-end" data-sort="hedge" title="Prêmio como % do preço do ativo — custo do hedge">Hedge% <span class="sort-icon">⇅</span></th>` : ''}
+            ${thSort('Negócios', 'negocios')}
             <th>Moneyness</th>
           </tr>
         </thead>
