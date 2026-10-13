@@ -17,6 +17,8 @@ import {
 import { buscarResumo, buscarBloqueios } from '../api/operacionalApi.js';
 import { buscarIndiceMacro } from '../api/indicesMacroApi.js';
 import { buscarDiarioDeSinais } from '../api/validacaoApi.js';
+import { listarAtivosPainel, listarSetoresBase } from '../api/baseAtivosApi.js';
+import { htmlTabelaAtivos } from '../analise/listagemAtivos.js';
 import { escaparHtml } from '../utils/html.js';
 import { htmlTabelaEstrategias, obterIaLivre, resumoEstrategias, htmlConsultaRapida } from '../components/simulador/TabelaEstrategias.js';
 import { htmlControlesCenario, htmlResultadoCenario, validarCenario } from '../components/simulador/CenarioSimulador.js';
@@ -88,6 +90,10 @@ export class SimuladorPage extends BaseComponent {
     this.selicAtual = null;
     // 8: bloqueios do dia na aba Operações
     this.bloqueiosHoje = null;
+    // universo completo em Estratégias
+    this.setores = [];
+    this.universoFiltros = null;
+    this.universoResultado = null;
     // 9: restaura último resultado retroativo
     try {
       const saved = JSON.parse(sessionStorage.getItem('simulador-retroativo') || 'null');
@@ -161,6 +167,40 @@ export class SimuladorPage extends BaseComponent {
       this.bloqueiosHoje = resp?.indisponivel ? [] : (resp?.itens || []);
     } catch {
       this.bloqueiosHoje = [];
+    }
+  }
+
+  async carregarUniverso() {
+    const container = this.querySelector('#universo-resultado');
+    if (container) container.innerHTML = '<span class="spinner-border spinner-border-sm ms-1"></span>';
+
+    if (!this.setores.length) {
+      try {
+        const resp = await listarSetoresBase();
+        const lista = Array.isArray(resp) ? resp : (resp?.itens || resp?.setores || []);
+        this.setores = lista.map((x) => (typeof x === 'string' ? x : x.nome || x.setor || String(x))).filter(Boolean);
+        const sel = this.querySelector('#universo-setor');
+        if (sel && this.setores.length) {
+          const atual = this.universoFiltros?.setor || '';
+          sel.innerHTML = `<option value="">Todos os setores</option>${this.setores.map((s) =>
+            `<option value="${escaparHtml(s)}"${s === atual ? ' selected' : ''}>${escaparHtml(s)}</option>`
+          ).join('')}`;
+        }
+      } catch { /* ignora — select fica com "Todos os setores" */ }
+    }
+
+    try {
+      const resultado = await listarAtivosPainel({
+        q: this.universoFiltros?.q || '',
+        setor: this.universoFiltros?.setor || '',
+        uf: this.universoFiltros?.uf || '',
+        pagina: 0,
+        tamanho: 30,
+      });
+      this.universoResultado = resultado;
+      if (container) container.innerHTML = htmlTabelaAtivos(resultado?.content || []);
+    } catch (err) {
+      if (container) container.innerHTML = `<p class="small text-danger mt-1">${escaparHtml(err?.message || 'Erro ao buscar ativos')}</p>`;
     }
   }
 
@@ -272,7 +312,9 @@ export class SimuladorPage extends BaseComponent {
       ${remover}
       <hr class="my-3">
       ${this.formularioAdicionarAtivo()}
-      ${htmlConsultaRapida(this.todosAtivos)}
+      ${htmlConsultaRapida()}
+      <hr class="my-3">
+      ${this._htmlUniversoCompleto()}
     `;
   }
 
@@ -364,6 +406,41 @@ export class SimuladorPage extends BaseComponent {
       ${this.erroOperacoes ? `<div class="alert alert-warning small">${escaparHtml(this.erroOperacoes)}</div>` : ''}
       <div id="lista-operacoes">${htmlOperacoesManuais(this.operacoes, this.todosAtivos, this.filtroStatusOperacoes, this.historicosPorOperacoes)}</div>
     `;
+  }
+
+  _htmlUniversoCompleto() {
+    const setoresOpcoes = this.setores.map((s) =>
+      `<option value="${escaparHtml(s)}"${s === (this.universoFiltros?.setor || '') ? ' selected' : ''}>${escaparHtml(s)}</option>`
+    ).join('');
+
+    const conteudo = this.universoResultado
+      ? htmlTabelaAtivos(this.universoResultado?.content || [])
+      : '<p class="small text-muted mb-0">Use os filtros acima para buscar no universo completo.</p>';
+
+    return `<div>
+      <p class="small fw-semibold mb-2">Universo completo (${this.todosAtivos.length} ativos)</p>
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-4">
+          <input type="text" id="universo-busca" class="form-control form-control-sm"
+                 placeholder="Símbolo ou nome…" value="${escaparHtml(this.universoFiltros?.q || '')}">
+        </div>
+        <div class="col-md-3">
+          <select id="universo-setor" class="form-select form-select-sm">
+            <option value="">Todos os setores</option>
+            ${setoresOpcoes}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <input type="text" id="universo-uf" class="form-control form-control-sm"
+                 placeholder="UF" maxlength="2" value="${escaparHtml(this.universoFiltros?.uf || '')}"
+                 style="text-transform:uppercase">
+        </div>
+        <div class="col-md-3">
+          <button type="button" class="btn btn-primary btn-sm w-100" id="btn-universo-filtrar">Filtrar</button>
+        </div>
+      </div>
+      <div id="universo-resultado">${conteudo}</div>
+    </div>`;
   }
 
   formularioAdicionarAtivo() {
@@ -647,6 +724,54 @@ export class SimuladorPage extends BaseComponent {
         this.capitalRetroativo = Number(btn.dataset.capitalRetroativo);
         this.render();
       });
+    });
+
+    // combobox consulta rápida: filtra por símbolo OU nome conforme digita
+    const inputConsulta = this.querySelector('#consulta-ativo');
+    const listaConsulta = this.querySelector('#consulta-ativo-sugestoes');
+    if (inputConsulta && listaConsulta) {
+      const atualizarSugestoes = () => {
+        const q = inputConsulta.value.trim().toUpperCase();
+        if (q.length < 1) { listaConsulta.classList.remove('show'); return; }
+        const matches = this.todosAtivos
+          .filter((a) => {
+            const s = (a.simbolo || '').toUpperCase();
+            const n = (a.nome || '').toUpperCase();
+            return s.startsWith(q) || n.includes(q);
+          })
+          .slice(0, 10);
+        if (!matches.length) { listaConsulta.classList.remove('show'); return; }
+        listaConsulta.innerHTML = matches.map((a) =>
+          `<li><button type="button" class="dropdown-item small py-1" data-simbolo="${escaparHtml(a.simbolo || a)}">
+            <strong>${escaparHtml(a.simbolo || a)}</strong>
+            ${a.nome ? `<span class="text-muted ms-2">${escaparHtml(a.nome)}</span>` : ''}
+          </button></li>`
+        ).join('');
+        listaConsulta.classList.add('show');
+        listaConsulta.querySelectorAll('[data-simbolo]').forEach((btn) => {
+          btn.addEventListener('mousedown', (ev) => {
+            ev.preventDefault();
+            inputConsulta.value = btn.dataset.simbolo;
+            listaConsulta.classList.remove('show');
+            inputConsulta.form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+          });
+        });
+      };
+      inputConsulta.addEventListener('input', atualizarSugestoes);
+      inputConsulta.addEventListener('focus', atualizarSugestoes);
+      inputConsulta.addEventListener('blur', () => {
+        setTimeout(() => listaConsulta.classList.remove('show'), 150);
+      });
+    }
+
+    // universo completo — botão filtrar
+    this.querySelector('#btn-universo-filtrar')?.addEventListener('click', () => {
+      this.universoFiltros = {
+        q: this.querySelector('#universo-busca')?.value?.trim() || '',
+        setor: this.querySelector('#universo-setor')?.value || '',
+        uf: (this.querySelector('#universo-uf')?.value || '').toUpperCase(),
+      };
+      this.carregarUniverso();
     });
 
     // 1: consulta rápida de qualquer ativo
