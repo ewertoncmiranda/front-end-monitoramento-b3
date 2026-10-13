@@ -116,9 +116,40 @@ export class CandleChart extends BaseComponent {
     this.aplicarMarcadores();
   }
 
+  setMarcadoresTecnico(marcadores) {
+    this._marcadoresTecnico = marcadores || [];
+    this.aplicarMarcadores();
+  }
+
+  /**
+   * Linhas de preço horizontais (suporte, resistência, Fibonacci…).
+   * Cada entrada: { price, color, lineWidth?, lineStyle?, title? }.
+   * lineStyle: 0=solid 1=dotted 2=dashed 3=largeDashed
+   */
+  setLinhas(linhas) {
+    this._linhas = linhas || [];
+    this._aplicarLinhas();
+  }
+
+  _aplicarLinhas() {
+    if (!this._serie) return;
+    (this._priceLines || []).forEach((pl) => this._serie.removePriceLine(pl));
+    const LC = window.LightweightCharts;
+    this._priceLines = (this._linhas || []).map((l) =>
+      this._serie.createPriceLine({
+        price: l.price,
+        color: l.color || '#888',
+        lineWidth: l.lineWidth ?? 1,
+        lineStyle: l.lineStyle ?? (LC?.LineStyle?.Dashed ?? 2),
+        axisLabelVisible: true,
+        title: l.title || '',
+      })
+    );
+  }
+
   aplicarMarcadores() {
     if (!this._serie) return;
-    const marcadores = [...(this._marcadores || []), ...(this._marcadoresComunicados || [])]
+    const marcadores = [...(this._marcadores || []), ...(this._marcadoresComunicados || []), ...(this._marcadoresTecnico || [])]
       .map((m) => ({
         time: m.dataIso,
         position: m.posicao === 'abaixo' ? 'belowBar' : 'aboveBar',
@@ -141,6 +172,7 @@ export class CandleChart extends BaseComponent {
       this._observador = null;
     }
     if (this._chart) {
+      this._priceLines = [];
       this._chart.remove();
       this._chart = null;
       this._serie = null;
