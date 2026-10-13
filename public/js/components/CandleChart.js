@@ -132,19 +132,43 @@ export class CandleChart extends BaseComponent {
   }
 
   _aplicarLinhas() {
-    if (!this._serie) return;
+    if (!this._serie || !this._chart) return;
+    // Remove linhas anteriores
     (this._priceLines || []).forEach((pl) => this._serie.removePriceLine(pl));
+    (this._linhaSeries || []).forEach((ls) => this._chart.removeSeries(ls));
+    this._priceLines = [];
+    this._linhaSeries = [];
+
     const LC = window.LightweightCharts;
-    this._priceLines = (this._linhas || []).map((l) =>
-      this._serie.createPriceLine({
-        price: l.price,
-        color: l.color || '#888',
-        lineWidth: l.lineWidth ?? 1,
-        lineStyle: l.lineStyle ?? (LC?.LineStyle?.Dashed ?? 2),
-        axisLabelVisible: true,
-        title: l.title || '',
-      })
-    );
+    const estiloLS = LC?.LineStyle?.Dashed ?? 2;
+
+    (this._linhas || []).forEach((l) => {
+      if (l.type === 'line' && Array.isArray(l.points) && l.points.length >= 2) {
+        // Linha diagonal — LineSeries com os pontos fornecidos
+        const ls = this._chart.addLineSeries({
+          color: l.color || '#888',
+          lineWidth: l.lineWidth ?? 1,
+          lineStyle: l.lineStyle ?? estiloLS,
+          crosshairMarkerVisible: false,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          title: l.title || '',
+        });
+        ls.setData(l.points);
+        this._linhaSeries.push(ls);
+      } else if (l.price != null) {
+        // Linha horizontal — PriceLine
+        const pl = this._serie.createPriceLine({
+          price: l.price,
+          color: l.color || '#888',
+          lineWidth: l.lineWidth ?? 1,
+          lineStyle: l.lineStyle ?? estiloLS,
+          axisLabelVisible: true,
+          title: l.title || '',
+        });
+        this._priceLines.push(pl);
+      }
+    });
   }
 
   aplicarMarcadores() {
@@ -173,6 +197,7 @@ export class CandleChart extends BaseComponent {
     }
     if (this._chart) {
       this._priceLines = [];
+      this._linhaSeries = [];
       this._chart.remove();
       this._chart = null;
       this._serie = null;
