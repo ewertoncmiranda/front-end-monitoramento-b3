@@ -104,14 +104,38 @@ tema-toggle[modo="bottom"] {
     position: sticky;
     top: 1rem;
     align-self: flex-start;
-    /* 1rem de folga em cima + os 3rem do pb-5 do <main>: sem descontar o
-       pb-5, no fim da rolagem o sticky bate no fim da linha e o topo do
-       menu sobe para fora da tela. */
     height: calc(100vh - 4rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .candles-lateral .tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .candles-lateral .tab-pane.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .candles-lateral-inner {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .candles-lateral painel-padroes,
-  .candles-lateral #painel-padroes {
+  .candles-lateral #painel-padroes,
+  .candles-lateral painel-tecnico,
+  .candles-lateral #painel-tecnico {
     display: flex;
     flex-direction: column;
     height: 100%;

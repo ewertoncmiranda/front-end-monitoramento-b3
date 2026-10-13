@@ -116,9 +116,64 @@ export class CandleChart extends BaseComponent {
     this.aplicarMarcadores();
   }
 
+  setMarcadoresTecnico(marcadores) {
+    this._marcadoresTecnico = marcadores || [];
+    this.aplicarMarcadores();
+  }
+
+  /**
+   * Linhas de preço horizontais (suporte, resistência, Fibonacci…).
+   * Cada entrada: { price, color, lineWidth?, lineStyle?, title? }.
+   * lineStyle: 0=solid 1=dotted 2=dashed 3=largeDashed
+   */
+  setLinhas(linhas) {
+    this._linhas = linhas || [];
+    this._aplicarLinhas();
+  }
+
+  _aplicarLinhas() {
+    if (!this._serie || !this._chart) return;
+    // Remove linhas anteriores
+    (this._priceLines || []).forEach((pl) => this._serie.removePriceLine(pl));
+    (this._linhaSeries || []).forEach((ls) => this._chart.removeSeries(ls));
+    this._priceLines = [];
+    this._linhaSeries = [];
+
+    const LC = window.LightweightCharts;
+    const estiloLS = LC?.LineStyle?.Dashed ?? 2;
+
+    (this._linhas || []).forEach((l) => {
+      if (l.type === 'line' && Array.isArray(l.points) && l.points.length >= 2) {
+        // Linha diagonal — LineSeries com os pontos fornecidos
+        const ls = this._chart.addLineSeries({
+          color: l.color || '#888',
+          lineWidth: l.lineWidth ?? 1,
+          lineStyle: l.lineStyle ?? estiloLS,
+          crosshairMarkerVisible: false,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          title: l.title || '',
+        });
+        ls.setData(l.points);
+        this._linhaSeries.push(ls);
+      } else if (l.price != null) {
+        // Linha horizontal — PriceLine
+        const pl = this._serie.createPriceLine({
+          price: l.price,
+          color: l.color || '#888',
+          lineWidth: l.lineWidth ?? 1,
+          lineStyle: l.lineStyle ?? estiloLS,
+          axisLabelVisible: true,
+          title: l.title || '',
+        });
+        this._priceLines.push(pl);
+      }
+    });
+  }
+
   aplicarMarcadores() {
     if (!this._serie) return;
-    const marcadores = [...(this._marcadores || []), ...(this._marcadoresComunicados || [])]
+    const marcadores = [...(this._marcadores || []), ...(this._marcadoresComunicados || []), ...(this._marcadoresTecnico || [])]
       .map((m) => ({
         time: m.dataIso,
         position: m.posicao === 'abaixo' ? 'belowBar' : 'aboveBar',
@@ -141,6 +196,8 @@ export class CandleChart extends BaseComponent {
       this._observador = null;
     }
     if (this._chart) {
+      this._priceLines = [];
+      this._linhaSeries = [];
       this._chart.remove();
       this._chart = null;
       this._serie = null;

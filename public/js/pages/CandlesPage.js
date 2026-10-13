@@ -25,6 +25,7 @@ import { escaparHtml } from '../utils/html.js';
 import '../components/SeletorDeAtivos.js';
 import '../components/CandleChart.js';
 import '../components/PainelPadroes.js';
+import '../components/PainelTecnico.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -69,20 +70,42 @@ export class CandlesPage extends BaseComponent {
 
       <div class="row g-3 mt-1">
         <div id="candles-grafico" class="col-lg order-lg-2 pt-2 pb-2"></div>
-        <aside id="candles-padroes" class="candles-lateral col-lg-4 order-lg-1"
-               aria-label="Padrões sobre o gráfico"></aside>
-      </div>
 
-      <div class="offcanvas offcanvas-end candles-noticias" tabindex="-1" id="candles-noticias"
-           data-bs-backdrop="false" data-bs-scroll="true" aria-labelledby="candles-noticias-titulo">
-        <div class="offcanvas-header border-bottom">
-          <div>
-            <h5 class="offcanvas-title mb-0" id="candles-noticias-titulo"></h5>
-            <small class="text-muted">Comunicados oficiais da CVM</small>
+        <aside class="candles-lateral col-lg-4 order-lg-1" aria-label="Painéis laterais">
+          <ul class="nav nav-tabs nav-fill mb-0" id="candles-abas" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active small px-2" id="tab-velas" data-bs-toggle="tab"
+                      data-bs-target="#painel-velas" type="button" role="tab">
+                🕯 Padrões de velas
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link small px-2" id="tab-tecnico" data-bs-toggle="tab"
+                      data-bs-target="#painel-tecnico-tab" type="button" role="tab">
+                📐 Técnico
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link small px-2" id="tab-noticias" data-bs-toggle="tab"
+                      data-bs-target="#painel-noticias-tab" type="button" role="tab">
+                📰 Notícias <span id="badge-noticias" class="badge text-bg-secondary ms-1" style="display:none"></span>
+              </button>
+            </li>
+          </ul>
+          <div class="tab-content border border-top-0 rounded-bottom p-0" id="candles-abas-conteudo">
+            <div class="tab-pane fade show active" id="painel-velas" role="tabpanel">
+              <div id="candles-padroes" class="candles-lateral-inner"></div>
+            </div>
+            <div class="tab-pane fade" id="painel-tecnico-tab" role="tabpanel">
+              <div id="candles-tecnico" class="candles-lateral-inner"></div>
+            </div>
+            <div class="tab-pane fade" id="painel-noticias-tab" role="tabpanel">
+              <div id="candles-noticias-painel" class="candles-lateral-inner p-3">
+                <p class="small text-muted">Clique em uma vela no gráfico para ver os comunicados da CVM daquele dia.</p>
+              </div>
+            </div>
           </div>
-          <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
-        </div>
-        <div class="offcanvas-body" id="candles-noticias-corpo"></div>
+        </aside>
       </div>
     `;
   }
@@ -100,19 +123,6 @@ export class CandlesPage extends BaseComponent {
 
     this.addEventListener('candle-clicado', (evento) => {
       this.abrirNoticias(evento.detail.dataIso);
-    });
-
-    // Em tela grande o painel empurra a pagina (ver app.css). O grafico se
-    // reenquadra sozinho quando a largura muda (ResizeObserver no CandleChart).
-    const painelNoticias = this.querySelector('#candles-noticias');
-    painelNoticias.addEventListener('show.bs.offcanvas', () => {
-      document.body.classList.add('painel-noticias-aberto');
-    });
-    painelNoticias.addEventListener('hide.bs.offcanvas', () => {
-      document.body.classList.remove('painel-noticias-aberto');
-    });
-    painelNoticias.addEventListener('hidden.bs.offcanvas', () => {
-      this._dataAberta = null;
     });
 
     this.querySelector('seletor-de-ativos').addEventListener('ativo-buscado', (evento) => {
@@ -149,12 +159,14 @@ export class CandlesPage extends BaseComponent {
 
     const areaGrafico = this.querySelector('#candles-grafico');
     const areaPadroes = this.querySelector('#candles-padroes');
-    const erro = this.querySelector('#candles-erro');
+    const erro        = this.querySelector('#candles-erro');
 
     erro.innerHTML = '';
     areaGrafico.innerHTML = '<loading-spinner></loading-spinner>';
     areaPadroes.innerHTML = '';
-    // Vela aberta de outro ativo ou periodo deixaria o painel mentindo.
+    this.querySelector('#candles-tecnico').innerHTML = '';
+    this.querySelector('#candles-noticias-painel').innerHTML =
+      '<p class="small text-muted p-3">Clique em uma vela no gráfico para ver os comunicados da CVM daquele dia.</p>';
     this.fecharNoticias();
 
     let candles;
@@ -166,19 +178,27 @@ export class CandlesPage extends BaseComponent {
       return;
     }
 
+    const areaTecnico = this.querySelector('#candles-tecnico');
+
     areaGrafico.innerHTML = this.templateGrafico(candles);
     areaPadroes.innerHTML = '<painel-padroes></painel-padroes>';
+    areaTecnico.innerHTML = '<painel-tecnico></painel-tecnico>';
 
     const grafico = areaGrafico.querySelector('candle-chart');
-    const painel = areaPadroes.querySelector('painel-padroes');
+    const painel  = areaPadroes.querySelector('painel-padroes');
+    const tecnico = areaTecnico.querySelector('painel-tecnico');
 
     grafico.setCandles(candles);
     painel.setCandles(candles);
+    tecnico.setCandles(candles);
 
-    // O painel decide o que mostrar; o grafico sabe desenhar. A ligacao entre
-    // os dois e um evento, nao uma referencia direta.
     painel.addEventListener('padroes-alterados', (evento) => {
       grafico.setMarcadores(evento.detail.marcadores);
+    });
+
+    tecnico.addEventListener('tecnico-alterado', (evento) => {
+      grafico.setLinhas(evento.detail.linhas);
+      grafico.setMarcadoresTecnico(evento.detail.marcadores);
     });
 
     this._candles = candles;
@@ -228,8 +248,10 @@ export class CandlesPage extends BaseComponent {
     this._comunicados = estado;
     if (estado.grupos) {
       grafico.setMarcadoresComunicados(marcadoresDeComunicados(candles, estado.grupos));
+      const total = [...estado.grupos.values()].reduce((s, g) => s + (g?.length || 0), 0);
+      const badge = this.querySelector('#badge-noticias');
+      if (badge && total > 0) { badge.textContent = total; badge.style.display = ''; }
     }
-    // Clicaram numa vela antes de os dados chegarem: atualiza o que ja esta aberto.
     if (this._dataAberta) this.renderizarNoticias(this._dataAberta);
   }
 
@@ -237,51 +259,43 @@ export class CandlesPage extends BaseComponent {
     if (!this._candles.some((c) => c.dataIso === dataIso)) return;
     this._dataAberta = dataIso;
     this.renderizarNoticias(dataIso);
-
-    const bootstrap = window.bootstrap;
-    const elemento = this.querySelector('#candles-noticias');
-    if (bootstrap && elemento) bootstrap.Offcanvas.getOrCreateInstance(elemento).show();
+    // Muda para a aba de Notícias automaticamente ao clicar numa vela
+    const tabBtn = this.querySelector('#tab-noticias');
+    if (tabBtn && window.bootstrap) window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
   }
 
   renderizarNoticias(dataIso) {
     const indice = this._candles.findIndex((c) => c.dataIso === dataIso);
     if (indice < 0) return;
     const estado = this._comunicados || {};
+    const painel = this.querySelector('#candles-noticias-painel');
+    if (!painel) return;
 
-    this.querySelector('#candles-noticias-titulo').innerHTML =
-      `${escaparHtml(this._simbolo)} · ${formatarData(dataIso)}`;
-    this.querySelector('#candles-noticias-corpo').innerHTML = renderNoticiasDoCandle({
-      simbolo: this._simbolo,
-      candle: this._candles[indice],
-      candleAnterior: indice > 0 ? this._candles[indice - 1] : null,
-      grupo: estado.grupos ? estado.grupos.get(dataIso) : null,
-      carregando: Boolean(estado.carregando),
-      erro: estado.erro || null,
-      dadosAte: estado.dadosAte || null,
-      fonte: estado.fonte || null,
-      aviso: estado.aviso || null,
-    });
+    painel.innerHTML = `
+      <div class="border-bottom pb-2 mb-3">
+        <strong>${escaparHtml(this._simbolo)}</strong>
+        <span class="text-muted small ms-1">· ${formatarData(dataIso)}</span>
+        <div class="small text-muted">Comunicados oficiais da CVM</div>
+      </div>
+      ${renderNoticiasDoCandle({
+        simbolo: this._simbolo,
+        candle: this._candles[indice],
+        candleAnterior: indice > 0 ? this._candles[indice - 1] : null,
+        grupo: estado.grupos ? estado.grupos.get(dataIso) : null,
+        carregando: Boolean(estado.carregando),
+        erro: estado.erro || null,
+        dadosAte: estado.dadosAte || null,
+        fonte: estado.fonte || null,
+        aviso: estado.aviso || null,
+      })}`;
   }
 
   fecharNoticias() {
     this._dataAberta = null;
-    const elemento = this.querySelector('#candles-noticias');
-    const instancia = window.bootstrap && elemento
-      ? window.bootstrap.Offcanvas.getInstance(elemento)
-      : null;
-    if (instancia) instancia.hide();
   }
 
   disconnectedCallback() {
-    // Troca de aba com o painel aberto: o offcanvas vive dentro desta pagina,
-    // mas o Bootstrap guarda estado global da instancia - e a margem que o
-    // painel abre na pagina ficaria presa nas outras abas.
-    document.body.classList.remove('painel-noticias-aberto');
-    const elemento = this.querySelector('#candles-noticias');
-    const instancia = window.bootstrap && elemento
-      ? window.bootstrap.Offcanvas.getInstance(elemento)
-      : null;
-    if (instancia) instancia.dispose();
+    this._dataAberta = null;
   }
 
   /**
