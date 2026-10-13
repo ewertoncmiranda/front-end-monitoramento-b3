@@ -157,7 +157,7 @@ function htmlFiltros(filtroStatus) {
 }
 
 export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '', historicosPorOperacao = {}) {
-  if (operacoes && !Array.isArray(operacoes)) operacoes = operacoes.itens || operacoes.operacoes || [];
+  if (!Array.isArray(operacoes)) operacoes = operacoes?.itens || operacoes?.operacoes || [];
 
   const form = htmlFormulario(ativos);
   const filtros = htmlFiltros(filtroStatus);

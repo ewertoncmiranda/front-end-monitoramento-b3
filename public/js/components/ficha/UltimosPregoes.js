@@ -22,6 +22,13 @@ export class UltimosPregoes extends BaseComponent {
   }
 }
 
+function _celularFonte(fonte) {
+  if (!fonte) return '<span class="text-muted">—</span>';
+  if (fonte === 'B3_COTAHIST') return '<span class="badge text-bg-success">B3</span>';
+  if (fonte === 'BRAPI') return '<span class="badge text-bg-warning text-dark">BRAPI</span>';
+  return `<span class="badge text-bg-secondary">${escaparHtml(fonte)}</span>`;
+}
+
 function celulaTicket(vela) {
   const t = ticketMedioDaVela(vela);
   if (t === null) return '—';
@@ -42,13 +49,15 @@ export function renderizar(velas) {
   return `${resumo}
     <div class="table-responsive tabela-rolavel"><table class="table table-sm align-middle small mb-0 tabela-cartoes">
       <thead><tr><th>Data</th><th class="text-end">Fechamento</th><th class="text-end">Negócios</th>
-        <th class="text-end">Volume</th><th class="text-end" title="${escaparHtml(DICA)}">Ticket médio ⓘ</th></tr></thead>
+        <th class="text-end">Volume</th><th class="text-end" title="${escaparHtml(DICA)}">Ticket médio ⓘ</th>
+        <th>Fonte</th></tr></thead>
       <tbody>${recentes.map((v) => `<tr>
         <td data-label="Data">${escaparHtml(v.dataFormatada || v.dataIso)}</td>
         <td data-label="Fechamento" class="text-end">${escaparHtml(formatarMoeda(v.close))}</td>
         <td data-label="Negócios" class="text-end">${v.numeroNegocios > 0 ? escaparHtml(formatarNumero(v.numeroNegocios, 0)) : '—'}</td>
         <td data-label="Volume" class="text-end">${v.volume > 0 ? escaparHtml(formatarNumero(v.volume, 0)) : '—'}</td>
-        <td data-label="Ticket médio" class="text-end">${escaparHtml(celulaTicket(v))}</td></tr>`).join('')}</tbody>
+        <td data-label="Ticket médio" class="text-end">${escaparHtml(celulaTicket(v))}</td>
+        <td data-label="Fonte">${_celularFonte(v.fonte)}</td></tr>`).join('')}</tbody>
     </table></div>`;
 }
 

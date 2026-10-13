@@ -53,8 +53,17 @@ function _montarContexto(fundamentos, cvm, pregoes, proventos) {
   const vol21d = _calcVol21d(velas);
   const atr14 = _calcAtr14(velas);
   const volRelativo = _calcVolRelativo(velas);
-  const saltos = (pregoes?.saltos || []).map((s) => ({ data: s.data, variacao: s.variacao }));
+  const saltos = (pregoes?.saltos || []).map((s) => ({
+    data: s.data,
+    variacao: s.variacao,
+    fechamentoAnterior: s.fechamentoAnterior != null ? Number(s.fechamentoAnterior) : null,
+    abertura: s.abertura != null ? Number(s.abertura) : null,
+  }));
   const exDividendos = _extrairExDividendos(proventos);
+  const dataMaxima = resumo?.dataMaxima || null;
+  const dataMinima = resumo?.dataMinima || null;
+  const variacaoPeriodo = resumo?.variacao != null ? Number(resumo.variacao) : null;
+  const dataAnalise = fundamentos?.dataAnalise || null;
 
   const ticketMedio = _calcTicketMedio(velas);
   const amplitudeDia = _calcAmplitudeDia(velas);
@@ -70,6 +79,7 @@ function _montarContexto(fundamentos, cvm, pregoes, proventos) {
     vol21d, atr14, volRelativo, saltos, exDividendos,
     ticketMedio, amplitudeDia, retornoIntraday, gapAbertura,
     posicaoRangeDia, volumeContratos21d, negocios21d,
+    dataMaxima, dataMinima, variacaoPeriodo, dataAnalise,
   };
 }
 

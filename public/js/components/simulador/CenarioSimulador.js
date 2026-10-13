@@ -13,6 +13,14 @@ export function validarCenario({ simbolo, dataEntrada, janela }, hoje = hojeIso(
   if (dataFutura(dataEntrada, hoje)) return 'Data futura bloqueada: use apenas pregões com cotação real.';
   const j = Number(janela);
   if (!Number.isFinite(j) || j < 1 || j > 63) return 'Janela deve ficar entre 1 e 63 pregões.';
+  // Pregão ≈ 7/5 dias corridos; verifica se a saída estimada é futura
+  const diasCorridos = Math.ceil(j * 7 / 5);
+  const saida = new Date(dataEntrada + 'T12:00:00');
+  saida.setDate(saida.getDate() + diasCorridos);
+  const saidaIso = saida.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  if (saidaIso > hoje) {
+    return `Janela de ${j} pregões a partir de ${dataEntrada} projeta saída em torno de ${saidaIso} (futuro). Reduza a janela ou escolha uma data de entrada mais antiga.`;
+  }
   return null;
 }
 
