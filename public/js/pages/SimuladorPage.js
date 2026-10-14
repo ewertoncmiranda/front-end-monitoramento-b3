@@ -526,6 +526,7 @@ export class SimuladorPage extends BaseComponent {
         simbolo: this.querySelector('#cenario-ativo')?.value,
         dataEntrada: this.querySelector('#cenario-data')?.value,
         janela: this.querySelector('#cenario-janela')?.value,
+        capital: this.querySelector('#cenario-capital')?.value,
       };
       const erro = validarCenario(dados);
       if (erro) {
@@ -537,7 +538,7 @@ export class SimuladorPage extends BaseComponent {
       const btnSimular = this.querySelector('#form-cenario button[type="submit"]');
       if (btnSimular) { btnSimular.disabled = true; btnSimular.textContent = 'Simulando…'; }
       try {
-        const resultado = await cenarioSimulador(dados.simbolo, dados.dataEntrada, dados.janela, CAPITAL_BASE);
+        const resultado = await cenarioSimulador(dados.simbolo, dados.dataEntrada, dados.janela, dados.capital);
         this.erroCenario = '';
         this.cardsCenario.unshift({
           id: Date.now(),
@@ -549,7 +550,7 @@ export class SimuladorPage extends BaseComponent {
           dataSimulacao: new Date().toISOString(),
         });
         this._salvarCardsCenario();
-        this.cenarioPreenchido = { simbolo: dados.simbolo, dataEntrada: dados.dataEntrada, janela: dados.janela, estrategia };
+        this.cenarioPreenchido = { simbolo: dados.simbolo, dataEntrada: dados.dataEntrada, janela: dados.janela, capital: dados.capital, estrategia };
       } catch (erroApi) {
         this.erroCenario = erroApi?.message || 'Erro ao simular cenário.';
       }

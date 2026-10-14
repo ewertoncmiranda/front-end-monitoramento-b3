@@ -7,12 +7,14 @@ const SEM = 'sem dado';
 export const hojeIso = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
 export const dataFutura = (data, hoje = hojeIso()) => Boolean(data && data > hoje);
 
-export function validarCenario({ simbolo, dataEntrada, janela }, hoje = hojeIso()) {
+export function validarCenario({ simbolo, dataEntrada, janela, capital }, hoje = hojeIso()) {
   if (!simbolo) return 'Selecione um ativo monitorado.';
   if (!dataEntrada) return 'Informe uma data de entrada com cotação real.';
   if (dataFutura(dataEntrada, hoje)) return 'Data futura bloqueada: use apenas pregões com cotação real.';
   const j = Number(janela);
   if (!Number.isFinite(j) || j < 1 || j > 63) return 'Janela deve ficar entre 1 e 63 pregões.';
+  const c = Number(capital ?? CAPITAL_BASE);
+  if (!Number.isFinite(c) || c <= 0) return 'Capital deve ser maior que zero.';
   // Pregão ≈ 7/5 dias corridos; verifica se a saída estimada é futura
   const diasCorridos = Math.ceil(j * 7 / 5);
   const saida = new Date(dataEntrada + 'T12:00:00');
@@ -27,6 +29,7 @@ export function validarCenario({ simbolo, dataEntrada, janela }, hoje = hojeIso(
 export function htmlFormularioCenario(ativos = [], valores = {}) {
   const dataEntrada = escaparHtml(valores.dataEntrada || '');
   const janela = escaparHtml(valores.janela || 21);
+  const capital = escaparHtml(valores.capital ?? CAPITAL_BASE);
   const estrategiaSelecionada = valores.estrategia || '';
   const opcoesEstrategia = ESTRATEGIAS_PADRAO.map((e) =>
     `<option value="${e}"${e === estrategiaSelecionada ? ' selected' : ''}>${escaparHtml(e.replace(/_/g, ' '))}</option>`
@@ -34,8 +37,9 @@ export function htmlFormularioCenario(ativos = [], valores = {}) {
   return `<form id="form-cenario" class="row g-2">
     <div class="col-md-3"><label for="cenario-ativo" class="form-label form-label-sm">Ativo</label>${htmlComboboxAtivo('cenario-ativo', ativos, { value: valores.simbolo || '' })}</div>
     <div class="col-md-2"><label for="cenario-data" class="form-label form-label-sm">Data de entrada</label><input type="date" max="${hojeIso()}" value="${dataEntrada}" class="form-control form-control-sm" id="cenario-data" required></div>
-    <div class="col-md-2"><label for="cenario-janela" class="form-label form-label-sm">Janela (1–63)</label><input type="number" min="1" max="63" value="${janela}" class="form-control form-control-sm" id="cenario-janela" required></div>
-    <div class="col-md-3"><label for="cenario-estrategia" class="form-label form-label-sm">Estratégia</label>
+    <div class="col-md-1"><label for="cenario-janela" class="form-label form-label-sm">Janela</label><input type="number" min="1" max="63" value="${janela}" class="form-control form-control-sm" id="cenario-janela" required></div>
+    <div class="col-md-2"><label for="cenario-capital" class="form-label form-label-sm">Capital (R$)</label><input type="number" min="1" step="100" value="${capital}" class="form-control form-control-sm" id="cenario-capital" required></div>
+    <div class="col-md-2"><label for="cenario-estrategia" class="form-label form-label-sm">Estratégia</label>
       <select id="cenario-estrategia" class="form-select form-select-sm">
         <option value="">Todas</option>
         ${opcoesEstrategia}

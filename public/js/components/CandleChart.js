@@ -9,8 +9,44 @@ import { BaseComponent } from './base/BaseComponent.js';
 // ou um unico retangulo) - por isso, abaixo de MIN_CANDLES, o componente
 // mostra uma mensagem em vez de tentar desenhar.
 const MIN_CANDLES = 5;
+const DESTAQUE_MS = 2000;
+
+/** Variavel CSS do documento ('' fora do navegador ou se nao definida). */
+function lerVariavelCss(nome) {
+  try {
+    return getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+  } catch {
+    return '';
+  }
+}
+
+/** Cores do grafico pelos tokens da paleta (C4); sem token, as cores de antes. */
+export function coresDoGrafico(ler = lerVariavelCss) {
+  return {
+    alta: ler('--f360-compra-forte') || '#198754',
+    baixa: ler('--f360-venda') || '#dc3545',
+    texto: ler('--bs-secondary-color') || '#495057',
+    grade: ler('--bs-border-color-translucent') || '#f1f1f1',
+    borda: ler('--bs-border-color') || '#dee2e6',
+    destaque: ler('--f360-info') || '#0369a1',
+  };
+}
+
+/** Indice da vela da data, ou da primeira vela depois dela; -1 se nao houver. */
+export function indiceDaData(candles, dataIso) {
+  if (!dataIso || !candles?.length) return -1;
+  const exato = candles.findIndex((c) => c.dataIso === dataIso);
+  if (exato >= 0) return exato;
+  return candles.findIndex((c) => c.dataIso > dataIso);
+}
 
 export class CandleChart extends BaseComponent {
+  connectedCallback() {
+    super.connectedCallback();
+    this._aoTrocarTema ??= () => this.aplicarCores();
+    window.addEventListener('tema:alterado', this._aoTrocarTema);
+  }
+
   setCandles(candles) {
     this.destruirGrafico();
     this._candles = candles || [];
@@ -41,18 +77,12 @@ export class CandleChart extends BaseComponent {
     const container = this.querySelector('.candle-chart-container');
     const chart = window.LightweightCharts.createChart(container, {
       autoSize: true,
-      layout: { textColor: '#495057', background: { color: 'transparent' } },
-      grid: { vertLines: { color: '#f1f1f1' }, horzLines: { color: '#f1f1f1' } },
-      timeScale: { borderColor: '#dee2e6' },
-      rightPriceScale: { borderColor: '#dee2e6' },
+      ...opcoesDoGrafico(coresDoGrafico()),
     });
 
     const serie = chart.addCandlestickSeries({
-      upColor: '#198754',
-      downColor: '#dc3545',
+      ...opcoesDaSerie(coresDoGrafico()),
       borderVisible: false,
-      wickUpColor: '#198754',
-      wickDownColor: '#dc3545',
     });
 
     serie.setData(
@@ -171,9 +201,42 @@ export class CandleChart extends BaseComponent {
     });
   }
 
+  /** Tema trocou: recolore grafico e velas sem redesenhar nem perder o zoom. */
+  aplicarCores() {
+    if (!this._chart || !this._serie) return;
+    const cores = coresDoGrafico();
+    this._chart.applyOptions(opcoesDoGrafico(cores));
+    this._serie.applyOptions(opcoesDaSerie(cores));
+  }
+
+  /**
+   * Centraliza a vela da data (ou a primeira depois dela), mantendo o zoom
+   * atual, e a marca por 2 s. false se nao ha grafico ou vela para a data.
+   */
+  focarData(dataIso) {
+    if (!this._chart || !this._serie) return false;
+    const i = indiceDaData(this._candles, dataIso);
+    if (i < 0) return false;
+    const escala = this._chart.timeScale();
+    const visivel = escala.getVisibleLogicalRange();
+    const largura = visivel ? Math.max(10, visivel.to - visivel.from) : 60;
+    escala.setVisibleLogicalRange({ from: i - largura / 2, to: i + largura / 2 });
+
+    clearTimeout(this._timerFoco);
+    this._marcadorFoco = [{
+      dataIso: this._candles[i].dataIso, posicao: 'abaixo', cor: coresDoGrafico().destaque, texto: '◆', forma: 'circle',
+    }];
+    this.aplicarMarcadores();
+    this._timerFoco = setTimeout(() => {
+      this._marcadorFoco = [];
+      this.aplicarMarcadores();
+    }, DESTAQUE_MS);
+    return true;
+  }
+
   aplicarMarcadores() {
     if (!this._serie) return;
-    const marcadores = [...(this._marcadores || []), ...(this._marcadoresComunicados || []), ...(this._marcadoresTecnico || [])]
+    const marcadores = [...(this._marcadores || []), ...(this._marcadoresComunicados || []), ...(this._marcadoresTecnico || []), ...(this._marcadorFoco || [])]
       .map((m) => ({
         time: m.dataIso,
         position: m.posicao === 'abaixo' ? 'belowBar' : 'aboveBar',
@@ -187,10 +250,13 @@ export class CandleChart extends BaseComponent {
   }
 
   disconnectedCallback() {
+    window.removeEventListener('tema:alterado', this._aoTrocarTema);
     this.destruirGrafico();
   }
 
   destruirGrafico() {
+    clearTimeout(this._timerFoco);
+    this._marcadorFoco = [];
     if (this._observador) {
       this._observador.disconnect();
       this._observador = null;
@@ -203,6 +269,19 @@ export class CandleChart extends BaseComponent {
       this._serie = null;
     }
   }
+}
+
+function opcoesDoGrafico(cores) {
+  return {
+    layout: { textColor: cores.texto, background: { color: 'transparent' } },
+    grid: { vertLines: { color: cores.grade }, horzLines: { color: cores.grade } },
+    timeScale: { borderColor: cores.borda },
+    rightPriceScale: { borderColor: cores.borda },
+  };
+}
+
+function opcoesDaSerie(cores) {
+  return { upColor: cores.alta, downColor: cores.baixa, wickUpColor: cores.alta, wickDownColor: cores.baixa };
 }
 
 /**

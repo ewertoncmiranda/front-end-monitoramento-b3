@@ -16,11 +16,11 @@ function assert(condition, message) {
   }
 }
 
-// Gerar 30 pregões de teste
+// Gerar pregões determinísticos para evitar que o ruído aleatório altere R/R.
 function gerarPregoes(preco = 100, volatilidade = 2) {
   const pregoes = [];
   for (let i = 0; i < 30; i++) {
-    const variacao = (Math.random() - 0.5) * volatilidade;
+    const variacao = Math.sin(i * 1.7) * volatilidade * 0.05;
     const max = preco + variacao + 1;
     const min = preco + variacao - 1;
     const fechamento = preco + variacao;
@@ -91,13 +91,9 @@ const planoRrBaixo = montarPlano({
   analise: {
     recomendacao: 'COMPRA_MODERADA',
     preco_atual: 100,
-    valor_justo: 102, // Alvo muito próximo
+    valor_justo: 100.5, // Recompensa menor que o risco calculado
   },
-  fundamentosCvm: {
-    graham_number: 101,
-    lpa: 10,
-    pl_setorial_mediana: 10.2,
-  },
+  fundamentosCvm: null,
   pregoes: gerarPregoes(100, 0.5), // Baixa volatilidade = ATR pequeno = R/R baixo
   backtest: null,
   opiniao: null,

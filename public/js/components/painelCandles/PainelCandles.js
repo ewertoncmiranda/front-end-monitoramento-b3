@@ -47,6 +47,7 @@ export class PainelCandles extends BaseComponent {
     this._comunicados = null;
     this._dataAberta = null;
     this._requisicaoComunicados = 0;
+    this._requisicaoVelas = 0;
   }
 
   static get observedAttributes() {
@@ -56,14 +57,13 @@ export class PainelCandles extends BaseComponent {
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === 'simbolo' && oldValue !== newValue) {
       this._simbolo = newValue;
-      this.carregar();
+      if (this.isConnected) this.carregar();
     }
   }
 
   connectedCallback() {
-    super.connectedCallback();
     this._simbolo = this.getAttribute('simbolo') || null;
-    this.render();
+    super.connectedCallback();
     this.carregar();
   }
 
@@ -142,6 +142,7 @@ export class PainelCandles extends BaseComponent {
 
   async carregar() {
     if (!this._simbolo) return;
+    const requisicao = ++this._requisicaoVelas;
 
     const areaGrafico = this.querySelector('#painel-candles-grafico');
     const areaPadroes = this.querySelector('#painel-candles-padroes');
@@ -159,10 +160,12 @@ export class PainelCandles extends BaseComponent {
     try {
       ({ candles, pregoes: this._pregoes } = await this.buscarVelas(this._simbolo));
     } catch (e) {
+      if (requisicao !== this._requisicaoVelas || !this.isConnected) return;
       areaGrafico.innerHTML = '';
-      erro.innerHTML = `<status-alert mensagem="${e.message}" variante="danger"></status-alert>`;
+      erro.innerHTML = `<status-alert mensagem="${escaparHtml(e.message || 'Não foi possível carregar o gráfico.') }" variante="danger"></status-alert>`;
       return;
     }
+    if (requisicao !== this._requisicaoVelas || !this.isConnected) return;
 
     const areaTecnico = this.querySelector('#painel-candles-tecnico');
 
@@ -271,6 +274,8 @@ export class PainelCandles extends BaseComponent {
 
   disconnectedCallback() {
     this._dataAberta = null;
+    this._requisicaoVelas++;
+    this._requisicaoComunicados++;
   }
 
   templateGrafico(candles) {

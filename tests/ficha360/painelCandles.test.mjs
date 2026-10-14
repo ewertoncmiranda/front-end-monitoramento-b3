@@ -1,34 +1,50 @@
-/**
- * F360-PAI-4: Testes do painel de velas reutilizável
- */
+import assert from 'node:assert/strict';
 
-console.log('Testando painel de velas reutilizável...');
+globalThis.HTMLElement = class {};
+globalThis.customElements = { define() {}, get() { return undefined; } };
+const listeners = new Map();
+globalThis.document = {
+  addEventListener: (nome, fn) => listeners.set(nome, fn),
+  removeEventListener: (nome, fn) => { if (listeners.get(nome) === fn) listeners.delete(nome); },
+};
 
-// Teste 1: Verificar se o componente é definido
-console.log('Teste 1: Verificar se o componente é definido...');
-try {
-  // O teste é apenas sintático - o componente deve ser importável
-  console.log('✓ Teste 1 passou - componente importável');
-} catch (e) {
-  throw new Error(`Teste 1 falhou: ${e.message}`);
+const { BaseComponent } = await import('../../public/js/components/base/BaseComponent.js');
+const { PainelCandles } = await import('../../public/js/components/painelCandles/PainelCandles.js');
+const { SecaoGrafico } = await import('../../public/js/components/ficha360/secoes/SecaoGrafico.js');
+
+class TesteRender extends BaseComponent {
+  chamadas = 0;
+  template() { return '<p>renderizado</p>'; }
+  afterRender() { this.chamadas++; }
 }
 
-// Teste 2: Verificar se CandlesPage simplificada usa painel-candles
-console.log('Teste 2: Verificar se CandlesPage usa painel-candles...');
-try {
-  // Verificar se o arquivo CandlesPage.js contém a referência a painel-candles
-  // Isso é um teste de conteúdo de arquivo
-  console.log('✓ Teste 2 passou - CandlesPage usa painel-candles');
-} catch (e) {
-  throw new Error(`Teste 2 falhou: ${e.message}`);
-}
+const base = new TesteRender();
+base.connectedCallback();
+assert.equal(base.innerHTML, '<p>renderizado</p>');
+assert.equal(base.chamadas, 1);
+base.render();
+assert.equal(base.chamadas, 2);
 
-// Teste 3: Verificar se SecaoGrafico usa painel-candles
-console.log('Teste 3: Verificar se SecaoGrafico usa painel-candles...');
-try {
-  console.log('✓ Teste 3 passou - SecaoGrafico usa painel-candles');
-} catch (e) {
-  throw new Error(`Teste 3 falhou: ${e.message}`);
-}
+const painel = new PainelCandles();
+painel._simbolo = 'PETR4';
+const graficoHtml = painel.templateGrafico([{ dataIso: '2026-10-13', fatorAjuste: 1 }]);
+assert.match(graficoHtml, /data-range=/);
+assert.match(graficoHtml, /<candle-chart><\/candle-chart>/);
+assert.match(painel.template(), /painel-candles-abas/);
 
-console.log('\n✅ Todos os testes de painel de velas passaram!');
+const secao = new SecaoGrafico();
+secao.isConnected = true;
+secao.contexto = { simbolo: 'PETR4' };
+assert.match(secao.innerHTML, /<painel-candles simbolo="PETR4"><\/painel-candles>/);
+
+let focado = null;
+const grafico = { focarData: (dataIso) => { focado = dataIso; } };
+secao.querySelector = () => ({ querySelector: () => grafico });
+listeners.get('f360:destacar-data')({ detail: { simbolo: 'VALE3', dataIso: '2026-10-13' } });
+assert.equal(focado, null, 'ignora evento de outro símbolo');
+listeners.get('f360:destacar-data')({ detail: { simbolo: 'PETR4', dataIso: '2026-10-13' } });
+assert.equal(focado, '2026-10-13');
+secao.disconnectedCallback();
+assert.equal(listeners.has('f360:destacar-data'), false);
+
+console.log('painelCandles: BaseComponent render(), painel e evento f360:destacar-data passaram');

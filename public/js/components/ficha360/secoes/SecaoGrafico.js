@@ -1,5 +1,6 @@
 import { BaseComponent } from '../../base/BaseComponent.js';
-import '../../components/painelCandles/PainelCandles.js';
+import { escaparHtml } from '../../../utils/html.js';
+import '../../painelCandles/PainelCandles.js';
 
 /**
  * F360-PAI-4: Seção Gráfico
@@ -9,12 +10,12 @@ import '../../components/painelCandles/PainelCandles.js';
 export class SecaoGrafico extends BaseComponent {
   constructor() {
     super();
-    this.contexto = null;
+    this._contexto = null;
   }
 
   set contexto(ctx) {
     this._contexto = ctx;
-    this.render();
+    if (this.isConnected) this.render();
   }
 
   get contexto() {
@@ -31,14 +32,17 @@ export class SecaoGrafico extends BaseComponent {
     }
 
     return `
-      <painel-candles simbolo="${this.contexto.simbolo}"></painel-candles>
+      <painel-candles simbolo="${escaparHtml(this.contexto.simbolo)}"></painel-candles>
     `;
   }
 
   afterRender() {
+    if (this._ouvirDestacarData) {
+      document.removeEventListener('f360:destacar-data', this._ouvirDestacarData);
+    }
     // Escutar evento f360:destacar-data
     this._ouvirDestacarData = (evento) => {
-      const { simbolo, dataIso } = evento.detail;
+      const { simbolo, dataIso } = evento.detail || {};
       if (simbolo !== this.contexto?.simbolo) return;
 
       const painel = this.querySelector('painel-candles');
@@ -60,6 +64,7 @@ export class SecaoGrafico extends BaseComponent {
     if (this._ouvirDestacarData) {
       document.removeEventListener('f360:destacar-data', this._ouvirDestacarData);
     }
+    this._ouvirDestacarData = null;
   }
 }
 

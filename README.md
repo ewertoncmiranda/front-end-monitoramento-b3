@@ -9,7 +9,7 @@ Frontend em HTML + JS puro + Bootstrap 5 (sem bundler no cliente) para o `gestor
 - **Web Components nativos, um por arquivo (SRP).** Cada componente em `public/js/components/` faz uma única coisa. As páginas em `public/js/pages/` só orquestram.
 - **Sem Shadow DOM.** De propósito: o Bootstrap carregado uma vez em `index.html` precisa valer para todos os componentes.
 - **Comunicação por eventos customizados** (`CustomEvent`) entre componentes de input e as páginas que os usam.
-- **Roteamento por hash** (`#/consulta`, `#/cadastro`): funciona em qualquer hospedagem estática e dentro de WebView sem configurar rewrite de URL no servidor.
+- **Roteamento por hash** (`#/ativo/PETR4`, `#/ativos`): funciona em qualquer hospedagem estática e dentro de WebView sem configurar rewrite de URL no servidor.
 - **Servidor Node/Express com proxy reverso.** O browser só chama caminho relativo (`/ativos/...`, `/analises/...`, `/api/...`) na própria origem do front; é o servidor quem decide para onde mandar isso de verdade. Elimina CORS e qualquer configuração de URL de API no lado do cliente. Detalhes do plano e do porquê em [`SPEC.md`](./SPEC.md) (seção 2.1).
 
 ## Estrutura
@@ -32,7 +32,8 @@ public/                      Tudo que o servidor expõe como estático
       base/BaseComponent.js        Ciclo de vida comum dos Web Components
       AtivoSearchForm.js            Captura simbolo, dispara evento
       SeletorDeAtivos.js            Busca + carteira clicavel (envolve o AtivoSearchForm)
-      CarteiraResumo.js             Carteira so leitura, usada no Cadastro
+      CarteiraResumo.js             Carteira so leitura (sem uso desde a remocao do Cadastro)
+      ficha360/                     Ficha do ativo centralizada (Plano F360): contexto, manifesto e secoes
       AtivoQuoteCard.js             Renderiza cotacao
       AnaliseResultCard.js          Renderiza decisao consolidada
       AtivosMonitoradosTable.js     Renderiza a carteira monitorada + linha expansivel
@@ -45,8 +46,8 @@ public/                      Tudo que o servidor expõe como estático
       AppHeader.js                    Navbar superior (telas medias+)
       BottomNav.js                     Navegacao inferior estilo app (celular)
     pages/
-      ConsultaPage.js                 Orquestra a tela de consulta
-      CadastroPage.js                 Orquestra a tela de cadastro
+      FichaAtivoPage.js               Ficha do ativo (#/ativo/PETR4): carrega as secoes do manifesto
+      ConsultaPage.js                 Ficha classica, usada por #/gestao
       AtivosMonitoradosPage.js        Orquestra a aba "Monitorados"
       MetodologiaPage.js              Orquestra a busca interativa de fundamentos
       CandlesPage.js                  Orquestra a aba de candles
@@ -144,12 +145,11 @@ paginas nao precisaram mudar de logica — trocaram a tag:
 ```
 
 A carteira e conveniencia, nao dependencia: se `GET /ativos/registrados` falhar, a lista
-some com um aviso discreto e o campo de busca continua funcionando. Carteira vazia mostra
-um atalho para a aba de Cadastro.
+some com um aviso discreto e o campo de busca continua funcionando.
 
-A aba Cadastro usa o `CarteiraResumo`, uma variante **somente leitura** — ali os simbolos
-nao sao clicaveis, porque clicar num ativo ja registrado so o recadastraria. Serve para
-voce nao tentar cadastrar algo que ja esta la, e se atualiza sozinha apos um cadastro.
+Nao ha mais aba Cadastro: todos os ativos ja estao no banco, e o unico efeito do antigo
+cadastro (favoritar para receber cotacao intradiaria) e a estrela no cabecalho da ficha e
+na tabela de ativos.
 
 ## Padroes sobre o grafico de candles (`#/candles`)
 
@@ -260,7 +260,7 @@ que parece.
 
 ## Aba "Monitorados" (`#/monitorados`)
 
-Cadastrar um ativo em `#/cadastro` persiste no backend e o coloca em monitoramento recorrente (cotação + histórico a cada 30s, sem intervenção manual). A aba `#/monitorados` lista a carteira (`GET /ativos/registrados`) e, para cada ativo, busca em paralelo a última decisão consolidada (`GET /analises/{simbolo}/analise`) — mesma rota já usada em `#/consulta`. Um ativo recém-cadastrado ou sem análise ainda aparece como "Sem análise ainda"; a busca de cada símbolo falha de forma independente, então isso nunca trava a lista inteira.
+Favoritar um ativo (estrela na ficha ou na tabela) persiste no backend e o coloca em monitoramento recorrente (cotação + histórico a cada 30s, sem intervenção manual). A aba `#/monitorados` lista a carteira (`GET /ativos/registrados`) e, para cada ativo, busca em paralelo a última decisão consolidada (`GET /analises/{simbolo}/analise`) — mesma rota já usada em `#/consulta`. Um ativo recém-cadastrado ou sem análise ainda aparece como "Sem análise ainda"; a busca de cada símbolo falha de forma independente, então isso nunca trava a lista inteira.
 
 Não há, de propósito, UI para desativar/pausar um ativo monitorado nem para configurar o intervalo — fora do escopo pedido (ver `TASK-05` no `SPEC.md`).
 

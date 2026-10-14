@@ -48,7 +48,7 @@ export function htmlResultadoRetroativo(dado) {
   if (!Array.isArray(dado)) {
     // formato legado: objeto único — exibe como antes
     const entradas = dado.entradas || [];
-    if (!entradas.length) return '<p class="small text-muted mt-3">Nenhuma entrada com resultado real foi encontrada no período.</p>';
+    if (!entradas.length) return '<p class="small text-muted mt-3">Sem dados no período: nenhuma entrada com resultado real foi encontrada.</p>';
     return _htmlTabela([{ estrategia: dado.estrategia || '—', resultado: dado, erro: null }]);
   }
   if (!dado.length) return '<p class="small text-muted mt-3">Nenhuma estratégia retornou dados.</p>';
