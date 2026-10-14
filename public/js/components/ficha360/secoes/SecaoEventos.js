@@ -1,6 +1,7 @@
 import { BaseComponent } from '../../base/BaseComponent.js';
 import { montarLinhaDoTempo, filtrarPorTipo } from '../../../analise/ficha360/linhaDoTempo.js';
 import { escaparHtml } from '../../../utils/html.js';
+import { formatarData } from '../../../utils/dataHora.js';
 
 /**
  * F360-PAI-9: Seção Eventos - linha do tempo única
@@ -96,8 +97,10 @@ export class SecaoEventos extends BaseComponent {
   }
 
   renderEvento(evento) {
-    const { tipo, dataIso, titulo, categoria, icone, conteudo } = evento;
-    const dataFormatada = new Date(dataIso).toLocaleDateString('pt-BR');
+    const { dataIso, titulo, categoria, icone, conteudo } = evento;
+    // new Date('AAAA-MM-DD') e meia-noite UTC: em Brasilia cairia no dia anterior.
+    const dataFormatada = formatarData(dataIso, '—');
+    const link = /^https?:\/\//i.test(conteudo?.link || '') ? conteudo.link : null;
 
     return `
       <div class="timeline-item mb-3 p-3 border rounded" style="background-color: var(--f360-superficie-2); cursor: pointer;" data-data-iso="${escaparHtml(dataIso)}">
@@ -109,9 +112,9 @@ export class SecaoEventos extends BaseComponent {
               <span class="badge bg-secondary">${escaparHtml(categoria)}</span>
             </div>
             <p class="mb-1 fw-semibold">${escaparHtml(titulo)}</p>
-            ${tipo === 'comunicado' && conteudo?.link ? `
-              <a href="${escaparHtml(conteudo.link)}" target="_blank" rel="noopener noreferrer" class="small text-primary">
-                Ver documento oficial ↗
+            ${link ? `
+              <a href="${escaparHtml(link)}" target="_blank" rel="noopener noreferrer" class="small text-primary">
+                ${evento.tipo === 'comunicado' ? 'Ver documento oficial' : 'Abrir notícia'} ↗
               </a>
             ` : ''}
           </div>
