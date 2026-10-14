@@ -12,40 +12,51 @@ export function montarLinhaDoTempo(dados) {
   const { comunicados, noticias } = dados;
   const eventos = [];
 
-  // Adicionar comunicados
+  // Contrato do gestor (/empresas/{s}/comunicados): camelCase, data em dataEntrega.
   if (comunicados?.length) {
     comunicados.forEach((c) => {
+      const data = diaIso(c.dataEntrega ?? c.dataReferencia);
+      if (!data) return;
+      const categoria = c.categoriaRotulo || c.categoriaOriginal || 'Comunicado';
       eventos.push({
         tipo: 'comunicado',
-        data: c.data_entrega || c.data,
-        dataIso: c.data_entrega || c.data,
-        titulo: c.titulo || c.tipo,
-        categoria: c.tipo || 'Comunicado',
-        icone: iconeComunicado(c.tipo),
+        data,
+        dataIso: data,
+        titulo: c.assunto || c.especie || categoria,
+        categoria,
+        icone: iconeComunicado(c.categoria),
         conteudo: c,
       });
     });
   }
 
-  // Adicionar notícias
+  // Proxy de noticias do painel (/noticias/{s}): { titulo, link, fonte, publicadoEm }.
   if (noticias?.length) {
     noticias.forEach((n) => {
+      const data = diaIso(n.publicadoEm);
+      if (!data || !n.titulo) return;
       eventos.push({
         tipo: 'noticia',
-        data: n.data_publicacao,
-        dataIso: n.data_publicacao,
+        data,
+        dataIso: data,
         titulo: n.titulo,
-        categoria: 'Notícia',
+        categoria: n.fonte || 'Notícia',
         icone: '📰',
         conteudo: n,
       });
     });
   }
 
-  // Ordenar por data decrescente
-  eventos.sort((a, b) => new Date(b.data) - new Date(a.data));
+  // ISO ordena como texto; mais recente primeiro.
+  eventos.sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0));
 
   return eventos;
+}
+
+/** 'AAAA-MM-DD' do inicio de uma data ISO; null se nao for data. */
+function diaIso(valor) {
+  const dia = String(valor ?? '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : null;
 }
 
 /**
@@ -56,16 +67,12 @@ export function filtrarPorTipo(eventos, tipo) {
   return eventos.filter((e) => e.tipo === tipo);
 }
 
-/**
- * Retorna ícone baseado no tipo de comunicado.
- */
-function iconeComunicado(tipo) {
-  if (!tipo) return '📄';
-  const t = tipo.toUpperCase();
-  if (t.includes('FATO RELEVANTE')) return '⚠️';
-  if (t.includes('DFP')) return '📊';
-  if (t.includes('ITR')) return '📈';
-  if (t.includes('ESTATUTO')) return '📜';
-  if (t.includes('Assembleia')) return '🏛️';
+/** Icone pela categoria do gestor (FATO_RELEVANTE, PROVENTOS...). */
+function iconeComunicado(categoria) {
+  const c = String(categoria || '').toUpperCase();
+  if (c.includes('FATO_RELEVANTE')) return '⚠️';
+  if (c.includes('PROVENTO')) return '💰';
+  if (c.includes('RESULTADO') || c.includes('DFP') || c.includes('ITR')) return '📊';
+  if (c.includes('ASSEMBLEIA')) return '🏛️';
   return '📄';
 }

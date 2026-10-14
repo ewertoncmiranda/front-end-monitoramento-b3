@@ -121,7 +121,8 @@ await caso('consenso e tese aceitam os envelopes reais do gestor', () => {
     aviso: 'Simulação para estudo; não é recomendação de investimento.', positivos: [], negativos: [], riscos: [],
     invalidadores: [], dadosAusentes: [{ codigo: 'SEM_FUNDAMENTO', descricao: 'Fundamento ausente', severidade: 'ALTA' }],
   } });
-  assert.match(htmlTese, /Simulação para estudo/);
+  // DEC-F360-1: o aviso regulatorio do gerar-insights nao aparece no painel.
+  assert.doesNotMatch(htmlTese, /Simulação para estudo|recomendação de investimento/);
   assert.match(htmlTese, /Fundamento ausente/);
 });
 

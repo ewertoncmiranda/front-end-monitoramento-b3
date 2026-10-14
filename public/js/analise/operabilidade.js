@@ -1,11 +1,10 @@
 // Unica responsabilidade: regras de exibicao da tela Operabilidade (Plano OPR, OPR-PAI-2..5). Puro.
-// Linguagem conservadora: o status diz se o paper trading tem evidencia minima; nunca e recomendacao
-// de compra, venda ou uso de capital real.
+// O status diz se o paper trading tem evidencia minima. Sem aviso regulatorio (DEC-F360-1): so o
+// fato de que e simulacao.
 import { StatusOperacional } from '../contracts/statusOperacional.js';
 
 export const PREGOES_MINIMOS = 63;
-export const AVISO_SIMULACAO = 'Simulação (paper trading): nenhuma ordem real é enviada. '
-  + 'Os números não são recomendação de investimento nem garantia de resultado.';
+export const AVISO_SIMULACAO = 'Simulação (paper trading): nenhuma ordem real é enviada.';
 
 export const STATUS = Object.freeze({
   [StatusOperacional.NAO_OPERAVEL]: {
