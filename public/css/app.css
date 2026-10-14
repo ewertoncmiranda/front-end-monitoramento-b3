@@ -5,6 +5,30 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
+/* Paleta da ficha do ativo (Plano F360, contrato C4). Cor nunca vai sozinha:
+   quem usa poe tambem o icone (▲ comprar, ▼ vender, ■ manter). */
+:root {
+  --f360-compra-forte: #15803d;
+  --f360-compra: #16a34a;
+  --f360-manter: #b45309;
+  --f360-venda: #be123c;
+  --f360-info: #0369a1;
+  --f360-superficie: #ffffff;
+  --f360-superficie-2: #f1f5f9;
+  --f360-texto-mudo: #64748b;
+}
+
+[data-bs-theme="dark"] {
+  --f360-compra-forte: #22c55e;
+  --f360-compra: #4ade80;
+  --f360-manter: #f59e0b;
+  --f360-venda: #f43f5e;
+  --f360-info: #38bdf8;
+  --f360-superficie: #0f172a;
+  --f360-superficie-2: #1e293b;
+  --f360-texto-mudo: #94a3b8;
+}
+
 [data-bs-theme="dark"] .bg-light,
 [data-bs-theme="dark"] .bg-white {
   background-color: var(--bs-tertiary-bg) !important;

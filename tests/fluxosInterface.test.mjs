@@ -13,7 +13,7 @@ function classeFake() {
 const listeners = {};
 const outlet = { innerHTML: '' };
 globalThis.window = {
-  location: { hash: '#/estudos?visao=biblioteca' },
+  location: { hash: '#/estudos?visao=biblioteca', replace(destino) { this.hash = destino; } },
   addEventListener(tipo, callback) { listeners[tipo] = callback; },
 };
 globalThis.document = {
@@ -27,7 +27,14 @@ const { iniciarRouter } = await import('../public/js/router.js');
 iniciarRouter('#app');
 assert.equal(outlet.innerHTML, '<estudos-page></estudos-page>');
 
+// F360-PAI-1: a ficha antiga redireciona para a nova, levando a aba para a secao.
 window.location.hash = '#/gestao/PETR4?aba=fatores';
+listeners.hashchange();
+assert.equal(window.location.hash, '#/ativo/PETR4?secao=proventos');
+listeners.hashchange();
+assert.equal(outlet.innerHTML, '<ficha-ativo-page></ficha-ativo-page>');
+
+window.location.hash = '#/gestao';
 listeners.hashchange();
 assert.equal(outlet.innerHTML, '<gestao-page></gestao-page>');
 

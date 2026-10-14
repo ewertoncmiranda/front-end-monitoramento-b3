@@ -4,8 +4,12 @@
 // Roteamento por hash (#/rota) funciona em qualquer hospedagem estatica e
 // dentro de WebViews sem precisar de configuracao de servidor para
 // reescrever URLs - diferente de roteamento via History API.
+import { carregarSecao } from './components/ficha360/manifesto.js';
+import { lerUltimo, redirecionamento } from './components/ficha360/rotaFicha.js';
+
 const rotas = {
   '#/inicio': 'inicio-page',
+  '#/ativo': 'ficha-ativo-page',
   '#/gestao': 'gestao-page',
   '#/ativos': 'ativos-page',
   // Rotas antigas das listas abrem a tabela unica na visao correspondente (REQ-UX-8).
@@ -28,26 +32,40 @@ const rotas = {
   '#/assistente': 'assistente-page',
   '#/operabilidade': 'operabilidade-page',
   '#/simulador': 'simulador-page',
-  '#/ficha': 'gestao-page',
 };
 
 const ROTA_PADRAO = '#/inicio';
 
+/** Pagina da rota; `#/ativo/PETR4` e `#/opcoes/PETR4` levam o simbolo como parametro. */
+export function paginaDaRota(hash) {
+  // `#/glossario?padrao=martelo`: o que vem depois do `?` e parametro da
+  // pagina (ela mesma le), nao parte da rota.
+  const caminho = String(hash || ROTA_PADRAO).split('?')[0];
+  return rotas[caminho]
+    || (caminho.startsWith('#/ativo/') ? rotas['#/ativo'] : null)
+    || (caminho.startsWith('#/opcoes/') ? rotas['#/opcoes'] : null)
+    || rotas[ROTA_PADRAO];
+}
+
 export function iniciarRouter(outletSelector) {
   const outlet = document.querySelector(outletSelector);
+  let rodada = 0;
 
-  function renderizarRotaAtual() {
-    // `#/glossario?padrao=martelo`: o que vem depois do `?` e parametro da
-    // pagina (ela mesma le), nao parte da rota.
-    const hash = (window.location.hash || ROTA_PADRAO).split('?')[0];
-    // `#/gestao/PETR4`: o simbolo e parametro de rota (a propria GestaoPage
-    // le de window.location.hash), nao uma rota nova - so o prefixo importa
-    // pra escolher a pagina.
-    const tagName = rotas[hash]
-      || (hash.startsWith('#/gestao/') ? rotas['#/gestao'] : null)
-      || (hash.startsWith('#/opcoes/') ? rotas['#/opcoes'] : null)
-    || (hash.startsWith('#/ficha/') ? rotas['#/ficha'] : null)
-      || rotas[ROTA_PADRAO];
+  async function renderizarRotaAtual() {
+    const minha = ++rodada;
+    const hash = window.location.hash || ROTA_PADRAO;
+    const ultimo = lerUltimo();
+    // #/candles so vira a ficha quando a secao Grafico existe; antes disso a
+    // tela de velas continua como estava.
+    const temGrafico = hash.split('?')[0] === '#/candles' && ultimo ? await carregarSecao('grafico') : false;
+    if (minha !== rodada) return;
+    // Ficha antiga (#/gestao/X, #/ficha/X) e #/candles viram a ficha nova.
+    const destino = redirecionamento(hash, { ultimo, temGrafico });
+    if (destino) {
+      window.location.replace(destino);
+      return;
+    }
+    const tagName = paginaDaRota(hash);
     outlet.innerHTML = `<${tagName}></${tagName}>`;
   }
 

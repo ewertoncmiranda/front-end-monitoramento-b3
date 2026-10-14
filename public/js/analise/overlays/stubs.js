@@ -1,0 +1,11 @@
+export const overlayNr7 = { id: 'nr7', rotulo: 'NR7 / Inside Bar', horizonte: 'curto', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayOco = { id: 'oco', rotulo: 'OCO / Cabeça-Ombros', horizonte: 'medio', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayDuplo = { id: 'duplo', rotulo: 'Topo / Fundo Duplo', horizonte: 'medio', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayTriangulo = { id: 'triangulo', rotulo: 'Triângulo', horizonte: 'medio', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayBandeira = { id: 'bandeira', rotulo: 'Bandeira', horizonte: 'medio', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayFibExtensao = { id: 'fibExtensao', rotulo: 'Fibonacci + Extensão', horizonte: 'medio', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayTendencia = { id: 'tendencia', rotulo: 'Linha de Tendência', horizonte: 'longo', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayCanalLongo = { id: 'canalLongo', rotulo: 'Canal de Tendência', horizonte: 'longo', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayWyckoff = { id: 'wyckoff', rotulo: 'Acumulação / Distribuição (Wyckoff)', horizonte: 'longo', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayCopa = { id: 'copa', rotulo: 'Copa com Alça', horizonte: 'longo', calcular: () => ({ linhas: [], marcadores: [] }) };
+export const overlayElliott = { id: 'elliott', rotulo: 'Ondas de Elliott', horizonte: 'longo', calcular: () => ({ linhas: [], marcadores: [] }) };

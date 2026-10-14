@@ -45,7 +45,8 @@ Fonte: public/js/router.js e public/js/main.js.
 
 | Rota | Conteúdo |
 |---|---|
-| #/gestao | Padrão. Agrupa Consulta, Cadastro e Como funciona em abas internas |
+| #/ativo, #/ativo/{TICKER}?secao={id} | Ficha do ativo centralizada (Plano F360): cabeçalho fixo e seções do manifesto C5. Sem ticker, mostra o seletor e o último ativo visto. `#/gestao/X` e `#/ficha/X` redirecionam para cá (a antiga `?aba=` vira `?secao=`); `#/ficha` vai para `#/ativo`; `#/candles` vem para a seção Gráfico do último ativo visto quando essa seção existir |
+| #/gestao | Ficha clássica (`<consulta-page>`), sem a aba Cadastro, removida em 2026-10-14 (F360-PAI-12): favoritar é a estrela da ficha |
 | #/ativos | Tabela única de ativos (REQ-UX-8): chips Todos/Favoritos/Monitorados, busca e setor no link; `#/base`, `#/favoritos`, `#/monitorados` e `#/setores` abrem esta tela na visão correspondente |
 | #/candles | Velas, padrões, notícias e comunicados relacionados |
 | #/comunicados | Newsletter por semana e linha do tempo por ativo |
@@ -60,7 +61,7 @@ Fonte: public/js/router.js e public/js/main.js.
 | #/arquitetura | Arquitetura do ecossistema |
 | #/design-codigo | Organização do código |
 
-Rotas desconhecidas exibem Gestão. As antigas #/consulta, #/cadastro e #/metodologia não selecionam suas antigas páginas: não estão mais no mapa. As páginas correspondentes continuam usadas dentro de GestaoPage.
+Rotas desconhecidas exibem Início. As antigas #/consulta, #/cadastro e #/metodologia não estão mais no mapa; `CadastroPage` foi removida.
 
 ### 2.2 Consulta e monitoramento
 
@@ -648,3 +649,139 @@ Rota inexistente responde 404: a tela mostra "dados operacionais indisponíveis"
 | SIM-PAI-5 | Aba "Operações": lista de operações manuais com status, P&L do dia e acumulado; expansível para histórico pregão a pregão | `components/simulador/OperacoesManuais.js` | gestor#SIM-GES-3, SIM-GES-4, SIM-PAI-1 | PENDENTE mostra data de abertura estimada; ABERTA mostra linha por pregão ao expandir; FECHADA mostra resumo com retorno vs CDI | IMPLEMENTADO (2026-10-12): lista em accordion diferencia PENDENTE, ABERTA e FECHADA; mostra P&L diário/acumulado, abertura estimada, histórico pregão a pregão e retorno vs CDI |
 | SIM-PAI-6 | Painel lateral de operabilidade paralela: mini-resumo do paper trading real (status, retorno vs CDI, pregões avaliados) exibido junto ao simulador para comparação direta | `components/simulador/OperabilidadeParalela.js` | OPR-PAI-1, SIM-PAI-1 | Reusa dados já carregados da OperabilidadePage; não faz chamada extra | IMPLEMENTADO (2026-10-12): painel lateral mostra status, retorno vs CDI e pregões avaliados; a página busca o resumo operacional uma vez e o repassa ao componente, com estado educativo quando ausente |
 | SIM-PAI-7 | Testes | `tests/simulador.test.mjs` | SIM-PAI-1..6 | Cobre: ativo inválido rejeitado, IA_LIVRE cache reutilizado (sem segunda chamada), data futura bloqueada, valor `null` nunca vira zero, XSS no texto IA escapado | IMPLEMENTADO (2026-10-12): `tests/simulador.test.mjs` cobre rejeição de ativo inválido, payload/cache IA_LIVRE, bloqueio de data futura, preservação de `null` como “sem dado”, escape XSS, vazio retroativo, status de operações e operabilidade paralela |
+
+---
+
+## Plano F360: ficha do ativo centralizada (2026-10-14)
+
+**Status:** PLANEJADO · **Rótulo das tarefas:** `F360-PAI-*` (este repositório) e `F360-GES-*` (`gestor-ativos-brutos/SPEC.md`, Plano F360). IDs reservados; não renomear nem reaproveitar.
+
+**Objetivo:** uma única página por ativo (`#/ativo/{TICKER}`) que reúne cotação, decisão objetiva, gráfico de velas com as ferramentas de análise, valuation, fundamentos com histórico, proventos, opções, eventos, operação simulada e IA. A aba "Cadastro" sai: todos os ativos já estão no banco, e o único efeito do cadastro (favoritar para receber cotação intradiária) já existe no `FavoritoToggle`.
+
+### DEC-F360-1: sinal objetivo, sem filtro regulatório
+
+Decisão do usuário (2026-10-14). A ferramenta é de uso próprio e não vai a mercado. A ficha mostra **COMPRAR / VENDER / MANTER** com entrada, alvo, stop e relação risco/retorno, sem disclaimer, rótulo "educacional" ou "estudo/simulação". A calibração aparece como dado (taxa de acerto do backtest ao lado do sinal), não como aviso. Esta decisão revoga, para o painel, as regras de texto "linguagem de estudo/simulação" e "nunca linguagem de recomendação" dos planos OPT e SIM, e substitui o ISS-F6 do `gerar-insights`. Textos já existentes nessas telas só mudam se uma tarefa própria pedir. O Plano F360 não toca esses arquivos.
+
+### Regras de execução paralela (valem para todo agente: Codex, Devin, Copilot, Claude)
+
+1. **Nenhuma tarefa F360 depende de outra.** Cada uma programa contra os contratos C1–C7 abaixo, e não contra o código de outra tarefa. Se o outro lado ainda não existir, a tela mostra o estado vazio previsto (`—`, "sem dado ainda" ou "seção em construção") e nunca quebra.
+2. **Posse exclusiva de arquivos.** Cada tarefa só cria ou edita os arquivos listados na sua linha. Reaproveitar um componente existente é permitido apenas por import/uso, sem editar o arquivo dele. Precisou mexer num arquivo de outra tarefa ou de fora da lista? Pare e registre no arquivo de status. Não edite.
+3. **Branch própria:** `feature-f360-pai-N` ou `feature-f360-ges-N`, criada a partir da `develop` (destino dos PRs automáticos; a `main` está defasada). Commit por pathspec, nunca `git add -A`. O PR abre automaticamente pela esteira.
+4. **Status fora da SPEC.** Para não colidir em linhas vizinhas desta tabela, ao terminar a tarefa o agente cria `docs/f360/F360-PAI-N.md` com estado (`IMPLEMENTADO`/`BLOQUEADO`), evidência (testes que passam) e desvios. Esta SPEC não é editada pelas tarefas, exceto pela F360-PAI-12 na seção 2.1.
+5. **Testes isolados:** cada tarefa cria `tests/ficha360/<nome>.test.mjs`, executável sozinho com `node`, usando um contexto falso (C2) em vez de rede. Só a F360-PAI-1 edita `package.json`.
+6. **Estilo:** só Bootstrap mais os tokens C4. CSS específico de um componente vai num `<style>` dentro do próprio template, com prefixo de classe `f360-<secao>-`. Só a F360-PAI-11 edita `public/css/app.css`.
+7. **Start único** (DEC-AGT-1): nada de comando, flag ou script novo. Tudo roda pelo `node server.js` existente.
+
+### Contratos (fonte da verdade para todas as tarefas)
+
+**C1 — Seção da ficha.** Cada seção é um custom element `secao-<id>` em `public/js/components/ficha360/secoes/Secao<Id>.js` e estende `BaseComponent`. A página cria o elemento e atribui `elemento.contexto = ctx` (C2). O setter de `contexto` dispara a carga. A seção é responsável pelo próprio esqueleto de carregamento (pode usar `components/ficha/esqueleto.js`), pelo estado vazio (`EstadoVazio`) e pelo erro. Ela nunca lança exceção por campo `null` e nunca transforma `null` em zero. Os ids e a ordem ficam fixos em C5.
+
+**C2 — `FichaContexto`.** Objeto com `simbolo: string` e `obter(chave): Promise<objeto | null>`. Cada chave é buscada no máximo uma vez por ficha (cache). 404 ou erro de rede resolve `null`, e não rejeita. Chaves:
+
+| Chave | Origem |
+|---|---|
+| `ativo` | `GET /ativos/{s}` |
+| `analise` | `GET /analises/{s}/analise` |
+| `fundamentosCvm` | `GET /analises/{s}/fundamentos-cvm` (campos novos em C6) |
+| `fundamentosHistorico` | `GET /analises/{s}/fundamentos-cvm/historico?anos=5` (C6) |
+| `base` | linha exata do símbolo em `GET /base/ativos?q={s}` (`nome`, `setor`, `situacaoRegistro`, `ufMunicipio`, `ultimoFechamento`) |
+| `identidade` | `GET /ativos/{s}/identidade` (C6) |
+| `opiniao` | `GET /ativos/{s}/opiniao` |
+| `fatores` | `GET /ativos/{s}/fatores` |
+| `proventos` | `GET /ativos/{s}/proventos-contabeis` |
+| `composicao` | `GET /ativos/{s}/composicao-capital` |
+| `comunicados` | `GET /empresas/{s}/comunicados?desde=<hoje − 1 ano>` |
+| `noticias` | `GET /noticias/{s}` |
+| `opcoes` | `GET /ativos/{s}/opcoes` |
+| `operacional` | `GET /operacional/tickers/{s}` |
+| `backtest` | `GET /validacao/backtest` |
+| `diario` | `GET /validacao/diario?simbolo={s}&limite=60` |
+| `pregoes` | `GET /ativos/{s}/pregoes?intervalo=dia&de=<hoje − 1 ano>` |
+
+Nos testes, um contexto falso é `{ simbolo: 'PETR4', obter: async (k) => fixtures[k] ?? null }`.
+
+**C3 — Eventos entre seções.** São disparados em `document` como `CustomEvent`, com `detail.simbolo` sempre presente. Quem escuta ignora eventos de outro símbolo.
+
+| Evento | Emissor | `detail` |
+|---|---|---|
+| `f360:plano` | `secao-decisao` | `{ simbolo, acao: 'COMPRAR'\|'VENDER'\|'MANTER', forca: 0\|1\|2, entrada: {min, max}, alvo, stop, rr }` (números ou `null`) |
+| `f360:destacar-data` | `secao-eventos` | `{ simbolo, dataIso }` |
+| `f360:ir-para` | qualquer seção | `{ simbolo, secao: '<id de C5>' }` |
+
+`secao-cabecalho` escuta `f360:plano`, `secao-grafico` escuta `f360:destacar-data` e a página escuta `f360:ir-para`. Sem emissor, o ouvinte segue funcionando sem o dado.
+
+Método novo do `CandleChart`: `focarData(dataIso)` centraliza a vela da data e a destaca por 2 s. Quem implementa é a F360-PAI-11, dona do arquivo. Quem chama verifica `typeof grafico.focarData === 'function'` antes; se o método não existir, a chamada simplesmente não acontece.
+
+**C4 — Tokens de cor.** São sempre usados com o fallback do tema claro, por exemplo `var(--f360-compra, #16a34a)`.
+
+| Token | Claro | Escuro | Uso |
+|---|---|---|---|
+| `--f360-compra-forte` | `#15803d` | `#22c55e` | COMPRAR força 2, vela de alta |
+| `--f360-compra` | `#16a34a` | `#4ade80` | COMPRAR força 1 |
+| `--f360-manter` | `#b45309` | `#f59e0b` | MANTER, alerta |
+| `--f360-venda` | `#be123c` | `#f43f5e` | VENDER, vela de baixa |
+| `--f360-info` | `#0369a1` | `#38bdf8` | comunicados, overlays neutros |
+| `--f360-superficie` | `#ffffff` | `#0f172a` | fundo da ficha |
+| `--f360-superficie-2` | `#f1f5f9` | `#1e293b` | cartões |
+| `--f360-texto-mudo` | `#64748b` | `#94a3b8` | rótulos, procedência |
+
+Cor nunca vai sozinha: COMPRAR leva ▲, VENDER leva ▼ e MANTER leva ■.
+
+**C5 — Manifesto de seções.** A ordem é fixa: `cabecalho`, `decisao`, `grafico`, `valuation`, `fundamentos`, `proventos`, `opcoes`, `eventos`, `operacao`, `ia`. Cada id corresponde ao caminho `components/ficha360/secoes/Secao<Id>.js` (com inicial maiúscula: `SecaoCabecalho.js`, `SecaoIa.js`...) e à tag `secao-<id>`. Cada seção é carregada pela página com `import()` dinâmico individual. Se a importação falhar, a página mostra "seção em construção" no lugar e as demais seguem. A âncora de cada seção é `#/ativo/{TICKER}?secao=<id>`.
+
+**C6 — Campos e rotas novos do gestor** (detalhe em `gestor#F360-GES-*`). Todos em snake_case e podem vir `null`.
+- `fundamentos-cvm` ganha `ebitda`, `ativo_circulante`, `passivo_circulante`, `cobertura_juros`, `liquidez_corrente`, `liquidez_seca`, `dso`, `graham_number`, `pl`, `ev_ebitda` e `pl_setorial_mediana`.
+- `GET /analises/{s}/fundamentos-cvm/historico?anos=5` retorna `{ simbolo, pontos: [{ periodo, tipo_periodo, roe, roic, margem_liquida, divida_liquida, ebitda, liquidez_corrente, lpa, vpa, receita_liquida, lucro_liquido }] }`, em ordem crescente de período e só com períodos ANUAL e TTM.
+- `GET /ativos/{s}/identidade` retorna `{ simbolo, cnpj, razao_social, isin, cnae, grupo_economico, situacao_registro, data_constituicao, uf_municipio, free_float }`.
+
+**C7 — Regra do plano de operação** (implementada só em `analise/ficha360/planoDeOperacao.js`, função pura `montarPlano({ analise, fundamentosCvm, pregoes, backtest, opiniao })`):
+- **Ação base:** `COMPRA_FORTE` vira COMPRAR com força 2. `COMPRA_MODERADA` vira COMPRAR com força 1. `ALERTA_RISCO` vira VENDER com força 2. `VENDA_VALUATION` vira VENDER com força 1. Qualquer outro valor vira MANTER com força 0.
+- **ATR:** média de 14 pregões de `max(máx − mín, |máx − fech_ant|, |mín − fech_ant|)`. Com menos de 15 pregões, entrada, stop e R/R ficam `null` e a ação é mantida.
+- **COMPRAR:**
+  - suporte = menor mínima dos últimos 20 pregões;
+  - stop = `max(suporte, preço − 2·ATR)`;
+  - entrada = `[max(suporte, preço − ATR), preço]`;
+  - alvo = média entre o valor justo base (Graham, da `analise`) e `lpa × pl_setorial_mediana`, ou só o que existir.
+- **VENDER:**
+  - resistência = maior máxima dos últimos 20 pregões;
+  - stop = `min(resistência, preço + 2·ATR)`;
+  - entrada = `[preço, min(resistência, preço + ATR)]`;
+  - alvo = o mesmo valor justo da regra de compra.
+- **R/R:** `|alvo − preço| / |preço − stop|`. Se `rr < 1,5` ou se o alvo estiver do lado errado do preço, a ação vira MANTER com força 0. O motivo vai em `motivos[]`.
+- **Retorno:** `{ acao, forca, entrada, alvo, stop, rr, upside_pct, horizonte (da opiniao, ou null), taxa_acerto (do backtest para a recomendação de origem, ou null), motivos[] }`.
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos (posse exclusiva) | Aceite |
+|---|---|---|---|
+| F360-PAI-1 | Esqueleto da ficha: página `ficha-ativo-page`, `FichaContexto` (C2), manifesto (C5), rotas e executor de testes da pasta | novos: `pages/FichaAtivoPage.js`, `components/ficha360/FichaContexto.js`, `components/ficha360/manifesto.js`, `api/ficha360Api.js`, `tests/ficha360/executar.mjs`, `tests/ficha360/pagina.test.mjs`; editados: `router.js`, `main.js`, `navegacao.js` (item "Ficha do ativo" aponta para `#/ativo` e `#/ativo` entra no grupo Ativos), `tests/fluxosInterface.test.mjs` (espera o redirecionamento de `#/gestao/X`), `package.json` (só acrescenta `node tests/ficha360/executar.mjs`); novo auxiliar `components/ficha360/rotaFicha.js` | `#/ativo/X` abre a ficha. `#/gestao/X` e `#/ficha/X` redirecionam para `#/ativo/X`. `#/candles` sem símbolo abre o último ativo visto (`localStorage` `b3.ficha.ultimo.v1`, com leitura e escrita em try/catch) na seção `grafico`, ou `#/ativos` se não houver. As seções carregam por `import()`; seção ausente vira "em construção" sem quebrar as outras. Contexto com cache: duas seções pedindo a mesma chave geram uma só requisição. Faixa de âncoras (C5) fixa no topo. O executor roda todo `tests/ficha360/*.test.mjs` |
+| F360-PAI-2 | Cabeçalho fixo | novos: `components/ficha360/secoes/SecaoCabecalho.js`, `tests/ficha360/cabecalho.test.mjs` | Mostra ticker, razão social, setor, preço, variação (▲/▼ com C4), data e fonte do preço, ISIN, CNPJ, situação na CVM, free float e a estrela (`<favorito-toggle>` reaproveitado). Ao receber `f360:plano`, mostra o selo da ação; sem o evento, não mostra selo. Campo `null` vira `—` |
+| F360-PAI-3 | Plano de operação e faixa de decisão | novos: `analise/ficha360/planoDeOperacao.js`, `components/ficha360/secoes/SecaoDecisao.js`, `tests/ficha360/planoDeOperacao.test.mjs` | Implementa C7 como função pura com testes de: COMPRAR válido, VENDER válido, R/R < 1,5 rebaixado para MANTER, alvo do lado errado, menos de 15 pregões, P/L setorial ausente e `null` preservado. A faixa mostra ação, força, entrada, alvo (+%), stop (−%), R/R, horizonte e taxa de acerto em linguagem direta (DEC-F360-1). Emite `f360:plano` |
+| F360-PAI-4 | Painel de velas reutilizável e seção Gráfico | novos: `components/painelCandles/PainelCandles.js`, `components/ficha360/secoes/SecaoGrafico.js`, `tests/ficha360/painelCandles.test.mjs`; editado: `pages/CandlesPage.js` | `<painel-candles simbolo="X">` reúne `candle-chart`, `painel-padroes`, `painel-tecnico` e as notícias do candle, usando as APIs públicas atuais sem editar esses componentes. Seletor de período e intervalo como hoje. `CandlesPage` passa a ser só seletor de ativo mais `<painel-candles>`, com comportamento igual. `SecaoGrafico` usa `<painel-candles>` e, ao receber `f360:destacar-data`, chama `focarData` no gráfico quando o método existir (C3) |
+| F360-PAI-5 | Registro de overlays técnicos (aberto/fechado) | novos: `analise/overlays/registro.js`, `analise/overlays/*.js` (um por indicador), `tests/ficha360/overlays.test.mjs`; editado: `components/PainelTecnico.js` | Cada um dos 14 overlays vira `{ id, rotulo, horizonte, calcular(candles) → { linhas, marcadores } }` em arquivo próprio. O `PainelTecnico` só percorre o registro. Eventos e atributos públicos do `PainelTecnico` não mudam. Teste prova que um overlay novo entra apenas criando um arquivo e registrando-o, e que os 14 atuais produzem a mesma saída de antes para um conjunto fixo de velas |
+| F360-PAI-6 | Seção Valuation | novos: `analise/ficha360/valuation.js`, `components/ficha360/secoes/SecaoValuation.js`, `tests/ficha360/valuation.test.mjs` | Reaproveita `ValorJustoRegua` (sem editá-lo). Acrescenta Graham Number, P/L atual × P/L setorial (mediana) com o preço implícito `lpa × pl_setorial_mediana`, EV/EBITDA e P/VP. Cada múltiplo vem colorido por faixa (C4) e com a fonte e a defasagem do balanço |
+| F360-PAI-7 | Seção Fundamentos com sparklines | novos: `components/ficha360/Sparkline.js` (`<f360-sparkline>` genérico: valores, rótulos, formato), `analise/ficha360/seriesFundamentos.js`, `components/ficha360/secoes/SecaoFundamentos.js`, `tests/ficha360/fundamentos.test.mjs` | Blocos Rentabilidade (ROE, ROIC, margem), Endividamento (dívida líquida/EBITDA, cobertura de juros), Liquidez (corrente, seca, DSO) e Resultado (receita, EBITDA, lucro), cada um com valor atual, tendência de 5 anos (sparkline) e seta de direção. Sem `fundamentosHistorico`, mostra só o valor atual com "histórico indisponível" |
+| F360-PAI-8 | Seções Proventos e Opções | novos: `components/ficha360/secoes/SecaoProventos.js`, `components/ficha360/secoes/SecaoOpcoes.js`, `tests/ficha360/proventosOpcoes.test.mjs` | Proventos reaproveita `ProventosContabeis` e acrescenta dividend yield dos últimos 12 meses e payout do último exercício. Opções mostra um resumo (vencimentos, nº de CALL/PUT válidas, strike mais negociado e status da cadeia) e link para `#/opcoes/X`, sem editar `OpcoesPainel` |
+| F360-PAI-9 | Seção Eventos (linha do tempo única) | novos: `analise/ficha360/linhaDoTempo.js`, `components/ficha360/secoes/SecaoEventos.js`, `tests/ficha360/linhaDoTempo.test.mjs` | Junta comunicados CVM e notícias em ordem decrescente, com filtro por tipo e ícone por categoria. Clicar num item emite `f360:destacar-data`. Texto externo sempre escapado (`escaparHtml`) |
+| F360-PAI-10 | Seções Operação e IA | novos: `components/ficha360/secoes/SecaoOperacao.js`, `components/ficha360/secoes/SecaoIa.js`, `tests/ficha360/operacaoIa.test.mjs` | Operação reaproveita `OperabilidadeAtivo` e tem link "simular este ativo" para `#/simulador`. IA reaproveita `AtivoIa`. Nenhum dos dois componentes reaproveitados é editado |
+| F360-PAI-11 | Paleta e tema | editados: `public/css/app.css`, `components/CandleChart.js`; novo: `tests/ficha360/paleta.test.mjs` | Tokens C4 definidos em `:root` e `[data-bs-theme="dark"]`. O `CandleChart` lê `--f360-compra-forte`/`--f360-venda` via `getComputedStyle` (fallback para as cores atuais) e redesenha ao trocar o tema. Acrescenta `focarData(dataIso)` (C3). O resto da API pública do `CandleChart` fica inalterado |
+| F360-PAI-12 | Remoção da aba Cadastro e documentação de rotas | editados: `pages/GestaoPage.js`, `README.md`, seção 2.1 desta SPEC; removido: `pages/CadastroPage.js`; novo: `tests/ficha360/semCadastro.test.mjs` | `GestaoPage` sem a aba Cadastro e sem importar `CadastroPage`. README e seção 2.1 descrevem `#/ativo/X` como ficha e os redirecionamentos. `tests/proxyFluxos.test.mjs` continua passando (a rota `POST /ativos/registrar` do proxy não é tocada) |
+
+### Grupos para dividir entre agentes
+
+As tarefas são independentes (regra 1) e não compartilham arquivos (regra 2), então qualquer divisão funciona. Os três grupos abaixo equilibram volume de trabalho e mantêm afinidade de assunto dentro de cada agente.
+
+| Grupo | Tarefas | Foco | Perfil sugerido |
+|---|---|---|---|
+| **A — Estrutura e visual** | F360-PAI-1, F360-PAI-2, F360-PAI-10, F360-PAI-11, F360-PAI-12 | página, rotas, contexto, cabeçalho, paleta, limpeza | agente com bom contexto do repositório (ex.: Codex) |
+| **B — Gráfico e decisão** | F360-PAI-3, F360-PAI-4, F360-PAI-5, F360-PAI-9 | regra de trading pura, velas, overlays, linha do tempo | agente forte em lógica e testes (ex.: Devin) |
+| **C — Dados e conteúdo** | gestor#F360-GES-1, gestor#F360-GES-2, gestor#F360-GES-3, F360-PAI-6, F360-PAI-7, F360-PAI-8 | endpoints Java e as seções que os consomem | agente que atua nos dois repositórios (ex.: Copilot no gestor + painel) |
+
+Os grupos podem rodar ao mesmo tempo e em qualquer ordem. A ordem de merge também é livre: cada PR é seguro sozinho porque o que falta aparece como estado vazio.
+
+### Aceite do plano
+
+- `npm test` passa em cada branch isolada e depois de todas mescladas.
+- `#/ativo/PETR4` mostra as dez seções, com cabeçalho e faixa de decisão visíveis sem rolar em 1366×768 e em 375 px de largura sem rolagem horizontal.
+- Tema claro e escuro legíveis. Nenhum `null` aparece como zero.
+- Nenhum texto de disclaimer regulatório na ficha (DEC-F360-1).

@@ -5,6 +5,7 @@ import './components/BottomNav.js';
 import './pages/InicioPage.js';
 import './pages/InicioPage.js';
 import './pages/GestaoPage.js';
+import './pages/FichaAtivoPage.js';
 import './pages/AtivosPage.js';
 import './pages/CandlesPage.js';
 import './pages/ComunicadosPage.js';

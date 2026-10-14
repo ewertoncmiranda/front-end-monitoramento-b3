@@ -242,7 +242,7 @@ export function htmlOperacoes(operacoes = [], ativos = [], filtroStatus = '', hi
            data-simbolo="${escaparHtml(o.simbolo)}"
            data-data-entrada="${escaparHtml(String(o.dataEntrada))}"
            data-capital="${escaparHtml(String(o.capital || '10000'))}"
-           title="Usar esta entrada no Cenário">→ Cenário</button>`
+           title="Usar esta entrada no Cenário">→ Simular no Cenário</button>`
       : '';
 
     // melhoria 6: thead com rótulos de coluna no histórico

@@ -78,7 +78,7 @@ caso('ultimos pregoes: tabela com ticket, aproximado marcado e traco quando ause
   assert.match(html, /Ticket médio/);
   assert.match(html, /≈ R\$ /);
   assert.match(html, /R\$ 18\.250,46/);
-  assert.match(html, /<td data-label="Ticket médio" class="text-end">—<\/td>/);
+  assert.match(html, /<td data-label="Ticket médio" class="text-end" data-sort-value="">—<\/td>/);
   assert.match(html, /polyline/);
   assert.match(renderizar([]), /Sem pregões/);
   assert.match(renderizar([{ dataIso: '2026-10-05', dataFormatada: '05/10/2026', close: 1, numeroNegocios: 0, volume: 0, pregoes: 1 }]), /indisponível/);

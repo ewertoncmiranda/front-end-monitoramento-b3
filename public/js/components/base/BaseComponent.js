@@ -6,6 +6,11 @@
 // importar CSS em cada um deles.
 export class BaseComponent extends HTMLElement {
   connectedCallback() {
+    this.render();
+  }
+
+  /** Atualiza o conteúdo e religa os hooks do markup recém-criado. */
+  render() {
     this.innerHTML = this.template();
     this.afterRender();
   }
