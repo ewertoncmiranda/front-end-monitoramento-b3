@@ -18,21 +18,21 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
   template() {
     const hoje = _hoje();
     return `
-      <form id="form-adicionar-ativo" novalidate>
+      <div id="form-adicionar-ativo">
         <div class="mb-3">
           <span class="form-label fw-semibold d-block">Ativo</span>
           <busca-ativos id="seletor-ativo" modo="unico"></busca-ativos>
         </div>
         <div class="mb-3">
           <label for="data-entrada" class="form-label fw-semibold">Data de entrada</label>
-          <input type="date" id="data-entrada" class="form-control" max="${hoje}" required>
+          <input type="date" id="data-entrada" class="form-control" max="${hoje}">
         </div>
         <div class="mb-3">
           <label for="capital" class="form-label fw-semibold">Capital (R$)</label>
-          <input type="number" id="capital" class="form-control" min="0.01" step="0.01" placeholder="0,00" required>
+          <input type="number" id="capital" class="form-control" min="0.01" step="0.01" placeholder="0,00">
         </div>
-        <button type="submit" id="btn-adicionar" class="btn btn-success w-100">Adicionar</button>
-      </form>
+        <button type="button" id="btn-adicionar" class="btn btn-success w-100">Adicionar</button>
+      </div>
     `;
   }
 
@@ -44,11 +44,8 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
       this._simbolo = e.detail?.simbolos?.[0] ?? '';
     });
 
-    const form = this.querySelector('#form-adicionar-ativo');
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      this._submeter();
-    });
+    // Sem <form>: a carteira fica dentro de outro formulario da pagina (form aninhado).
+    this.querySelector('#btn-adicionar').addEventListener('click', () => this._submeter());
   }
 
   setCarteiraId(id) {
