@@ -165,6 +165,12 @@ await caso('pagina completa monta as quatro secoes', () => {
   for (const trecho of ['Em observação', 'grafico-operabilidade', 'Posições abertas (2)', 'Operações encerradas (1)', 'Sinais que não viraram operação']) {
     assert.ok(html.includes(trecho), trecho);
   }
+  for (const id of ['operabilidade-status', 'operabilidade-pregoes', 'maturidade-63-popover', 'maturidade-126-popover',
+    'operabilidade-alertas', 'operabilidade-grafico', 'operabilidade-carteira', 'operabilidade-bloqueios']) {
+    assert.ok(html.includes(id), `ajuda ${id}`);
+  }
+  assert.match(html, /Posições abertas pela regra de entrada vigente\. Sem execução real\./);
+  assert.match(html, /liquidez, dado ausente, drawdown/);
 });
 
 await caso('rota no roteador, item no grupo Avaliacao e /operacional no proxy do gestor', () => {

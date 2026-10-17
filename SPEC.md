@@ -790,7 +790,7 @@ Os grupos podem rodar ao mesmo tempo e em qualquer ordem. A ordem de merge tamb�
 
 ## Plano AJUDA: ícones de contexto na aba Operabilidade (2026-10-17)
 
-**Status:** PLANEJADO · **Rótulo das tarefas:** `AJUDA-PAI-*`. IDs reservados; não renomear.
+**Status:** IMPLEMENTADO (2026-10-17) · **Rótulo das tarefas:** `AJUDA-PAI-*`. IDs reservados; não renomear.
 
 **Objetivo:** adicionar um botão `?` no canto superior direito de cada card da aba Operabilidade. Ao clicar, um popover inline (sem dependência externa) exibe título e descrição do card e fecha ao clicar fora. Nenhuma rota nova no backend.
 
@@ -802,11 +802,11 @@ Mesmas do Plano F360 (regras 1–7, seção acima). Cada tarefa possui posse exc
 
 | ID | Tarefa | Arquivos (posse exclusiva) | Depende | Aceite | Status |
 |---|---|---|---|---|---|
-| AJUDA-PAI-1 | **Utilitário `htmlAjuda`:** `htmlAjuda(id, titulo, texto)` retorna botão `?` com popover `role="tooltip"` absolutamente posicionado; fecha via `mousedown` no `document` com `closest`; `aria-expanded` e `aria-describedby`; CSS próprio na seção `/* === AJUDA POPOVER === */` de `app.css` (`.btn-ajuda`, `.ajuda-popover`, `.ajuda-popover.visivel`); `tests/ajuda.test.mjs` cobre: abre, fecha ao clicar fora, escapa título e texto | novos: `public/js/utils/ajuda.js`; editado: `public/css/app.css` | — | Função exportada; popover visível em 375 px sem quebrar layout; `npm test` verde | PLANEJADO |
-| AJUDA-PAI-2 | **Integração em `OperabilidadePage.js`:** importa `htmlAjuda` e insere `${htmlAjuda(...)}` em `htmlResumo` (status/badge, pregões avaliados), `htmlMaturidade` (barras 63/126) e `htmlOperabilidade` (alertas, gráfico) com os textos da proposta | editado: `public/js/pages/OperabilidadePage.js` | AJUDA-PAI-1 | Três cards com botão `?` visível; conteúdo do popover não vazio; layout intacto | PLANEJADO |
-| AJUDA-PAI-3 | **Integração em `GraficoOperabilidade.js`:** importa `htmlAjuda` e insere botão no cabeçalho do gráfico retorno × CDI | editado: `public/js/components/operacional/GraficoOperabilidade.js` | AJUDA-PAI-1 | Card do gráfico com botão `?`; popover descreve o eixo e a comparação com CDI líquido | PLANEJADO |
-| AJUDA-PAI-4 | **Integração em `CarteiraSimulada.js`:** botão `?` no cabeçalho do card carteira com texto "Posições abertas pela regra de entrada vigente. Sem execução real." | editado: `public/js/components/operacional/CarteiraSimulada.js` | AJUDA-PAI-1 | Card com botão `?`; popover correto | PLANEJADO |
-| AJUDA-PAI-5 | **Integração em `BloqueiosOperacionais.js`:** botão `?` com texto "Lista os motivos que impedem a regra de abrir novas posições: liquidez, dado ausente, drawdown." | editado: `public/js/components/operacional/BloqueiosOperacionais.js` | AJUDA-PAI-1 | Card com botão `?`; popover correto | PLANEJADO |
+| AJUDA-PAI-1 | **Utilitário `htmlAjuda`:** `htmlAjuda(id, titulo, texto)` retorna botão `?` com popover `role="tooltip"` absolutamente posicionado; fecha via `mousedown` no `document` com `closest`; `aria-expanded` e `aria-describedby`; CSS próprio na seção `/* === AJUDA POPOVER === */` de `app.css` (`.btn-ajuda`, `.ajuda-popover`, `.ajuda-popover.visivel`); `tests/ajuda.test.mjs` cobre: abre, fecha ao clicar fora, escapa título e texto | novos: `public/js/utils/ajuda.js`; editado: `public/css/app.css` | — | Função exportada; popover responsivo sem quebrar layout; `npm test` verde | IMPLEMENTADO (2026-10-17) |
+| AJUDA-PAI-2 | **Integração em `OperabilidadePage.js`:** importa `htmlAjuda` e insere `${htmlAjuda(...)}` em `htmlResumo` (status/badge, pregões avaliados), `htmlMaturidade` (barras 63/126) e `htmlOperabilidade` (alertas) com textos contextuais | editado: `public/js/pages/OperabilidadePage.js` | AJUDA-PAI-1 | Cards com botão `?` visível; conteúdo do popover não vazio; layout intacto | IMPLEMENTADO (2026-10-17) |
+| AJUDA-PAI-3 | **Integração em `GraficoOperabilidade.js`:** importa `htmlAjuda` e insere botão na legenda/cabeçalho do gráfico retorno × CDI | editado: `public/js/components/operacional/GraficoOperabilidade.js` | AJUDA-PAI-1 | Card do gráfico com botão `?`; popover descreve o eixo e a comparação com CDI líquido | IMPLEMENTADO (2026-10-17) |
+| AJUDA-PAI-4 | **Integração em `CarteiraSimulada.js`:** botão `?` no cabeçalho do card carteira com texto "Posições abertas pela regra de entrada vigente. Sem execução real." | editado: `public/js/components/operacional/CarteiraSimulada.js` | AJUDA-PAI-1 | Card com botão `?`; popover correto | IMPLEMENTADO (2026-10-17) |
+| AJUDA-PAI-5 | **Integração em `BloqueiosOperacionais.js`:** botão `?` com texto "Lista os motivos que impedem a regra de abrir novas posições: liquidez, dado ausente, drawdown." | editado: `public/js/components/operacional/BloqueiosOperacionais.js` | AJUDA-PAI-1 | Card com botão `?`; popover correto | IMPLEMENTADO (2026-10-17) |
 
 ### Grupos para agentes paralelos
 

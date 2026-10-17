@@ -2,6 +2,7 @@ import { BaseComponent } from '../components/base/BaseComponent.js';
 import { escaparHtml } from '../utils/html.js';
 import { formatarData, formatarDataHora } from '../utils/dataHora.js';
 import { formatarMoeda, formatarPercentual } from '../utils/numero.js';
+import { htmlAjuda } from '../utils/ajuda.js';
 import { buscarBloqueios, buscarDiario, buscarOperacoes, buscarResumo, buscarSaude } from '../api/operacionalApi.js';
 import { AVISO_SIMULACAO, STATUS, progresso, statusDe, venceuCdi } from '../analise/operabilidade.js';
 import { htmlLegenda, htmlTabelaDiario, svgOperabilidade } from '../components/operacional/GraficoOperabilidade.js';
@@ -32,7 +33,11 @@ export function htmlMaturidade(pregoes) {
   return `<div class="row g-2 mb-3" aria-label="Maturidade da simulação">
     ${[63, 126].map((meta) => {
       const fracao = Math.min(1, valor / meta);
-      return `<div class="col-md-6"><div class="d-flex justify-content-between small"><span>${meta === 63 ? 'Evidência mínima' : 'Janela ampliada'}</span><span>${valor} de ${meta} pregões</span></div>
+      const titulo = meta === 63 ? 'Evidência mínima' : 'Janela ampliada';
+      const descricao = meta === 63
+        ? 'Referência mínima de 63 pregões para começar a avaliar a estabilidade dos resultados; não é garantia de desempenho futuro.'
+        : 'Janela de 126 pregões para observar o comportamento da simulação por mais tempo; uma amostra maior ainda não garante desempenho futuro.';
+      return `<div class="col-md-6"><div class="d-flex justify-content-between align-items-center small"><span>${titulo} ${htmlAjuda(`maturidade-${meta}`, titulo, descricao)}</span><span>${valor} de ${meta} pregões</span></div>
         <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${meta}" aria-valuenow="${Math.min(valor, meta)}"><div class="progress-bar" style="width:${(fracao * 100).toFixed(1)}%"></div></div></div>`;
     }).join('')}</div>`;
 }
@@ -51,11 +56,12 @@ export function htmlResumo(resumo, saude) {
       <span class="badge fs-6 ${st.classe}">${escaparHtml(st.rotulo)}</span>
       <span class="small text-muted">${resumo?.ultimoPregao ? `pregão de ${escaparHtml(formatarData(resumo.ultimoPregao))}` : ''}
         ${resumo?.versaoRegra ? ` · regra ${escaparHtml(resumo.versaoRegra)}` : ''}</span>
+      ${htmlAjuda('operabilidade-status', 'Status da simulação', 'Resume o estado do paper trading conforme a regra vigente, a quantidade de pregões avaliados e a qualidade dos dados. “Elegível” não autoriza uso de capital real.')}
     </div>
     <p class="small mb-2">${escaparHtml(st.descricao)}</p>
     ${naoIniciado ? `<p class="small text-muted mb-2">${escaparHtml(MENSAGEM_NAO_INICIADO)}</p>` : ''}
     <div class="mb-2" aria-label="Pregões avaliados">
-      <div class="d-flex justify-content-between small"><span>Pregões avaliados</span><span>${escaparHtml(prog.texto)}</span></div>
+      <div class="d-flex justify-content-between small"><span>Pregões avaliados ${htmlAjuda('operabilidade-pregoes', 'Pregões avaliados', 'Conta as sessões de negociação usadas na avaliação. A referência de 63 pregões indica a evidência mínima; dados ausentes podem reduzir a qualidade da leitura.')}</span><span>${escaparHtml(prog.texto)}</span></div>
       <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(prog.fracao * 100)}">
         <div class="progress-bar" style="width:${(prog.fracao * 100).toFixed(1)}%"></div></div>
     </div>
@@ -81,7 +87,7 @@ export function htmlResumo(resumo, saude) {
 export function htmlOperabilidade({ resumo, saude, diario, operacoes, bloqueios, alertas }, filtro = {}) {
   const grafico = svgOperabilidade(diario?.itens);
   return `${htmlResumo(resumo, saude)}
-    <section class="ficha-cartao mb-3"><p class="ficha-rotulo">Alertas e eventos recentes</p>${htmlAlertasOperacionais(alertas)}</section>
+    <section class="ficha-cartao mb-3"><div class="d-flex justify-content-between align-items-center"><p class="ficha-rotulo mb-2">Alertas e eventos recentes</p>${htmlAjuda('operabilidade-alertas', 'Alertas e eventos', 'Reúne condições operacionais e eventos recentes que podem afetar a leitura da simulação. Um alerta descreve um fato ou controle; não é recomendação de investimento.')}</div>${htmlAlertasOperacionais(alertas)}</section>
     <section class="ficha-cartao mb-3">
       <p class="ficha-rotulo">Retorno líquido acumulado x CDI líquido de IR</p>
       ${grafico ? `${htmlLegenda()}<div class="grafico-operabilidade-caixa">${grafico}</div>` : `<p class="small text-muted">${escaparHtml(MENSAGEM_NAO_INICIADO)}</p>`}

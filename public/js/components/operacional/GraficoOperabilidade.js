@@ -6,6 +6,7 @@ import { escaparHtml } from '../../utils/html.js';
 import { formatarData } from '../../utils/dataHora.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { STATUS, statusDe } from '../../analise/operabilidade.js';
+import { htmlAjuda } from '../../utils/ajuda.js';
 
 const L = 560;
 const A = 220;
@@ -80,7 +81,8 @@ export function htmlLegenda() {
   return `<p class="small mb-1 legenda-operabilidade">
     <span class="marca-legenda carteira"></span> Carteira simulada (líquida de custos e IR estimado)
     <span class="marca-legenda cdi ms-3"></span> CDI líquido de IR
-    <span class="marca-legenda drawdown ms-3"></span> Drawdown</p>`;
+    <span class="marca-legenda drawdown ms-3"></span> Drawdown
+    ${htmlAjuda('operabilidade-grafico', 'Retorno líquido x CDI líquido', 'O eixo horizontal mostra os pregões e o vertical mostra o retorno acumulado em percentual. A linha da carteira considera custos e IR estimado; a linha do CDI usa o CDI líquido de IR. A faixa inferior mostra o drawdown. Lacunas representam dados indisponíveis, não retorno zero.')}</p>`;
 }
 
 /** Tabela acessivel do diario (mais recente primeiro): um pregao por linha, sem dado como "sem dado". */

@@ -5,6 +5,7 @@ import { escaparHtml } from '../../utils/html.js';
 import { formatarData } from '../../utils/dataHora.js';
 import { formatarMoeda, formatarNumero } from '../../utils/numero.js';
 import { MOTIVO_SAIDA, separarCarteira } from '../../analise/operabilidade.js';
+import { htmlAjuda } from '../../utils/ajuda.js';
 
 const SEM = 'sem dado';
 const moeda = (v) => escaparHtml(formatarMoeda(v, SEM));
@@ -79,7 +80,7 @@ export function htmlFechadas(fechadas) {
 export function htmlCarteira(itens) {
   const { abertas, fechadas } = separarCarteira(itens);
   return `<section class="ficha-cartao mb-3">
-      <p class="ficha-rotulo">Posições abertas (${abertas.length})</p>${htmlAbertas(abertas)}
+      <div class="d-flex justify-content-between align-items-center"><p class="ficha-rotulo mb-2">Posições abertas (${abertas.length})</p>${htmlAjuda('operabilidade-carteira', 'Carteira simulada', 'Posições abertas pela regra de entrada vigente. Sem execução real.')}</div>${htmlAbertas(abertas)}
     </section>
     <section class="ficha-cartao mb-3">
       <p class="ficha-rotulo">Operações encerradas (${fechadas.length})</p>${htmlFechadas(fechadas)}
