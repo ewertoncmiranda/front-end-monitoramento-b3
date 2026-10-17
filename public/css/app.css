@@ -500,3 +500,15 @@ th[data-sort].sort-asc .sort-icon, th[data-sort].sort-desc .sort-icon { opacity:
   display: block; font-size: .65rem; opacity: .65;
   white-space: nowrap; overflow: hidden; max-width: 9rem; text-overflow: ellipsis;
 }
+
+/* === OPCOES LAYOUT === */
+/* Plano OPCX: contexto do ativo-objeto ao lado da cadeia de opcoes. */
+.opcoes-layout { display: flex; gap: 1rem; align-items: flex-start; }
+.opcoes-sidebar { width: 260px; flex-shrink: 0; position: sticky; top: 1rem; }
+.opcoes-principal { flex: 1; min-width: 0; }
+
+/* Celular: sidebar empilhada acima da tabela, sem ficar presa no topo. */
+@media (max-width: 767px) {
+  .opcoes-layout { flex-direction: column; align-items: stretch; }
+  .opcoes-sidebar { width: 100%; position: static; }
+}

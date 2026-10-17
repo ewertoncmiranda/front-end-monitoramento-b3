@@ -9,6 +9,7 @@ import '../components/SeletorDeAtivos.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 import '../components/SaudeCadeiaOpcoes.js';
+import '../components/opcoes/AtivoContextoOpcoes.js';
 
 // Extrai o ativo do hash: #/opcoes/PETR4 ou #/opcoes?ativo=PETR4
 function ativoDoHash() {
@@ -193,6 +194,8 @@ function _calcNegocios21d(velas) {
 // Unica responsabilidade: painel de opcoes de um ativo.
 // Rota #/opcoes/PETR4 ou #/opcoes?ativo=PETR4.
 // Enriquece com precoAtual (moneyness real), range 63d, vol21d, Graham e recomendacao.
+// Layout (Plano OPCX): contexto do ativo na sidebar ao lado da cadeia; a saude
+// da cadeia fica num <details> no rodape - aberto ate o usuario escolher um ativo.
 export class OpcaoPage extends BaseComponent {
   template() {
     return `
@@ -200,8 +203,11 @@ export class OpcaoPage extends BaseComponent {
         <h4 class="mb-0">Painel de opções</h4>
       </div>
       <seletor-de-ativos rotulo-botao="Ver opções" placeholder="Ex.: PETR4"></seletor-de-ativos>
-      <div id="opcao-saude" class="mt-3"><loading-spinner></loading-spinner></div>
       <div id="opcao-resultado" class="mt-3"></div>
+      <details id="opcao-saude-detalhes" class="mt-4" open>
+        <summary class="fw-semibold small">Saúde da cadeia de opções</summary>
+        <div id="opcao-saude" class="mt-2"><loading-spinner></loading-spinner></div>
+      </details>
     `;
   }
 
@@ -211,8 +217,14 @@ export class OpcaoPage extends BaseComponent {
 
     this._carregarSaude();
 
+    // Link direto (#/opcoes/PETR4): o SeletorDeAtivos nao tem mais selecionar();
+    // preenche o campo e abre o ativo aqui mesmo.
     const inicial = ativoDoHash();
-    if (inicial) seletor.selecionar(inicial);
+    if (inicial) {
+      const campo = seletor.querySelector('input');
+      if (campo) campo.value = inicial;
+      this._abrir(inicial);
+    }
   }
 
   async _carregarSaude() {
@@ -230,6 +242,8 @@ export class OpcaoPage extends BaseComponent {
     this._simbolo = simbolo;
     const resultado = this.querySelector('#opcao-resultado');
     resultado.innerHTML = '<loading-spinner></loading-spinner>';
+    // Com ativo escolhido, a saude da cadeia vira rodape recolhido.
+    this.querySelector('#opcao-saude-detalhes')?.removeAttribute('open');
     history.replaceState(null, '', `#/opcoes/${encodeURIComponent(simbolo)}`);
 
     try {
@@ -267,21 +281,27 @@ export class OpcaoPage extends BaseComponent {
     }).join('');
 
     resultado.innerHTML = `
-      <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-        <span class="fw-semibold">${escaparHtml(dados.simboloCanonico || dados.simbolo || simbolo)}</span>
-        ${dados.aliasAplicado ? `<span class="badge text-bg-info">solicitado: ${escaparHtml(dados.simboloSolicitado || simbolo)}</span>` : ''}
-        ${vencimentos.length > 0 ? `
-          <label class="small text-muted mb-0" for="opcao-vencimento">Vencimento:</label>
-          <select class="form-select form-select-sm w-auto" id="opcao-vencimento">
-            <option value="">Mais próximo</option>
-            ${opcoes}
-          </select>` : ''}
+      <div class="opcoes-layout">
+        <aside class="opcoes-sidebar"><ativo-contexto-opcoes></ativo-contexto-opcoes></aside>
+        <div class="opcoes-principal">
+          <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+            <span class="fw-semibold">${escaparHtml(dados.simboloCanonico || dados.simbolo || simbolo)}</span>
+            ${dados.aliasAplicado ? `<span class="badge text-bg-info">solicitado: ${escaparHtml(dados.simboloSolicitado || simbolo)}</span>` : ''}
+            ${vencimentos.length > 0 ? `
+              <label class="small text-muted mb-0" for="opcao-vencimento">Vencimento:</label>
+              <select class="form-select form-select-sm w-auto" id="opcao-vencimento">
+                <option value="">Mais próximo</option>
+                ${opcoes}
+              </select>` : ''}
+          </div>
+          <opcoes-painel></opcoes-painel>
+        </div>
       </div>
-      <opcoes-painel></opcoes-painel>
     `;
 
     const painel = resultado.querySelector('opcoes-painel');
     painel.setDados(dados);
+    resultado.querySelector('ativo-contexto-opcoes').setContexto(this._contexto);
 
     const sel = resultado.querySelector('#opcao-vencimento');
     if (sel) {
