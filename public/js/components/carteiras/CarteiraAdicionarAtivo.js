@@ -1,5 +1,6 @@
 import { BaseComponent } from '../base/BaseComponent.js';
 import { adicionarAtivo } from '../../utils/carteirasStore.js';
+import { listarAtivosMonitorados } from '../../api/ativosMonitoradosApi.js';
 
 /**
  * CART-PAI-6 — Formulário para adicionar um ativo a uma carteira.
@@ -17,21 +18,29 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
   template() {
     const hoje = _hoje();
     return `
-      <form id="form-adicionar-ativo" novalidate>
-        <div class="mb-3">
-          <label class="form-label fw-semibold">Ativo</label>
-          <seletor-de-ativos id="seletor-ativo"></seletor-de-ativos>
+      <div id="form-adicionar-ativo">
+        <div class="row g-2 mb-3 align-items-end">
+          <div class="col">
+            <label class="form-label fw-semibold mb-1">Setor</label>
+            <select id="setor-filtro" class="form-select form-select-sm">
+              <option value="">Todos os setores</option>
+            </select>
+          </div>
+          <div class="col-8">
+            <label class="form-label fw-semibold mb-1">Ativo</label>
+            <seletor-de-ativos id="seletor-ativo"></seletor-de-ativos>
+          </div>
         </div>
         <div class="mb-3">
           <label for="data-entrada" class="form-label fw-semibold">Data de entrada</label>
-          <input type="date" id="data-entrada" class="form-control" max="${hoje}" required>
+          <input type="date" id="data-entrada" class="form-control" max="${hoje}">
         </div>
         <div class="mb-3">
           <label for="capital" class="form-label fw-semibold">Capital (R$)</label>
-          <input type="number" id="capital" class="form-control" min="0.01" step="0.01" placeholder="0,00" required>
+          <input type="number" id="capital" class="form-control" min="0.01" step="0.01" placeholder="0,00">
         </div>
-        <button type="submit" id="btn-adicionar" class="btn btn-success w-100">Adicionar</button>
-      </form>
+        <button type="button" id="btn-adicionar" class="btn btn-success w-100">Adicionar</button>
+      </div>
     `;
   }
 
@@ -43,11 +52,32 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
       this._simbolo = e.detail?.simbolo ?? '';
     });
 
-    const form = this.querySelector('#form-adicionar-ativo');
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      this._submeter();
-    });
+    this.querySelector('#btn-adicionar').addEventListener('click', () => this._submeter());
+
+    this._carregarSetores();
+  }
+
+  async _carregarSetores() {
+    try {
+      const ativos = (await listarAtivosMonitorados()) || [];
+      const setores = [...new Set(ativos.map((a) => a.setor).filter(Boolean))].sort();
+      const sel = this.querySelector('#setor-filtro');
+      if (!sel) return;
+      setores.forEach((s) => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => {
+        const seletor = this.querySelector('#seletor-ativo');
+        if (seletor) {
+          seletor.setAttribute('setor', sel.value);
+          const input = seletor.querySelector('#seletor-input');
+          if (input) { input.value = ''; input.dispatchEvent(new Event('focus')); }
+        }
+      });
+    } catch { /* setores opcionais */ }
   }
 
   setCarteiraId(id) {
