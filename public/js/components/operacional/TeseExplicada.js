@@ -25,5 +25,6 @@ export function htmlTese(dados) {
     return `<div class="col-md-6"><h3 class="h6">${rotulo}</h3>
       ${itens.length ? `<ul class="list-group list-group-flush small">${itens.map((i) => itemHtml(i, tom)).join('')}</ul>` : '<p class="small text-muted">Nenhum item informado.</p>'}</div>`;
   }).join('');
-  return `<section class="ficha-cartao"><p class="ficha-rotulo">Por que esse sinal existe?</p>${bloco.aviso ? `<p class="small text-muted">${escaparHtml(bloco.aviso)}</p>` : ''}<div class="row g-3">${grupos}</div></section>`;
+  // O campo `aviso` do gerar-insights (aviso regulatorio) nao e exibido: DEC-F360-1.
+  return `<section class="ficha-cartao"><p class="ficha-rotulo">Por que esse sinal existe?</p><div class="row g-3">${grupos}</div></section>`;
 }

@@ -494,6 +494,26 @@ th[data-sort].sort-asc .sort-icon, th[data-sort].sort-desc .sort-icon { opacity:
 .opc-confluencia-baixa  { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); border: 1px solid var(--bs-border-color); }
 .opc-crossref { font-size: .65rem !important; vertical-align: middle; }
 
+/* === AJUDA POPOVER === */
+.ajuda-contexto { position: relative; display: inline-flex; flex: 0 0 auto; vertical-align: middle; }
+.btn-ajuda {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; padding: 0;
+  border: 1px solid var(--bs-border-color); border-radius: 50%; background: transparent;
+  color: var(--bs-secondary-color); font-size: .72rem; font-weight: 700; line-height: 1; cursor: pointer;
+}
+.btn-ajuda:hover, .btn-ajuda:focus-visible { color: var(--bs-body-color); border-color: var(--bs-secondary-color); }
+.ajuda-popover {
+  display: none; position: absolute; z-index: 1080; top: calc(100% + .35rem); right: 0;
+  width: min(20rem, calc(100vw - 2rem)); padding: .75rem; border: 1px solid var(--bs-border-color);
+  border-radius: .5rem; background: var(--bs-body-bg); color: var(--bs-body-color);
+  box-shadow: 0 .35rem 1rem rgba(0, 0, 0, .16); white-space: normal; text-align: left;
+  font-size: .82rem; line-height: 1.4;
+}
+.ajuda-popover.visivel { display: block; }
+.ajuda-popover-cabecalho { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: .3rem; }
+.btn-ajuda-fechar { border: 0; padding: 0 .1rem; margin: -.2rem -.2rem 0 0; background: transparent; color: var(--bs-secondary-color); font-size: 1.2rem; line-height: 1; cursor: pointer; }
+.ajuda-popover-texto { display: block; }
+
 /* --- Chips de seletor de ativo com setor -------------------------------------- */
 .seletor-chip { line-height: 1.25 !important; text-align: left !important; }
 .seletor-chip-setor {
