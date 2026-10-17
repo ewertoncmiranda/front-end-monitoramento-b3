@@ -68,11 +68,16 @@ export function dataFutura(dataIso, hoje = hojeIso()) {
   return Boolean(dataIso && dataIso > hoje);
 }
 
-export function htmlComboboxAtivo(id, ativos = [], { label = 'Ativo', cssClass = 'form-control form-control-sm', placeholder = 'Digite ou busque…', required = true, value = '' } = {}) {
-  const listId = `dl-${id}`;
-  const opcoes = ativos.map((a) => `<option value="${escaparHtml(a.simbolo || a)}"></option>`).join('');
-  const valorInicial = value ? ` value="${escaparHtml(value)}"` : '';
-  return `<input type="text" id="${id}" list="${listId}" class="${cssClass}" placeholder="${placeholder}" autocomplete="off"${valorInicial}${required ? ' required' : ''}><datalist id="${listId}">${opcoes}</datalist>`;
+/**
+ * Campo de ativo dos formularios do simulador: input oculto com o id que a
+ * pagina ja le no submit + <busca-ativos> (busca, setor, UF, filtros
+ * operacionais e cartoes) que o preenche. `valor` so entra quando a pagina tem
+ * um ativo; vazio, apagaria a escolha guardada na sessao a cada redesenho.
+ */
+export function htmlCampoBuscaAtivo(id, { chave = id, valor = '' } = {}) {
+  const simbolo = escaparHtml(String(valor || '').toUpperCase());
+  return `<input type="hidden" id="${id}" value="${simbolo}">
+    <busca-ativos modo="unico" chave="simulador-${escaparHtml(chave)}" campo="${id}"${simbolo ? ` valor="${simbolo}"` : ''}></busca-ativos>`;
 }
 
 export function validarSimboloAtivo(simbolo) {

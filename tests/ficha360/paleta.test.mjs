@@ -6,7 +6,8 @@ globalThis.HTMLElement = class {};
 globalThis.customElements = { define() {} };
 
 const { coresDoGrafico, indiceDaData, CandleChart } = await import('../../public/js/components/CandleChart.js');
-const css = readFileSync(new URL('../../public/css/app.css', import.meta.url), 'utf8');
+// Com core.autocrlf=true o checkout traz CRLF; os padroes abaixo usam \n.
+const css = readFileSync(new URL('../../public/css/app.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
 let casos = 0;
 async function caso(nome, fn) { await fn(); casos++; console.log(`  ok  ${nome}`); }

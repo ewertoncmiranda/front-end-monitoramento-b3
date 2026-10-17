@@ -1,5 +1,6 @@
 import { BaseComponent } from '../base/BaseComponent.js';
 import { adicionarAtivo } from '../../utils/carteirasStore.js';
+import '../busca/BuscaAtivos.js';
 
 /**
  * CART-PAI-6 — Formulário para adicionar um ativo a uma carteira.
@@ -19,8 +20,8 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
     return `
       <form id="form-adicionar-ativo" novalidate>
         <div class="mb-3">
-          <label class="form-label fw-semibold">Ativo</label>
-          <seletor-de-ativos id="seletor-ativo"></seletor-de-ativos>
+          <span class="form-label fw-semibold d-block">Ativo</span>
+          <busca-ativos id="seletor-ativo" modo="unico"></busca-ativos>
         </div>
         <div class="mb-3">
           <label for="data-entrada" class="form-label fw-semibold">Data de entrada</label>
@@ -38,9 +39,9 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
   afterRender() {
     this._simbolo = '';
 
-    const seletor = this.querySelector('#seletor-ativo');
-    seletor.addEventListener('ativo-buscado', (e) => {
-      this._simbolo = e.detail?.simbolo ?? '';
+    const busca = this.querySelector('#seletor-ativo');
+    busca.addEventListener('busca-ativos:selecao', (e) => {
+      this._simbolo = e.detail?.simbolos?.[0] ?? '';
     });
 
     const form = this.querySelector('#form-adicionar-ativo');
@@ -52,6 +53,12 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
 
   setCarteiraId(id) {
     this._carteiraId = id;
+    // Uma busca por carteira: cada uma guarda seus filtros e seu ticker na sessao.
+    const busca = this.querySelector('#seletor-ativo');
+    if (busca) {
+      busca.setAttribute('chave', `carteira-${id}`);
+      this._simbolo = busca.simbolos?.[0] ?? '';
+    }
   }
 
   /**
@@ -101,14 +108,16 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
         capital: Number(capital),
       });
 
+      // Limpa antes de avisar: a pagina se redesenha no evento e a busca nova
+      // restauraria da sessao o ticker que acabou de entrar.
+      this._resetar();
+
       this.dispatchEvent(
         new CustomEvent('ativo-adicionado', {
           detail: { simbolo, dataEntrada, capital: Number(capital), ativo },
           bubbles: true,
         })
       );
-
-      this._resetar();
     } catch (err) {
       this._exibirErro(err.message || 'Erro ao adicionar ativo.');
     }
@@ -128,9 +137,8 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
     const capitalInput = this.querySelector('#capital');
     if (dataInput) dataInput.value = '';
     if (capitalInput) capitalInput.value = '';
-    // Re-render do seletor para limpar o campo de texto
-    const seletor = this.querySelector('#seletor-ativo');
-    if (seletor && typeof seletor.render === 'function') seletor.render();
+    // Tira o ticker escolhido; filtros e resultados ficam para o proximo ativo.
+    this.querySelector('#seletor-ativo')?.limpar?.();
   }
 }
 

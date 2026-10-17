@@ -1,7 +1,7 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
-import { htmlComboboxAtivo, CAPITAIS_SIMULACAO, CAPITAL_BASE, labelCapital, classeValor, ESTRATEGIAS_PADRAO } from './utils.js';
+import { htmlCampoBuscaAtivo, CAPITAIS_SIMULACAO, CAPITAL_BASE, labelCapital, classeValor, ESTRATEGIAS_PADRAO } from './utils.js';
 
 const SEM = 'sem dado';
 export const hojeIso = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
@@ -35,10 +35,10 @@ export function htmlFormularioCenario(ativos = [], valores = {}) {
     `<option value="${e}"${e === estrategiaSelecionada ? ' selected' : ''}>${escaparHtml(e.replace(/_/g, ' '))}</option>`
   ).join('');
   return `<form id="form-cenario" class="row g-2">
-    <div class="col-md-3"><label for="cenario-ativo" class="form-label form-label-sm">Ativo</label>${htmlComboboxAtivo('cenario-ativo', ativos, { value: valores.simbolo || '' })}</div>
-    <div class="col-md-2"><label for="cenario-data" class="form-label form-label-sm">Data de entrada</label><input type="date" max="${hojeIso()}" value="${dataEntrada}" class="form-control form-control-sm" id="cenario-data" required></div>
-    <div class="col-md-1"><label for="cenario-janela" class="form-label form-label-sm">Janela</label><input type="number" min="1" max="63" value="${janela}" class="form-control form-control-sm" id="cenario-janela" required></div>
-    <div class="col-md-2"><label for="cenario-capital" class="form-label form-label-sm">Capital (R$)</label><input type="number" min="1" step="100" value="${capital}" class="form-control form-control-sm" id="cenario-capital" required></div>
+    <div class="col-12"><span class="form-label form-label-sm d-block">Ativo</span>${htmlCampoBuscaAtivo('cenario-ativo', { chave: 'cenario', valor: valores.simbolo })}</div>
+    <div class="col-md-3"><label for="cenario-data" class="form-label form-label-sm">Data de entrada</label><input type="date" max="${hojeIso()}" value="${dataEntrada}" class="form-control form-control-sm" id="cenario-data" required></div>
+    <div class="col-md-2"><label for="cenario-janela" class="form-label form-label-sm">Janela</label><input type="number" min="1" max="63" value="${janela}" class="form-control form-control-sm" id="cenario-janela" required></div>
+    <div class="col-md-2"><label for="cenario-capital" class="form-label form-label-sm">Capital (R$)</label><input type="number" min="100" step="100" value="${capital}" class="form-control form-control-sm" id="cenario-capital" required></div>
     <div class="col-md-2"><label for="cenario-estrategia" class="form-label form-label-sm">Estratégia</label>
       <select id="cenario-estrategia" class="form-select form-select-sm">
         <option value="">Todas</option>

@@ -1,7 +1,6 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarPercentual } from '../../utils/numero.js';
 import { formatarDataHora } from '../../utils/dataHora.js';
-import { htmlComboboxAtivo } from './utils.js';
 
 const SEM = '—';
 const ESTRATEGIAS_PADRAO = ['MOMENTO_PURO', 'MOMENTO_REVERSAO', 'BAIXO_SPREAD', 'VALOR_RELATIVO', 'QUALIDADE', 'DIVIDENDOS', 'DEFENSIVA'];
@@ -57,31 +56,6 @@ export function resumoEstrategias(ativos, resultadosPorAtivo) {
     <span class="text-muted">Monitorados: <strong>${ativos.length}</strong></span>
     <span class="text-success">Com Q5: <strong>${q5}</strong></span>
     <span class="text-primary">Com Q≥4: <strong>${q4mais}</strong></span>
-  </div>`;
-}
-
-// 1: consulta rápida — qualquer ativo dos 264 sem precisar monitorar
-// O combobox filtra por símbolo OU nome conforme o usuário digita (handler em SimuladorPage.afterRender).
-export function htmlConsultaRapida() {
-  return `<div class="mt-3 pt-3 border-top">
-    <p class="small fw-semibold mb-1">Consulta rápida</p>
-    <p class="small text-muted mb-2">Veja as estratégias de qualquer ativo sem adicioná-lo ao monitoramento.</p>
-    <form id="form-consulta-rapida" class="row g-2 align-items-end">
-      <div class="col-md-5 position-relative">
-        <input type="text" id="consulta-ativo" class="form-control form-control-sm"
-               placeholder="Símbolo ou nome da empresa…" autocomplete="off">
-        <ul class="dropdown-menu w-100 py-0" id="consulta-ativo-sugestoes"
-            style="max-height:220px;overflow-y:auto"></ul>
-      </div>
-      <div class="col-md-3">
-        <input type="date" id="consulta-data" class="form-control form-control-sm"
-               title="Data do pregão (vazio = mais recente)">
-      </div>
-      <div class="col-md-4">
-        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Consultar</button>
-      </div>
-    </form>
-    <div id="resultado-consulta-rapida" class="mt-2"></div>
   </div>`;
 }
 

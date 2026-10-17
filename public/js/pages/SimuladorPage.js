@@ -17,15 +17,14 @@ import {
 import { buscarResumo, buscarBloqueios } from '../api/operacionalApi.js';
 import { buscarIndiceMacro } from '../api/indicesMacroApi.js';
 import { buscarDiarioDeSinais } from '../api/validacaoApi.js';
-import { listarAtivosPainel, listarSetoresBase } from '../api/baseAtivosApi.js';
-import { htmlTabelaAtivos } from '../analise/listagemAtivos.js';
 import { escaparHtml } from '../utils/html.js';
-import { htmlTabelaEstrategias, obterIaLivre, resumoEstrategias, htmlConsultaRapida } from '../components/simulador/TabelaEstrategias.js';
+import { htmlTabelaEstrategias, obterIaLivre, resumoEstrategias } from '../components/simulador/TabelaEstrategias.js';
 import { htmlControlesCenario, htmlResultadoCenario, htmlCardCenario, htmlComparacaoCenarios, validarCenario } from '../components/simulador/CenarioSimulador.js';
 import { htmlControlesRetroativo, htmlResultadoRetroativo, janelaEntreDatas } from '../components/simulador/Retroativo.js';
 import { htmlHistoricoOperacao, htmlOperacoesManuais } from '../components/simulador/OperacoesManuais.js';
 import { htmlOperabilidadeParalela } from '../components/simulador/OperabilidadeParalela.js';
-import { campo, listaDe, validarSimboloAtivo, htmlComboboxAtivo, ESTRATEGIAS_PADRAO, CAPITAIS_SIMULACAO, CAPITAL_BASE, labelCapital } from '../components/simulador/utils.js';
+import { campo, listaDe, ESTRATEGIAS_PADRAO, CAPITAIS_SIMULACAO, CAPITAL_BASE, labelCapital } from '../components/simulador/utils.js';
+import '../components/busca/BuscaAtivos.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -91,10 +90,6 @@ export class SimuladorPage extends BaseComponent {
     this.selicAtual = null;
     // 8: bloqueios do dia na aba Operações
     this.bloqueiosHoje = null;
-    // universo completo em Estratégias
-    this.setores = [];
-    this.universoFiltros = null;
-    this.universoResultado = null;
     // 9: restaura último resultado retroativo
     try {
       const saved = JSON.parse(sessionStorage.getItem('simulador-retroativo') || 'null');
@@ -183,37 +178,42 @@ export class SimuladorPage extends BaseComponent {
     }
   }
 
-  async carregarUniverso() {
-    const container = this.querySelector('#universo-resultado');
-    if (container) container.innerHTML = '<span class="spinner-border spinner-border-sm ms-1"></span>';
-
-    if (!this.setores.length) {
-      try {
-        const resp = await listarSetoresBase();
-        const lista = Array.isArray(resp) ? resp : (resp?.itens || resp?.setores || []);
-        this.setores = lista.map((x) => (typeof x === 'string' ? x : x.nome || x.setor || String(x))).filter(Boolean);
-        const sel = this.querySelector('#universo-setor');
-        if (sel && this.setores.length) {
-          const atual = this.universoFiltros?.setor || '';
-          sel.innerHTML = `<option value="">Todos os setores</option>${this.setores.map((s) =>
-            `<option value="${escaparHtml(s)}"${s === atual ? ' selected' : ''}>${escaparHtml(s)}</option>`
-          ).join('')}`;
-        }
-      } catch { /* ignora — select fica com "Todos os setores" */ }
-    }
-
+  // Estratégias: a <busca-ativos> em modo multiplo e a lista de ativos do
+  // simulador. Adicionar registra; o "x" do ticker desativa (com confirmacao).
+  async aoAlterarSelecaoEstrategias({ simbolo, selecionado }, busca) {
     try {
-      const resultado = await listarAtivosPainel({
-        q: this.universoFiltros?.q || '',
-        setor: this.universoFiltros?.setor || '',
-        uf: this.universoFiltros?.uf || '',
-        pagina: 0,
-        tamanho: 30,
-      });
-      this.universoResultado = resultado;
-      if (container) container.innerHTML = htmlTabelaAtivos(resultado?.content || []);
+      if (selecionado) {
+        await registrarAtivoSimulador(simbolo);
+      } else if (confirm(`Remover ${simbolo} do simulador?`)) {
+        await desativarAtivoSimulador(simbolo);
+      } else {
+        busca.setAttribute('valor', this.simbolosDoSimulador().join(','));
+        return;
+      }
+      await this.carregarAtivos();
     } catch (err) {
-      if (container) container.innerHTML = `<p class="small text-danger mt-1">${escaparHtml(err?.message || 'Erro ao buscar ativos')}</p>`;
+      alert(`Erro ao ${selecionado ? 'adicionar' : 'remover'} ${simbolo}: ${err.message}`);
+      busca.setAttribute('valor', this.simbolosDoSimulador().join(','));
+    }
+  }
+
+  simbolosDoSimulador() {
+    return this.ativos.map((ativo) => campo(ativo, ['simbolo', 'ticker'], '')).filter(Boolean);
+  }
+
+  // 1: consulta rapida - estrategias de qualquer ativo sem adiciona-lo.
+  async consultarEstrategias(simbolo) {
+    const container = this.querySelector('#resultado-consulta-rapida');
+    if (!simbolo || !container) return;
+    container.innerHTML = `<p class="small text-muted mb-1">Consulta: <strong>${escaparHtml(simbolo)}</strong></p><span class="spinner-border spinner-border-sm"></span>`;
+    try {
+      const resultado = await buscarResultadosSimulador(simbolo, this.dataEstrategias || null);
+      const lista = Array.isArray(resultado) ? resultado : (resultado?.resultados || []);
+      container.innerHTML = lista.length
+        ? `<p class="small text-muted mb-1">Consulta: <strong>${escaparHtml(simbolo)}</strong> (fora do simulador)</p>${htmlTabelaEstrategias([{ simbolo }], { [simbolo]: lista }, {}, '')}`
+        : `<p class="small text-muted mt-1">Nenhum sinal encontrado para ${escaparHtml(simbolo)}.</p>`;
+    } catch (err) {
+      container.innerHTML = `<p class="small text-danger mt-1">${escaparHtml(err.message || 'Erro ao consultar')}</p>`;
     }
   }
 
@@ -301,12 +301,6 @@ export class SimuladorPage extends BaseComponent {
   }
 
   abaEstrategias() {
-    const remover = this.ativos.length ? `<div class="table-responsive mt-3">
-      <table class="table table-sm"><thead><tr><th>Ativo</th><th>Ações</th></tr></thead>
-      <tbody>${this.ativos.map((ativo) => `<tr><td>${escaparHtml(campo(ativo, ['simbolo', 'ticker'], ''))}</td>
-        <td><button type="button" class="btn btn-sm btn-outline-danger btn-remover" data-simbolo="${escaparHtml(campo(ativo, ['simbolo', 'ticker'], ''))}">Remover</button></td></tr>`).join('')}</tbody></table>
-    </div>` : '';
-
     // 3: date picker + taxa SELIC para contexto
     const selicChip = this.selicAtual != null
       ? `<span class="badge text-bg-secondary ms-2" title="Selic meta anual — referência de custo de oportunidade">Selic ${this.selicAtual.toFixed(2)}% a.a.</span>`
@@ -322,12 +316,12 @@ export class SimuladorPage extends BaseComponent {
     return `${datePicker}
       ${resumoEstrategias(this.ativos, this.resultadosPorAtivo)}
       ${htmlTabelaEstrategias(this.ativos, this.resultadosPorAtivo, this.iaPorAtivo, this.carregandoIa)}
-      ${remover}
       <hr class="my-3">
-      ${this.formularioAdicionarAtivo()}
-      ${htmlConsultaRapida()}
-      <hr class="my-3">
-      ${this._htmlUniversoCompleto()}
+      <p class="small fw-semibold mb-1">Ativos do simulador (${this.ativos.length}) · universo completo (${this.todosAtivos.length})</p>
+      <p class="small text-muted mb-2">“+ Adicionar” coloca o ativo no simulador; o × do ticker tira. “Consultar” mostra as estratégias sem adicionar.</p>
+      <busca-ativos modo="multiplo" chave="simulador-estrategias" acoes="consultar"
+                    valor="${escaparHtml(this.simbolosDoSimulador().join(','))}"></busca-ativos>
+      <div id="resultado-consulta-rapida" class="mt-3"></div>
     `;
   }
 
@@ -391,7 +385,7 @@ export class SimuladorPage extends BaseComponent {
         <p class="mb-0">Retroativo: valide estratégias históricas contra retornos reais.</p>
         <p class="mb-0"><small>Selecione estratégia, janela e período para ver taxa de acerto e retorno médio.</small></p>
       </div>
-      ${htmlControlesRetroativo(this.todosAtivos)}
+      ${htmlControlesRetroativo(this.todosAtivos, { simbolo })}
       ${janelaChip}
       <div id="resultado-retroativo" class="mt-3">${this.erroRetroativo ? `<div class="alert alert-danger small">${escaparHtml(this.erroRetroativo)}</div>` : htmlResultadoRetroativo(this.resultadoRetroativo)}</div>
       ${secaoHistorico}
@@ -427,64 +421,20 @@ export class SimuladorPage extends BaseComponent {
     `;
   }
 
-  _htmlUniversoCompleto() {
-    const setoresOpcoes = this.setores.map((s) =>
-      `<option value="${escaparHtml(s)}"${s === (this.universoFiltros?.setor || '') ? ' selected' : ''}>${escaparHtml(s)}</option>`
-    ).join('');
-
-    const conteudo = this.universoResultado
-      ? htmlTabelaAtivos(this.universoResultado?.content || [])
-      : '<p class="small text-muted mb-0">Use os filtros acima para buscar no universo completo.</p>';
-
-    return `<div>
-      <p class="small fw-semibold mb-2">Universo completo (${this.todosAtivos.length} ativos)</p>
-      <div class="row g-2 align-items-end mb-3">
-        <div class="col-md-4">
-          <input type="text" id="universo-busca" class="form-control form-control-sm"
-                 placeholder="Símbolo ou nome…" value="${escaparHtml(this.universoFiltros?.q || '')}">
-        </div>
-        <div class="col-md-3">
-          <select id="universo-setor" class="form-select form-select-sm">
-            <option value="">Todos os setores</option>
-            ${setoresOpcoes}
-          </select>
-        </div>
-        <div class="col-md-2">
-          <input type="text" id="universo-uf" class="form-control form-control-sm"
-                 placeholder="UF" maxlength="2" value="${escaparHtml(this.universoFiltros?.uf || '')}"
-                 style="text-transform:uppercase">
-        </div>
-        <div class="col-md-3">
-          <button type="button" class="btn btn-primary btn-sm w-100" id="btn-universo-filtrar">Filtrar</button>
-        </div>
-      </div>
-      <div id="universo-resultado">${conteudo}</div>
-    </div>`;
-  }
-
-  formularioAdicionarAtivo() {
-    return `
-      <form id="form-adicionar" class="row g-2 align-items-end">
-        <div class="col-md-4">
-          <label for="novo-ativo" class="form-label small">Adicionar ativo</label>
-          ${htmlComboboxAtivo('novo-ativo', this.todosAtivos, { placeholder: 'PETR4' })}
-        </div>
-        <div class="col-md-2">
-          <label for="nova-janela" class="form-label small">Janela</label>
-          <input type="number" class="form-control form-control-sm" id="nova-janela" value="63" min="1" max="252" required>
-        </div>
-        <div class="col-md-3">
-          <label for="novo-capital" class="form-label small">Capital (R$)</label>
-          <input type="number" class="form-control form-control-sm" id="novo-capital" value="100000" min="1000" step="1000" required>
-        </div>
-        <div class="col-md-3">
-          <button type="submit" class="btn btn-success btn-sm w-100">Adicionar</button>
-        </div>
-      </form>
-    `;
-  }
 
   afterRender() {
+    // Busca de ativos (Estratégias): ligada uma vez na propria pagina, que
+    // sobrevive aos redesenhos; os eventos sobem da <busca-ativos>.
+    if (!this._buscaLigada) {
+      this._buscaLigada = true;
+      this.addEventListener('busca-ativos:selecao', (e) => {
+        if (e.target.getAttribute('chave') === 'simulador-estrategias') this.aoAlterarSelecaoEstrategias(e.detail, e.target);
+      });
+      this.addEventListener('busca-ativos:acao', (e) => {
+        if (e.detail?.acao === 'consultar') this.consultarEstrategias(e.detail.simbolo);
+      });
+    }
+
     // Eventos das abas
     this.querySelectorAll('[data-aba]').forEach((btn) => {
       btn.addEventListener('click', (evento) => {
@@ -623,42 +573,6 @@ export class SimuladorPage extends BaseComponent {
       this.carregarAtivos();
     });
 
-    // Formulário adicionar ativo
-    this.querySelector('#form-adicionar')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const simbolo = this.querySelector('#novo-ativo').value.toUpperCase();
-      const janela = parseInt(this.querySelector('#nova-janela').value, 10);
-      const capital = this.querySelector('#novo-capital').value;
-      const erroAtivo = validarSimboloAtivo(simbolo);
-      if (erroAtivo) {
-        alert(erroAtivo);
-        return;
-      }
-
-      try {
-        await registrarAtivoSimulador(simbolo);
-        await this.carregarAtivos();
-        this.querySelector('#form-adicionar').reset();
-      } catch (err) {
-        alert(`Erro ao adicionar ativo: ${err.message}`);
-      }
-    });
-
-    // Botões remover
-    this.querySelectorAll('.btn-remover').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const simbolo = btn.dataset.simbolo;
-        if (confirm(`Remover ${simbolo} do simulador?`)) {
-          try {
-            await desativarAtivoSimulador(simbolo);
-            await this.carregarAtivos();
-          } catch (err) {
-            alert(`Erro ao remover ativo: ${err.message}`);
-          }
-        }
-      });
-    });
-
     // Filtro de status na aba Operações
     this.querySelectorAll('[data-filtro-status]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -772,75 +686,6 @@ export class SimuladorPage extends BaseComponent {
         this.capitalRetroativo = Number(btn.dataset.capitalRetroativo);
         this.render();
       });
-    });
-
-    // combobox consulta rápida: filtra por símbolo OU nome conforme digita
-    const inputConsulta = this.querySelector('#consulta-ativo');
-    const listaConsulta = this.querySelector('#consulta-ativo-sugestoes');
-    if (inputConsulta && listaConsulta) {
-      const atualizarSugestoes = () => {
-        const q = inputConsulta.value.trim().toUpperCase();
-        if (q.length < 1) { listaConsulta.classList.remove('show'); return; }
-        const matches = this.todosAtivos
-          .filter((a) => {
-            const s = (a.simbolo || '').toUpperCase();
-            const n = (a.nome || '').toUpperCase();
-            return s.startsWith(q) || n.includes(q);
-          })
-          .slice(0, 10);
-        if (!matches.length) { listaConsulta.classList.remove('show'); return; }
-        listaConsulta.innerHTML = matches.map((a) =>
-          `<li><button type="button" class="dropdown-item small py-1" data-simbolo="${escaparHtml(a.simbolo || a)}">
-            <strong>${escaparHtml(a.simbolo || a)}</strong>
-            ${a.nome ? `<span class="text-muted ms-2">${escaparHtml(a.nome)}</span>` : ''}
-          </button></li>`
-        ).join('');
-        listaConsulta.classList.add('show');
-        listaConsulta.querySelectorAll('[data-simbolo]').forEach((btn) => {
-          btn.addEventListener('mousedown', (ev) => {
-            ev.preventDefault();
-            inputConsulta.value = btn.dataset.simbolo;
-            listaConsulta.classList.remove('show');
-            inputConsulta.form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-          });
-        });
-      };
-      inputConsulta.addEventListener('input', atualizarSugestoes);
-      inputConsulta.addEventListener('focus', atualizarSugestoes);
-      inputConsulta.addEventListener('blur', () => {
-        setTimeout(() => listaConsulta.classList.remove('show'), 150);
-      });
-    }
-
-    // universo completo — botão filtrar
-    this.querySelector('#btn-universo-filtrar')?.addEventListener('click', () => {
-      this.universoFiltros = {
-        q: this.querySelector('#universo-busca')?.value?.trim() || '',
-        setor: this.querySelector('#universo-setor')?.value || '',
-        uf: (this.querySelector('#universo-uf')?.value || '').toUpperCase(),
-      };
-      this.carregarUniverso();
-    });
-
-    // 1: consulta rápida de qualquer ativo
-    this.querySelector('#form-consulta-rapida')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const simbolo = (this.querySelector('#consulta-ativo')?.value || '').toUpperCase();
-      const data = this.querySelector('#consulta-data')?.value || null;
-      const container = this.querySelector('#resultado-consulta-rapida');
-      if (!simbolo || !container) return;
-      container.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-      try {
-        const resultado = await buscarResultadosSimulador(simbolo, data);
-        const lista = Array.isArray(resultado) ? resultado : (resultado?.resultados || []);
-        if (!lista.length) {
-          container.innerHTML = '<p class="small text-muted mt-1">Nenhum sinal encontrado para este ativo.</p>';
-          return;
-        }
-        container.innerHTML = htmlTabelaEstrategias([{ simbolo }], { [simbolo]: lista }, {}, '');
-      } catch (err) {
-        container.innerHTML = `<p class="small text-danger mt-1">${escaparHtml(err.message || 'Erro ao consultar')}</p>`;
-      }
     });
 
     // 9: salva retroativo em sessionStorage após análise
