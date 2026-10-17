@@ -32,6 +32,7 @@ const rotas = {
   '#/assistente': 'assistente-page',
   '#/operabilidade': 'operabilidade-page',
   '#/simulador': 'simulador-page',
+  '#/carteiras': 'carteiras-page',
 };
 
 const ROTA_PADRAO = '#/inicio';
