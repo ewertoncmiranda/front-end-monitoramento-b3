@@ -4,6 +4,7 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarData } from '../../utils/dataHora.js';
 import { ROTULO_GRUPO, contarPorGrupo, filtrarBloqueios, grupoDoMotivo } from '../../analise/operabilidade.js';
+import { htmlAjuda } from '../../utils/ajuda.js';
 
 export function htmlFiltrosBloqueios(itens, filtro = {}) {
   const contagem = contarPorGrupo(itens);
@@ -41,7 +42,7 @@ export function htmlBloqueios(dados, filtro = {}) {
   const itens = dados?.itens || [];
   const quando = dados?.dataPregao ? ` em ${escaparHtml(formatarData(dados.dataPregao))}` : '';
   return `<section class="ficha-cartao mb-3 bloqueios-operacionais">
-    <p class="ficha-rotulo">Sinais que não viraram operação${quando}</p>
+    <div class="d-flex justify-content-between align-items-center"><p class="ficha-rotulo mb-2">Sinais que não viraram operação${quando}</p>${htmlAjuda('operabilidade-bloqueios', 'Bloqueios operacionais', 'Lista os motivos que impedem a regra de abrir novas posições: liquidez, dado ausente, drawdown.')}</div>
     <p class="small text-muted">Quando um ativo tem sinal mas não entra na carteira simulada, o motivo aparece aqui.</p>
     ${htmlFiltrosBloqueios(itens, filtro)}
     <div data-lista-bloqueios>${htmlListaBloqueios(itens, filtro)}</div>

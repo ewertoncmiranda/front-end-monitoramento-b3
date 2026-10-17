@@ -22,6 +22,11 @@ import './pages/OpcaoPage.js';
 import './pages/AssistentePage.js';
 import './pages/OperabilidadePage.js';
 import './pages/SimuladorPage.js';
+import './pages/CarteirasPage.js';
+import './components/carteiras/CarteiraModal.js';
+import './components/carteiras/CarteiraCabecalho.js';
+import './components/carteiras/CarteiraAtivoLinha.js';
+import './components/carteiras/CarteiraAdicionarAtivo.js';
 import { iniciarRouter } from './router.js';
 import { inicializarTema } from './utils/tema.js';
 
