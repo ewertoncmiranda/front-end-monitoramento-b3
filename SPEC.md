@@ -785,3 +785,113 @@ Os grupos podem rodar ao mesmo tempo e em qualquer ordem. A ordem de merge tamb�
 - `#/ativo/PETR4` mostra as dez seções, com cabeçalho e faixa de decisão visíveis sem rolar em 1366×768 e em 375 px de largura sem rolagem horizontal.
 - Tema claro e escuro legíveis. Nenhum `null` aparece como zero.
 - Nenhum texto de disclaimer regulatório na ficha (DEC-F360-1).
+
+---
+
+## Plano AJUDA: ícones de contexto na aba Operabilidade (2026-10-17)
+
+**Status:** PLANEJADO · **Rótulo das tarefas:** `AJUDA-PAI-*`. IDs reservados; não renomear.
+
+**Objetivo:** adicionar um botão `?` no canto superior direito de cada card da aba Operabilidade. Ao clicar, um popover inline (sem dependência externa) exibe título e descrição do card e fecha ao clicar fora. Nenhuma rota nova no backend.
+
+### Regras de execução paralela
+
+Mesmas do Plano F360 (regras 1–7, seção acima). Cada tarefa possui posse exclusiva dos arquivos listados. A AJUDA-PAI-1 cria o utilitário; as demais só o importam e não o editam. Branch `feature-ajuda-pai-N` a partir de `develop`.
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos (posse exclusiva) | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| AJUDA-PAI-1 | **Utilitário `htmlAjuda`:** `htmlAjuda(id, titulo, texto)` retorna botão `?` com popover `role="tooltip"` absolutamente posicionado; fecha via `mousedown` no `document` com `closest`; `aria-expanded` e `aria-describedby`; CSS próprio na seção `/* === AJUDA POPOVER === */` de `app.css` (`.btn-ajuda`, `.ajuda-popover`, `.ajuda-popover.visivel`); `tests/ajuda.test.mjs` cobre: abre, fecha ao clicar fora, escapa título e texto | novos: `public/js/utils/ajuda.js`; editado: `public/css/app.css` | — | Função exportada; popover visível em 375 px sem quebrar layout; `npm test` verde | PLANEJADO |
+| AJUDA-PAI-2 | **Integração em `OperabilidadePage.js`:** importa `htmlAjuda` e insere `${htmlAjuda(...)}` em `htmlResumo` (status/badge, pregões avaliados), `htmlMaturidade` (barras 63/126) e `htmlOperabilidade` (alertas, gráfico) com os textos da proposta | editado: `public/js/pages/OperabilidadePage.js` | AJUDA-PAI-1 | Três cards com botão `?` visível; conteúdo do popover não vazio; layout intacto | PLANEJADO |
+| AJUDA-PAI-3 | **Integração em `GraficoOperabilidade.js`:** importa `htmlAjuda` e insere botão no cabeçalho do gráfico retorno × CDI | editado: `public/js/components/operacional/GraficoOperabilidade.js` | AJUDA-PAI-1 | Card do gráfico com botão `?`; popover descreve o eixo e a comparação com CDI líquido | PLANEJADO |
+| AJUDA-PAI-4 | **Integração em `CarteiraSimulada.js`:** botão `?` no cabeçalho do card carteira com texto "Posições abertas pela regra de entrada vigente. Sem execução real." | editado: `public/js/components/operacional/CarteiraSimulada.js` | AJUDA-PAI-1 | Card com botão `?`; popover correto | PLANEJADO |
+| AJUDA-PAI-5 | **Integração em `BloqueiosOperacionais.js`:** botão `?` com texto "Lista os motivos que impedem a regra de abrir novas posições: liquidez, dado ausente, drawdown." | editado: `public/js/components/operacional/BloqueiosOperacionais.js` | AJUDA-PAI-1 | Card com botão `?`; popover correto | PLANEJADO |
+
+### Grupos para agentes paralelos
+
+| Grupo | Tarefas | Pode iniciar em |
+|---|---|---|
+| **A — Base** | AJUDA-PAI-1 | imediato |
+| **B — Integrações** | AJUDA-PAI-2, AJUDA-PAI-3, AJUDA-PAI-4, AJUDA-PAI-5 | após AJUDA-PAI-1 merged |
+
+### Aceite do plano
+
+- Cada card da aba Operabilidade exibe botão `?` discreto (18×18 px, `border-radius: 50%`, `text-muted`).
+- Clicar abre o popover; clicar fora ou no `×` fecha.
+- Nenhum layout quebra em 375 px.
+- `npm test` verde.
+
+---
+
+## Plano CART: feature Carteiras (2026-10-17)
+
+**Status:** PLANEJADO · **Rótulo das tarefas:** `CART-PAI-*`. IDs reservados; não renomear.
+
+**Objetivo:** nova aba `#/carteiras`. O usuário cria carteiras nomeadas, cada uma com uma das 7 estratégias (`Fundamentalista`, `Dividendos`, `Momentum`, `Reversão`, `Crescimento`, `Graham`, `Qualidade`). Cada carteira agrega N ativos monitorados com data de entrada e capital alocado. O painel exibe a evolução patrimonial desde a entrada mais antiga. Persistência 100% em `localStorage` — zero dependência de backend novo.
+
+### Regras de execução paralela
+
+Mesmas do Plano F360 (regras 1–7). Branch `feature-cart-pai-N` a partir de `develop`. A CART-PAI-7 (página) depende de todas as demais; as restantes podem rodar em paralelo assim que a CART-PAI-1 (store) e a CART-PAI-2 (api de preço) estiverem merged.
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos (posse exclusiva) | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| CART-PAI-1 | **Store de carteiras:** CRUD sobre `localStorage['b3-carteiras']`; exportar `listarCarteiras`, `obterCarteira(id)`, `criarCarteira({nome, estrategia, cor})`, `atualizarCarteira(id, campos)`, `removerCarteira(id)`, `adicionarAtivo(carteiraId, {simbolo, dataEntrada, capital})`, `removerAtivo(carteiraId, simbolo)`; estrutura `{ id, nome, estrategia, cor, criadaEm, ativos: [{simbolo, dataEntrada, capital}] }`; `tests/carteiras.test.mjs` cobre CRUD completo e `localStorage` indisponível | novo: `public/js/utils/carteirasStore.js` | — | Testes verde; `null` de `localStorage` não quebra | PLANEJADO |
+| CART-PAI-2 | **API de preço por data:** wrapper sobre `buscarPregoes` que resolve o fechamento em `dataIso` (ou o mais próximo disponível); exportar `buscarPrecoNaData(simbolo, dataIso) → {dataEfetiva, preco}\|null` e `calcularRetornoAtivo(simbolo, dataIso) → {precoEntrada, precoAtual, retorno}`; `tests/carteiras.test.mjs` (seção própria) com `fetch` falso | novo: `public/js/api/carteirasPrecoApi.js` | — | `null` quando não há dado; testes cobrem found, not found e erro de rede | PLANEJADO |
+| CART-PAI-3 | **Modal "Nova/Editar carteira"** `<carteira-modal>`: campos nome (text), estratégia (select das 7), cor (`<input type="color">`); emite `carteira-salva` com `{carteira}` ao confirmar; cancela sem salvar | novo: `public/js/components/carteiras/CarteiraModal.js` | CART-PAI-1 | Modal abre/fecha sem efeito colateral; `localStorage` atualizado ao salvar | PLANEJADO |
+| CART-PAI-4 | **Linha de ativo** `<carteira-ativo-linha>`: recebe `{simbolo, dataEntrada, capital}` via `setAtivo(obj)`; chama `calcularRetornoAtivo` e exibe símbolo, data de entrada, capital, retorno (%) e badge ▲/▼; spinner enquanto carrega; `—` em falha | novo: `public/js/components/carteiras/CarteiraAtivoLinha.js` | CART-PAI-2 | Retorno calculado e formatado; `null` vira `—` | PLANEJADO |
+| CART-PAI-5 | **Cabeçalho da carteira** `<carteira-cabecalho>`: recebe `Carteira` via `setCarteira(obj)`; calcula patrimônio ponderado (`Σ capital × (1 + retorno)`), retorno médio ponderado; exibe nome, estratégia, badge cor, patrimônio e retorno; linha "vs CDI" via `taxasBase.js` existente | novo: `public/js/components/carteiras/CarteiraCabecalho.js` | CART-PAI-2 | Patrimônio e retorno corretos; CDI calculado sem chamada extra | PLANEJADO |
+| CART-PAI-6 | **Formulário "Adicionar ativo"** `<carteira-adicionar-ativo>`: campos `<seletor-de-ativos>`, data de entrada (`input[type=date]`), capital (`input[type=number]`); valida data não futura e capital > 0; emite `ativo-adicionado` ao salvar | novo: `public/js/components/carteiras/CarteiraAdicionarAtivo.js` | CART-PAI-1 | Data futura rejeitada; capital ≤ 0 rejeitado; evento emitido com `{simbolo, dataEntrada, capital}` | PLANEJADO |
+| CART-PAI-7 | **Página principal** `<carteiras-page>` (`#/carteiras`): pills por carteira, botão "Nova", `<carteira-cabecalho>`, tabela de `<carteira-ativo-linha>`, `<carteira-adicionar-ativo>` e `<carteira-modal>`; estado vazio com CTA; rota e link de nav | novos: `public/js/pages/CarteirasPage.js`; editados: `public/js/router.js`, `public/index.html`, `public/js/navegacao.js` | CART-PAI-1..6 | `#/carteiras` carrega sem erro; criar e remover carteira persiste no reload; estado vazio com mensagem amigável | PLANEJADO |
+
+### Grupos para agentes paralelos
+
+| Grupo | Tarefas | Pode iniciar em |
+|---|---|---|
+| **A — Store e API** | CART-PAI-1, CART-PAI-2 | imediato (paralelo entre si) |
+| **B — Componentes** | CART-PAI-3, CART-PAI-4, CART-PAI-5, CART-PAI-6 | após CART-PAI-1 e CART-PAI-2 merged (paralelo entre si) |
+| **C — Página e roteamento** | CART-PAI-7 | após todos os componentes merged |
+
+### Aceite do plano
+
+- `#/carteiras` carrega sem erro de console; link de navegação ativo.
+- Criar, editar e remover carteira persiste no `localStorage` após reload.
+- Adicionar e remover ativo persiste.
+- Retorno calculado a partir da data de entrada; patrimônio = Σ capital × (1 + retorno).
+- `npm test` verde.
+
+---
+
+## Plano OPCX: opções orientadas ao ativo (2026-10-17)
+
+**Status:** PLANEJADO · **Rótulo das tarefas:** `OPCX-PAI-*`. IDs reservados; não renomear. (Prefixo diferenciado de `OPT-PAI-*` do plano anterior.)
+
+**Objetivo:** reorganizar `#/opcoes` para colocar o contexto do ativo em primeiro plano. Hoje a tela exibe a saúde da cadeia antes mesmo de o usuário selecionar um ativo. A proposta: sidebar com os dados de contexto do ativo (preço, range, Graham, vol, ex-dividendos) ao lado da tabela de opções; saúde da cadeia move para `<details>` colapsável no rodapé.
+
+### Regras de execução paralela
+
+Mesmas do Plano F360 (regras 1–7). Branch `feature-opcx-pai-N` a partir de `develop`. OPCX-PAI-1 (sidebar) e OPCX-PAI-2 (CSS) podem rodar em paralelo; OPCX-PAI-3 (integração) depende de ambas.
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos (posse exclusiva) | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| OPCX-PAI-1 | **Sidebar de contexto** `<ativo-contexto-opcoes>`: recebe `contexto` (resultado de `_montarContexto` em `OpcaoPage.js`) via `setContexto(obj)`; bloco 1 — preço atual, variação do dia, máx/mín 63d, barra de posição no range, variação no período; bloco 2 — Graham Number, recomendação (badge), margem de segurança, vol21d, ATR14, volume relativo, ex-dividendos; `null` vira `—`; `tests/opcx.test.mjs` cobre render com contexto completo e com tudo `null` | novo: `public/js/components/opcoes/AtivoContextoOpcoes.js` | — | Ambos os blocos renderizam; `null` universal produz `—` em todos os campos; sem erro de console | PLANEJADO |
+| OPCX-PAI-2 | **CSS layout duas colunas:** seção `/* === OPCOES LAYOUT === */` ao final de `app.css`; `.opcoes-layout { display:flex; gap:1rem; align-items:flex-start }`, `.opcoes-sidebar { width:260px; flex-shrink:0; position:sticky; top:1rem }`, `.opcoes-principal { flex:1; min-width:0 }`; breakpoint `max-width:767px` empilha sidebar acima do principal | editado: `public/css/app.css` | — | Layout visível em 1280 px (lado a lado) e em 375 px (empilhado); sem rolagem horizontal | PLANEJADO |
+| OPCX-PAI-3 | **Refatoração de `OpcaoPage.js`:** importa `AtivoContextoOpcoes`; move `<saude-cadeia-opcoes>` para `<details open>` no rodapé; em `_renderizar` envolve painel + seletor em `.opcoes-layout` com `<aside class="opcoes-sidebar"><ativo-contexto-opcoes></ativo-contexto-opcoes></aside>`; após `painel.setDados(dados)`, chama `contextoEl.setContexto(this._contexto)`; mantém toda a lógica e imports existentes | editado: `public/js/pages/OpcaoPage.js` | OPCX-PAI-1, OPCX-PAI-2 | Tela sem ativo: só seletor + saúde colapsada. Com ativo: sidebar ao lado da tabela. Mobile: sidebar empilhada acima. `npm test` verde | PLANEJADO |
+
+### Grupos para agentes paralelos
+
+| Grupo | Tarefas | Pode iniciar em |
+|---|---|---|
+| **A — Sidebar e CSS** | OPCX-PAI-1, OPCX-PAI-2 | imediato (paralelo entre si) |
+| **B — Integração** | OPCX-PAI-3 | após OPCX-PAI-1 e OPCX-PAI-2 merged |
+
+### Aceite do plano
+
+- Entrar em `#/opcoes` sem ativo: seletor + saúde em `<details>` (aberto). Sem bloco de contexto visível.
+- Selecionar ativo: sidebar com contexto ao lado da tabela de opções.
+- Em 375 px: sidebar empilha acima da tabela; sem rolagem horizontal.
+- `npm test` verde.
