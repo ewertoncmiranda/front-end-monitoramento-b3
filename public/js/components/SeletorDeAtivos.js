@@ -34,7 +34,9 @@ export class SeletorDeAtivos extends BaseComponent {
     const mostrarSugestoes = () => {
       const q = input.value.trim().toUpperCase();
       if (!q || !this._ativos.length) { lista.classList.remove('show'); return; }
+      const setorFiltro = this.getAttribute('setor') || '';
       const filtrados = this._ativos
+        .filter((a) => !setorFiltro || a.setor === setorFiltro)
         .filter((a) => a.simbolo.startsWith(q) || (a.nome || '').toUpperCase().includes(q))
         .slice(0, 8);
       if (!filtrados.length) { lista.classList.remove('show'); return; }
