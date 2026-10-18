@@ -23,6 +23,8 @@ const ROTAS_PROXIADAS = [
   '/operacional',
   // Simulador de operacoes (gestor SIM-GES-*)
   '/simulador',
+  // Carteiras persistentes (gestor CARTDB-GES-1)
+  '/carteiras',
 ];
 
 export function registrarProxy(app, backendUrl) {

@@ -1,12 +1,15 @@
 import { BaseComponent } from '../base/BaseComponent.js';
+import { mensagemDeErro, salvarAtivo } from '../../api/carteirasApi.js';
 import { adicionarAtivo } from '../../utils/carteirasStore.js';
 import '../busca/BuscaAtivos.js';
 
 /**
  * CART-PAI-6 — Formulário para adicionar um ativo a uma carteira.
  * Uso: <carteira-adicionar-ativo></carteira-adicionar-ativo>
- * API pública: setCarteiraId(id)
+ * API pública: setCarteiraId(id, simbolosExistentes)
  * Evento emitido: ativo-adicionado { simbolo, dataEntrada, capital, ativo }
+ * Grava no gestor (PUT /carteiras/{id}/ativos/{simbolo}); um registro por
+ * ticker em cada carteira, então repetir um ticker substitui (com confirmação).
  */
 export class CarteiraAdicionarAtivo extends BaseComponent {
   constructor() {
@@ -48,8 +51,9 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
     this.querySelector('#btn-adicionar').addEventListener('click', () => this._submeter());
   }
 
-  setCarteiraId(id) {
+  setCarteiraId(id, simbolosExistentes = []) {
     this._carteiraId = id;
+    this._existentes = simbolosExistentes.map((s) => String(s).toUpperCase());
     // Uma busca por carteira: cada uma guarda seus filtros e seu ticker na sessao.
     const busca = this.querySelector('#seletor-ativo');
     if (busca) {
@@ -83,7 +87,7 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
     return null;
   }
 
-  _submeter() {
+  async _submeter() {
     // Remove erro anterior
     const erroAnterior = this.querySelector('.alert-danger');
     if (erroAnterior) erroAnterior.remove();
@@ -97,9 +101,15 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
       this._exibirErro(erro);
       return;
     }
+    if ((this._existentes || []).includes(String(simbolo).toUpperCase())
+      && !window.confirm(`${simbolo} já está nesta carteira. Substituir a data de entrada e o capital?`)) {
+      return;
+    }
 
+    const botao = this.querySelector('#btn-adicionar');
+    if (botao) botao.disabled = true;
     try {
-      const ativo = adicionarAtivo(this._carteiraId, {
+      const ativo = await salvarAtivo(this._carteiraId, {
         simbolo,
         dataEntrada,
         capital: Number(capital),
@@ -116,7 +126,9 @@ export class CarteiraAdicionarAtivo extends BaseComponent {
         })
       );
     } catch (err) {
-      this._exibirErro(err.message || 'Erro ao adicionar ativo.');
+      this._exibirErro(mensagemDeErro(err));
+    } finally {
+      if (botao) botao.disabled = false;
     }
   }
 

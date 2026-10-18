@@ -2,6 +2,11 @@
 import { BaseComponent } from '../base/BaseComponent.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
+import { escaparHtml } from '../../utils/html.js';
+
+// Nome, estrategia e cor vem do gestor e sao compartilhados pela instancia:
+// tudo escapado, e cor so entra no style se for #RGB/#RRGGBB.
+const corSegura = (cor) => (/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(cor)) ? cor : '#6c757d');
 
 // CDI anual aproximado usado para comparação (10,75% a.a.)
 const CDI_AA = 0.1075;
@@ -65,12 +70,12 @@ export class CarteiraCabecalho extends BaseComponent {
 
     const sinalRetorno = retornoMedio >= 0 ? '+' : '';
 
-    return `<div class="card mb-3" style="border-left: 4px solid ${c.cor}">
+    return `<div class="card mb-3" style="border-left: 4px solid ${corSegura(c.cor)}">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start">
           <div>
-            <h5 class="card-title mb-1">${c.nome}</h5>
-            <span class="badge bg-secondary mb-2">${c.estrategia}</span>
+            <h5 class="card-title mb-1">${escaparHtml(c.nome ?? '')}</h5>
+            ${c.estrategia ? `<span class="badge bg-secondary mb-2">${escaparHtml(c.estrategia)}</span>` : ''}
           </div>
           <div class="d-flex gap-2">
             <button class="btn btn-sm btn-outline-primary js-editar">Editar</button>
