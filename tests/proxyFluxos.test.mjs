@@ -51,6 +51,20 @@ try {
   assert.equal(cadastro.metodo, 'POST');
   assert.equal(cadastro.origin, undefined);
   assert.equal(cadastro.corpo, '{"favorito":true}');
+
+  const ultimas = await fetch(`${base}/cargas/ultimas`).then(resposta => resposta.json());
+  assert.equal(ultimas.url, '/cargas/ultimas');
+  const historico = await fetch(`${base}/cargas?limite=20&status=FALHA&desde=2026-10-01`).then(resposta => resposta.json());
+  assert.equal(historico.url, '/cargas?limite=20&status=FALHA&desde=2026-10-01');
+  const carga = await fetch(`${base}/cargas`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: 'http://localhost:8082' },
+    body: JSON.stringify({ tipo: 'ROTINA', solicitadaPor: 'PAINEL' }),
+  }).then(resposta => resposta.json());
+  assert.equal(carga.url, '/cargas');
+  assert.equal(carga.metodo, 'POST');
+  assert.equal(carga.origin, undefined);
+  assert.deepEqual(JSON.parse(carga.corpo), { tipo: 'ROTINA', solicitadaPor: 'PAINEL' });
 } finally {
   await fechar(frontend);
   await fechar(backend);

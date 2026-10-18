@@ -520,3 +520,15 @@ th[data-sort].sort-asc .sort-icon, th[data-sort].sort-desc .sort-icon { opacity:
   display: block; font-size: .65rem; opacity: .65;
   white-space: nowrap; overflow: hidden; max-width: 9rem; text-overflow: ellipsis;
 }
+
+/* Cargas: os mesmos tokens semânticos da ficha, com texto e ícone nos selos. */
+.text-bg-carga-success { background-color: var(--f360-compra-forte) !important; color: var(--f360-superficie) !important; }
+.text-bg-carga-warning { background-color: var(--f360-manter) !important; color: var(--f360-superficie) !important; }
+.text-bg-carga-danger { background-color: var(--f360-venda) !important; color: var(--f360-superficie) !important; }
+.text-bg-carga-primary { background-color: var(--f360-info) !important; color: var(--f360-superficie) !important; }
+.text-bg-carga-partial { background-color: #c2410c !important; color: #fff !important; }
+[data-bs-theme="dark"] .text-bg-carga-partial { background-color: #fb923c !important; color: #0f172a !important; }
+cargas-page header { flex-wrap: wrap; }
+cargas-page section { margin-bottom: 1.5rem; }
+cargas-page dialog { color: var(--bs-body-color); background: var(--bs-body-bg); }
+cargas-page dialog::backdrop { background: rgb(0 0 0 / 45%); }

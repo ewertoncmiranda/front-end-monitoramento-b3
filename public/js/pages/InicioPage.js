@@ -14,6 +14,7 @@ import { htmlEstadoVazio } from '../components/EstadoVazio.js';
 import { buscarAlertasOperacionais } from '../api/operacionalV2Api.js';
 import { htmlAlertasOperacionais } from '../components/inicio/AlertasOperacionais.js';
 import '../components/LoadingSpinner.js';
+import '../components/cargas/AvisoDefasagem.js';
 
 // Unica responsabilidade: a pagina Inicio (REQ-UX-7) - um resumo do que mudou:
 // saude dos dados, favoritos com variacao e comunicados da semana. Cada bloco
@@ -31,6 +32,7 @@ export class InicioPage extends BaseComponent {
           <button class="btn btn-sm btn-primary" type="submit">Abrir</button>
         </form>
       </div>
+      <aviso-defasagem-cargas></aviso-defasagem-cargas>
       <div class="row g-3">
         <section class="col-12" aria-labelledby="ini-alertas"><div class="card shadow-sm"><div class="card-body">
           <div class="d-flex justify-content-between"><h6 id="ini-alertas">Alertas operacionais</h6><a class="small" href="#/operabilidade">Abrir cockpit</a></div>

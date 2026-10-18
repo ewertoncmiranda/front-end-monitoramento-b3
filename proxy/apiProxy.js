@@ -5,6 +5,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const ROTAS_PROXIADAS = [
   '/ativos',
+  '/cargas',
   '/analises',
   '/api',
   '/setores',
@@ -38,7 +39,7 @@ export function registrarProxy(app, backendUrl) {
         // depois), o Express normaliza o path remanescente para "/" - sem este
         // caso especial o proxy reenviaria "/setores/" (com barra final), que o
         // backend nao mapeia para o mesmo endpoint e responde 500.
-        pathRewrite: (path) => (path === '/' ? rota : rota + path),
+        pathRewrite: (path) => (path === '/' ? rota : rota + (path.startsWith('/?') ? path.slice(1) : path)),
         on: {
           proxyReq: (proxyReq) => {
             // O backend tem CORS proprio (para outros clientes). Sem remover o
