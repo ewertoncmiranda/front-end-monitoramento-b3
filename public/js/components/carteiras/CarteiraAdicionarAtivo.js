@@ -1,6 +1,5 @@
 import { BaseComponent } from '../base/BaseComponent.js';
 import { mensagemDeErro, salvarAtivo } from '../../api/carteirasApi.js';
-import { adicionarAtivo } from '../../utils/carteirasStore.js';
 import '../busca/BuscaAtivos.js';
 
 /**
