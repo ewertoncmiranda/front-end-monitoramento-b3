@@ -12,6 +12,7 @@ import { formatarPercentual } from '../analise/diarioDeSinais.js';
 import { formatarData, formatarDataHora } from '../utils/dataHora.js';
 import { escaparHtml } from '../utils/html.js';
 import './LoadingSpinner.js';
+import './cargas/AvisoDefasagem.js';
 
 // Unica responsabilidade: mostrar, ao vivo, se os dados que alimentam as
 // regras merecem confianca - idade de cada fonte, cobertura por ativo e a
@@ -20,7 +21,7 @@ import './LoadingSpinner.js';
 
 export class SaudeDosDados extends BaseComponent {
   template() {
-    return '<div id="saude-conteudo"><loading-spinner></loading-spinner></div>';
+    return '<aviso-defasagem-cargas></aviso-defasagem-cargas><div id="saude-conteudo"><loading-spinner></loading-spinner></div>';
   }
 
   async afterRender() {

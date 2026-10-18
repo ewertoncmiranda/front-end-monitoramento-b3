@@ -9,6 +9,7 @@ import { lerUltimo, redirecionamento } from './components/ficha360/rotaFicha.js'
 
 const rotas = {
   '#/inicio': 'inicio-page',
+  '#/cargas': 'cargas-page',
   '#/ativo': 'ficha-ativo-page',
   '#/gestao': 'gestao-page',
   '#/ativos': 'ativos-page',
@@ -43,6 +44,7 @@ export function paginaDaRota(hash) {
   // pagina (ela mesma le), nao parte da rota.
   const caminho = String(hash || ROTA_PADRAO).split('?')[0];
   return rotas[caminho]
+    || (caminho.startsWith('#/cargas/') ? rotas['#/cargas'] : null)
     || (caminho.startsWith('#/ativo/') ? rotas['#/ativo'] : null)
     || (caminho.startsWith('#/opcoes/') ? rotas['#/opcoes'] : null)
     || rotas[ROTA_PADRAO];

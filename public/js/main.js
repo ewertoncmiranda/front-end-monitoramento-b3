@@ -1,3 +1,4 @@
+import './pages/CargasPage.js';
 // Ponto de entrada: registra os componentes de layout e inicia o router.
 // Nao contem regra de negocio nenhuma.
 import './components/AppHeader.js';
