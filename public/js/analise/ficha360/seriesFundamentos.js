@@ -7,6 +7,25 @@ export const METRICAS_FUNDAMENTOS = Object.freeze([
   { grupo: 'Resultado', itens: [['receita_liquida', 'Receita líquida', 'moeda'], ['ebitda', 'EBITDA', 'moeda'], ['lucro_liquido', 'Lucro líquido', 'moeda']] },
 ]);
 
+// Bancos e seguradoras publicam outro plano de contas: nao existe receita liquida,
+// EBITDA, liquidez nem DSO no sentido de empresa comum, e o ETL nao calcula ROIC
+// para eles de proposito. Mostrar esses cartoes vazios parecia falta de dado.
+export const PLANOS_FINANCEIROS = Object.freeze(['FINANCEIRO', 'SEGURADORA']);
+export const METRICAS_FINANCEIRAS = Object.freeze([
+  { grupo: 'Rentabilidade', itens: [['roe', 'ROE', 'pct'], ['lucro_liquido', 'Lucro líquido', 'moeda']] },
+  { grupo: 'Por ação', itens: [['lpa', 'LPA', 'numero'], ['vpa', 'VPA', 'numero']] },
+  { grupo: 'Múltiplos', itens: [['preco_lucro', 'P/L', 'numero'], ['preco_valor_patrimonial', 'P/VP', 'numero']] },
+]);
+export const NOTA_PLANO_FINANCEIRO = 'Instituição financeira: receita líquida, EBITDA, dívida líquida/EBITDA, cobertura de juros, liquidez, DSO e ROIC não se aplicam ao plano de contas de bancos e seguradoras.';
+
+export function ehPlanoFinanceiro(planoContas) {
+  return PLANOS_FINANCEIROS.includes(String(planoContas || '').toUpperCase());
+}
+
+export function metricasDoPlano(planoContas) {
+  return ehPlanoFinanceiro(planoContas) ? METRICAS_FINANCEIRAS : METRICAS_FUNDAMENTOS;
+}
+
 export function serieDaMetrica(pontos = [], metrica) {
   return pontos.map((p) => {
     const value = metrica === 'divida_liquida_ebitda'
