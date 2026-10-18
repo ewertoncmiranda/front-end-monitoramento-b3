@@ -1,7 +1,8 @@
 import { BaseComponent } from '../base/BaseComponent.js';
 import { escaparHtml as esc } from '../../utils/html.js';
 import { dispararCarga } from '../../api/cargasApi.js';
-import { listarAtivosBase } from '../../api/baseAtivosApi.js';
+// Registra a <busca-ativos> compartilhada (Carteiras, Simulador e aqui).
+import '../busca/BuscaAtivos.js';
 
 export const ETAPAS_CARGA = ['COTAHIST', 'LIQUIDEZ', 'PRONTIDAO', 'QUALIDADE_OPCOES', 'CONCILIACAO', 'DFP', 'TTM', 'IPE', 'DVA', 'EVENTOS', 'CHECAGENS'];
 export function validarCarga({ tipo, anos = '', simbolos = [], etapas = [], forcar = false }, anoAtual = new Date().getFullYear()) {
@@ -18,33 +19,9 @@ export function resumoCarga(p) {
   return `${{ ROTINA: 'Rotina', COMPLETA: 'Completa', PARCIAL: 'Parcial' }[p.tipo]} · Anos: ${p.anos?.join(', ') || (p.tipo === 'COMPLETA' ? 'últimos 5 anos' : 'padrão da rotina/etapa')} · Ativos: ${p.simbolos?.join(', ') || 'todos'} · Etapas: ${p.etapas?.join(', ') || (p.tipo === 'ROTINA' ? 'todas exceto EVENTOS' : 'todas')} · Forçar reprocessamento: ${p.forcar ? 'sim' : 'não'}.`;
 }
 
-// Busca múltipla compartilhável: o projeto ainda não possuía este elemento.
-export class BuscaAtivosCarga extends BaseComponent {
-  constructor() { super(); this.simbolos = []; this._versao = 0; }
-  template() { return '<label class="form-label">Símbolos (opcional)</label><div class="input-group"><input class="form-control" aria-label="Buscar ativo por símbolo ou nome" placeholder="Busque símbolo ou nome"><button type="button" class="btn btn-outline-secondary" data-adicionar>Adicionar símbolo</button></div><div data-sugestoes></div><div data-selecionados class="mt-2"></div><small class="text-muted">Sem seleção: todos os ativos. Selecione vários símbolos.</small>'; }
-  afterRender() {
-    const input = this.querySelector('input');
-    input.addEventListener('input', () => { clearTimeout(this._timer); const versao = ++this._versao; this._timer = setTimeout(() => this._buscar(input.value, versao), 250); });
-    this.querySelector('[data-adicionar]').onclick = () => this._adicionar(input.value);
-    input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); this._adicionar(input.value); } };
-    this.querySelector('[data-sugestoes]').onclick = e => { const b = e.target.closest('[data-simbolo]'); if (b) this._adicionar(b.dataset.simbolo); };
-    this.querySelector('[data-selecionados]').onclick = e => { const b = e.target.closest('[data-remover]'); if (b) { this.simbolos = this.simbolos.filter(s => s !== b.dataset.remover); this._chips(); } };
-  }
-  async _buscar(q, versao) {
-    if (!q.trim()) { this.querySelector('[data-sugestoes]').innerHTML = ''; return; }
-    try { const dados = await listarAtivosBase({ q: q.trim(), tamanho: 8 }); if (versao !== this._versao || !this.isConnected) return;
-      this.querySelector('[data-sugestoes]').innerHTML = (dados?.content || []).map(a => `<button type="button" class="btn btn-sm btn-outline-secondary m-1" data-simbolo="${esc(a.simbolo)}">${esc(a.simbolo)} · ${esc(a.nome || a.nomeEmpresa || '')}</button>`).join('');
-    } catch { if (versao === this._versao && this.isConnected) this.querySelector('[data-sugestoes]').textContent = 'Busca indisponível. Você pode adicionar o símbolo diretamente.'; }
-  }
-  _adicionar(valor) { if (this.querySelector('input').disabled) return; const novos = String(valor).toUpperCase().split(/[\s,;]+/).filter(Boolean); if (!novos.length) return; this.simbolos = [...new Set([...this.simbolos, ...novos])]; this.querySelector('input').value = ''; this._versao++; this.querySelector('[data-sugestoes]').innerHTML = ''; this._chips(); }
-  _chips() { this.querySelector('[data-selecionados]').innerHTML = this.simbolos.map(s => `<button type="button" class="btn btn-sm btn-outline-primary m-1" data-remover="${esc(s)}" aria-label="Remover ${esc(s)}">${esc(s)} ×</button>`).join(''); }
-  disconnectedCallback() { clearTimeout(this._timer); this._versao++; }
-}
-if (!customElements.get('busca-ativos')) customElements.define('busca-ativos', BuscaAtivosCarga);
-
 export class RodarCarga extends BaseComponent {
   constructor() { super(); this._ativa = null; this._enviando = false; this._pendente = null; }
-  template() { return `<dialog class="border rounded shadow p-0" style="width:min(95vw,680px);max-height:90vh" aria-label="Rodar carga"><form class="p-3" novalidate><div class="d-flex justify-content-between"><h2 class="h5">Rodar carga</h2><button type="button" data-fechar class="btn-close" aria-label="Fechar"></button></div><label class="form-label" for="carga-tipo">Tipo</label><select id="carga-tipo" class="form-select mb-3"><option value="ROTINA">Rotina</option><option value="COMPLETA">Completa</option><option value="PARCIAL">Parcial</option></select><div data-anos hidden><label for="carga-anos" class="form-label">Anos (opcional, separados por vírgula)</label><input id="carga-anos" class="form-control mb-3" placeholder="Ex.: 2024, 2025, 2026"></div><busca-ativos modo="multiplo"></busca-ativos><fieldset data-etapas class="my-3" hidden><legend class="fs-6">Etapas</legend>${ETAPAS_CARGA.map(e => `<label class="me-3 mb-2"><input type="checkbox" name="etapa" value="${e}"> ${e}</label>`).join('')}</fieldset><label class="d-block my-3"><input type="checkbox" data-forcar> Forçar reprocessamento</label><div data-erro role="alert" class="text-danger mb-2"></div><div data-resumo class="alert alert-info" hidden></div><button type="submit" class="btn btn-primary" data-revisar>Revisar carga</button><button type="button" class="btn btn-primary" data-confirmar hidden>Confirmar e iniciar carga</button><button type="button" class="btn btn-secondary ms-2" data-voltar hidden>Voltar e editar</button></form></dialog>`; }
+  template() { return `<dialog class="border rounded shadow p-0" style="width:min(95vw,680px);max-height:90vh" aria-label="Rodar carga"><form class="p-3" novalidate><div class="d-flex justify-content-between"><h2 class="h5">Rodar carga</h2><button type="button" data-fechar class="btn-close" aria-label="Fechar"></button></div><label class="form-label" for="carga-tipo">Tipo</label><select id="carga-tipo" class="form-select mb-3"><option value="ROTINA">Rotina</option><option value="COMPLETA">Completa</option><option value="PARCIAL">Parcial</option></select><div data-anos hidden><label for="carga-anos" class="form-label">Anos (opcional, separados por vírgula)</label><input id="carga-anos" class="form-control mb-3" placeholder="Ex.: 2024, 2025, 2026"></div><div class="mb-3"><span class="form-label d-block">Ativos (opcional)</span><busca-ativos modo="multiplo"></busca-ativos><small class="text-muted">Sem seleção: todos os ativos.</small></div><fieldset data-etapas class="my-3" hidden><legend class="fs-6">Etapas</legend>${ETAPAS_CARGA.map(e => `<label class="me-3 mb-2"><input type="checkbox" name="etapa" value="${e}"> ${e}</label>`).join('')}</fieldset><label class="d-block my-3"><input type="checkbox" data-forcar> Forçar reprocessamento</label><div data-erro role="alert" class="text-danger mb-2"></div><div data-resumo class="alert alert-info" hidden></div><button type="submit" class="btn btn-primary" data-revisar>Revisar carga</button><button type="button" class="btn btn-primary" data-confirmar hidden>Confirmar e iniciar carga</button><button type="button" class="btn btn-secondary ms-2" data-voltar hidden>Voltar e editar</button></form></dialog>`; }
   afterRender() {
     this.querySelector('[data-fechar]').onclick = () => this.fechar();
     this.querySelector('dialog').addEventListener('cancel', e => { if (this._enviando) e.preventDefault(); });
@@ -63,7 +40,8 @@ export class RodarCarga extends BaseComponent {
   _editar() {
     if (this._enviando) return;
     this._pendente = null;
-    this.querySelectorAll('input,select,busca-ativos button').forEach(e => { e.disabled = false; });
+    this.querySelectorAll('#carga-tipo,#carga-anos,[name="etapa"],[data-forcar]').forEach(e => { e.disabled = false; });
+    this._congelarBusca(false);
     this.querySelector('[data-confirmar]').hidden = true;
     this.querySelector('[data-voltar]').hidden = true;
     this.querySelector('[data-revisar]').hidden = false;
@@ -72,16 +50,13 @@ export class RodarCarga extends BaseComponent {
   }
   revisar() {
     if (this._enviando || this._ativa) return;
-    try { const busca = this.querySelector('busca-ativos'); if (busca.querySelector('input')?.value.trim()) throw new Error('Adicione o símbolo digitado ou limpe a busca antes de revisar.');
+    try { const busca = this.querySelector('busca-ativos');
       this._pendente = validarCarga({ tipo: this.querySelector('#carga-tipo').value, anos: this.querySelector('#carga-anos').value, simbolos: busca.simbolos || [], etapas: [...this.querySelectorAll('[name="etapa"]:checked')].map(e => e.value), forcar: this.querySelector('[data-forcar]').checked });
-      // Descarte respostas pendentes e sugestões antes de congelar a revisão.
-      busca._versao++;
-      clearTimeout(busca._timer);
-      busca.querySelector('[data-sugestoes]').innerHTML = '';
       this.querySelector('[data-erro]').textContent = '';
       this.querySelector('[data-resumo]').textContent = resumoCarga(this._pendente);
       this.querySelector('[data-resumo]').hidden = false;
-      this.querySelectorAll('input,select,busca-ativos button').forEach(e => { e.disabled = true; });
+      this.querySelectorAll('#carga-tipo,#carga-anos,[name="etapa"],[data-forcar]').forEach(e => { e.disabled = true; });
+      this._congelarBusca(true);
       this.querySelector('[data-revisar]').hidden = true;
       this.querySelector('[data-confirmar]').hidden = false;
       this.querySelector('[data-voltar]').hidden = false;
@@ -103,6 +78,9 @@ export class RodarCarga extends BaseComponent {
       if (e.status === 409 && id) { this._ativa = id; const a = document.createElement('a'); a.href = `#/cargas/${encodeURIComponent(id)}`; a.textContent = ' Abrir carga em andamento'; erro.append(a); a.onclick = ev => { ev.preventDefault(); this._abrirExecucao(id); }; }
     } finally { this._enviando = false; this.querySelector('[data-confirmar]').disabled = false; this.querySelector('[data-voltar]').disabled = false; }
   }
+  // A busca redesenha cartões e filtros a cada ação; inert congela tudo o que ela desenhar
+  // enquanto a revisão está na tela, sem depender dos detalhes internos do componente.
+  _congelarBusca(congelar) { const busca = this.querySelector('busca-ativos'); if (busca) busca.inert = congelar; }
   _abrirExecucao(id) { this._ativa = id; this.querySelector('dialog').close(); this.dispatchEvent(new CustomEvent('carga-aberta', { detail: { id }, bubbles: true })); }
   disconnectedCallback() { this.querySelector('dialog')?.close(); }
 }
