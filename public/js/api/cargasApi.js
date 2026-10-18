@@ -1,3 +1,6 @@
+// Maior `limite` aceito pelo gestor em GET /cargas (fora de 1..200 ele responde 400).
+export const LIMITE_MAXIMO_CARGAS = 200;
+
 async function requisitar(caminho, opcoes = {}) {
   const resposta = await fetch(caminho, {
     ...opcoes, headers: { Accept: 'application/json', ...opcoes.headers },
@@ -7,7 +10,7 @@ async function requisitar(caminho, opcoes = {}) {
   try { data = texto ? JSON.parse(texto) : null; }
   catch { data = { mensagem: texto }; }
   if (!resposta.ok) {
-    const erro = new Error(data?.mensagem || data?.message || `Falha ao consultar cargas (${resposta.status})`);
+    const erro = new Error(data?.mensagem || data?.erro || data?.message || `Falha ao consultar cargas (${resposta.status})`);
     erro.status = resposta.status;
     erro.data = data;
     erro.body = data;
