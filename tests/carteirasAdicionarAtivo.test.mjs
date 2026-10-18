@@ -28,11 +28,12 @@ let casos = 0;
 function caso(nome, fn) { fn(); casos++; console.log(`  ok  ${nome}`); }
 
 // helper para criar uma instância sem precisar do DOM real
-function criarInstancia() {
+function criarInstancia(busca = null) {
   const inst = Object.create(CarteiraAdicionarAtivo.prototype);
   // inicializa o estado como o constructor faria
   inst._carteiraId = null;
   inst._simbolo = '';
+  inst.querySelector = (seletor) => (seletor === '#seletor-ativo' ? busca : null);
   return inst;
 }
 
@@ -42,6 +43,15 @@ caso('setCarteiraId armazena id', () => {
   const inst = criarInstancia();
   inst.setCarteiraId('c1');
   assert.equal(inst._carteiraId, 'c1');
+});
+
+caso('setCarteiraId da a busca uma chave por carteira e herda o ticker guardado', () => {
+  const atributos = {};
+  const busca = { simbolos: ['VALE3'], setAttribute: (n, v) => { atributos[n] = v; } };
+  const inst = criarInstancia(busca);
+  inst.setCarteiraId('c7');
+  assert.equal(atributos.chave, 'carteira-c7');
+  assert.equal(inst._simbolo, 'VALE3');
 });
 
 caso('_validarCampos rejeita simbolo vazio', () => {

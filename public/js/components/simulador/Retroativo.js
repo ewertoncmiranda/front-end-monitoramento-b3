@@ -1,7 +1,7 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
-import { ESTRATEGIAS_PADRAO, htmlComboboxAtivo, classeValor } from './utils.js';
+import { ESTRATEGIAS_PADRAO, htmlCampoBuscaAtivo, classeValor } from './utils.js';
 
 const SEM = '—';
 
@@ -14,21 +14,21 @@ export function janelaEntreDatas(inicioIso, fimIso) {
   return Math.max(1, Math.round(dias * 252 / 365));
 }
 
-export function htmlFormularioRetroativo(ativos = []) {
+export function htmlFormularioRetroativo(ativos = [], { simbolo = '' } = {}) {
   const hoje = new Date().toISOString().slice(0, 10);
   const umAnoAtras = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
   return `
     <form id="form-retroativo" class="row g-3">
-      <div class="col-md-4">
-        <label class="form-label" for="retroativo-ativo">Ativo</label>
-        ${htmlComboboxAtivo('retroativo-ativo', ativos)}
+      <div class="col-12">
+        <span class="form-label d-block">Ativo</span>
+        ${htmlCampoBuscaAtivo('retroativo-ativo', { chave: 'retroativo', valor: simbolo })}
       </div>
-      <div class="col-md-3">
+      <div class="col-md-5">
         <label class="form-label" for="retroativo-inicio">Início</label>
         <input id="retroativo-inicio" type="date" class="form-control form-control-sm"
                value="${umAnoAtras}" required>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-5">
         <label class="form-label" for="retroativo-fim">Fim</label>
         <input id="retroativo-fim" type="date" class="form-control form-control-sm"
                value="${hoje}" required>
