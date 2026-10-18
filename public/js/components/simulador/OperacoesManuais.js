@@ -1,7 +1,7 @@
 import { escaparHtml } from '../../utils/html.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
-import { ESTRATEGIAS_PADRAO, htmlComboboxAtivo, classeValor } from './utils.js';
+import { ESTRATEGIAS_PADRAO, htmlCampoBuscaAtivo, classeValor } from './utils.js';
 
 const SEM = '—';
 
@@ -113,9 +113,9 @@ function htmlFormulario(ativos) {
       </summary>
       <div class="border rounded p-3 mt-2">
         <form id="form-operacao" class="row g-2">
-          <div class="col-md-3">
-            <label class="form-label small mb-1" for="operacao-ativo">Ativo</label>
-            ${htmlComboboxAtivo('operacao-ativo', ativos, { placeholder: 'Ativo…' })}
+          <div class="col-12">
+            <span class="form-label small mb-1 d-block">Ativo</span>
+            ${htmlCampoBuscaAtivo('operacao-ativo', { chave: 'operacao' })}
           </div>
           <div class="col-md-3">
             <label class="form-label small mb-1" for="operacao-data">Data de entrada</label>

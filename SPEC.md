@@ -911,3 +911,45 @@ Mesmas do Plano F360 (regras 1–7). Branch `feature-opcx-pai-N` a partir de `de
 - Selecionar ativo: sidebar com contexto ao lado da tabela de opções.
 - Em 375 px: sidebar empilha acima da tabela; sem rolagem horizontal.
 - `npm test` verde.
+
+---
+
+## Plano CARGA: página de controle das cargas (2026-10-18)
+
+**Status:** PLANEJADO · **Contexto, contrato e ordem:** `infra-b3-ecossytem/SPEC.md`, Plano CARGA. Rótulo `CARGA-PAI-*`, reservado. O painel só fala com o gestor (`/cargas`), nunca com o ETL nem com o banco.
+
+### Página `#/cargas` — "Cargas de dados" (grupo Avaliação no menu)
+
+Ordem na tela, de cima para baixo:
+
+1. **Cabeçalho:** título, carga em andamento (se houver: tipo, há quanto tempo, etapa atual) e o botão **Rodar carga**.
+2. **Estado por etapa:** uma grade de cartões, um por etapa do catálogo (COTAHIST, LIQUIDEZ, PRONTIDAO, QUALIDADE_OPCOES, DFP, TTM, IPE, DVA, EVENTOS, CHECAGENS). Cada cartão mostra:
+   - nome legível da etapa e da fonte (ex.: "Preço oficial B3 · COTAHIST");
+   - **última tentativa**: data/hora e selo de status;
+   - **último sucesso**: data e "há N dias";
+   - destaque de **defasagem** quando o último sucesso passou do esperado (COTAHIST e LIQUIDEZ > 1 pregão; DFP/TTM/DVA > 120 dias; IPE > 2 dias);
+   - clique leva ao detalhe da execução da última tentativa.
+3. **Histórico de execuções:** tabela com início, tipo (Rotina/Completa/Parcial), quem pediu (Rotina da manhã/Painel/API), duração, status e contagem `ok · alerta · falha`. Filtros por status e período; paginação. A linha abre o detalhe.
+4. **Detalhe da execução** (painel lateral ou página `#/cargas/{id}`):
+   - parâmetros usados (anos, símbolos, etapas, forçar);
+   - linha do tempo das etapas, com duração e status;
+   - por etapa, **o que foi carregado** (`metricas`: anos processados, anos sem mudança, lidos, gravados, rejeitados e rejeitados por motivo), **alertas** e **erros**, com o texto completo copiável;
+   - **arquivos baixados** (`etl_execucao`): fonte, competência, arquivo, ETag, linhas e status.
+
+**Selos de status** (cor + ícone, nunca só cor; tokens C4 do Plano F360): Sucesso ✔ verde · Sem mudança ＝ cinza · Alerta ▲ âmbar · Falha ✖ vermelho · Em execução ⟳ azul · Interrompida ⏸ cinza escuro · Pulada – cinza claro. O status da execução usa os mesmos selos (Sucesso com alerta = âmbar; Sucesso parcial = laranja).
+
+**Rodar carga:** modal com tipo (Rotina/Completa/Parcial), anos (só na Parcial/Completa), símbolos (reaproveita `<busca-ativos modo="multiplo">`), etapas (caixas de seleção, na Parcial) e "forçar reprocessamento". Mostra um resumo do que será feito e pede confirmação. Fica desabilitado enquanto há carga em andamento; 409 do gestor vira "já existe uma carga rodando" com link para ela.
+
+**Acompanhamento ao vivo:** com uma execução `PENDENTE`/`EXECUTANDO`, a página consulta `GET /cargas/{id}` a cada 5 s, atualiza a etapa atual e os cartões, e para ao terminar ou ao sair da página (sem polling em segundo plano).
+
+**Estados vazios e de erro:** sem nenhuma carga registrada ("Nenhuma carga registrada ainda — a primeira rotina da manhã preenche esta tela"); gestor sem a V44 (503: "o banco ainda não tem o controle de cargas"); falha de rede (mensagem + "Tentar de novo"). `null` vira "—", nunca zero.
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| CARGA-PAI-1 | Rota, API e estado por etapa | `api/cargasApi.js`, `pages/CargasPage.js`, `components/cargas/EstadoEtapas.js`, `analise/cargas.js` (rótulos, selos, defasagem — puro), `router.js`, `navegacao.js`, `proxy/apiProxy.js` (`/cargas`); `tests/cargas.test.mjs` | CARGA-GES-1 (contrato) | `#/cargas` no grupo Avaliação; cartões com última tentativa, último sucesso e defasagem; estados vazio/503/erro; testes da lógica pura (status, defasagem, rótulos) | PLANEJADO |
+| CARGA-PAI-2 | Histórico e detalhe da execução | `components/cargas/HistoricoCargas.js`, `components/cargas/DetalheCarga.js`; `tests/cargasDetalhe.test.mjs` | CARGA-PAI-1 | Tabela com filtros e paginação; detalhe com parâmetros, linha do tempo, métricas, alertas, erros e arquivos; texto externo escapado; erro longo copiável | PLANEJADO |
+| CARGA-PAI-3 | Disparo pelo painel | `components/cargas/RodarCarga.js` (modal); `tests/cargasDisparo.test.mjs` | CARGA-PAI-2, CARGA-GES-2, DEC-CARGA-1 | Modal valida e resume antes de confirmar; 202 abre a execução; 409 aponta a carga em andamento; 503 explica que o ETL está fora | PLANEJADO |
+| CARGA-PAI-4 | Acompanhamento ao vivo | `pages/CargasPage.js`, `components/cargas/DetalheCarga.js` | CARGA-PAI-3 | Polling de 5 s só com execução ativa e página aberta; para ao terminar; cartões e detalhe atualizam sem recarregar a página | PLANEJADO |
+| CARGA-PAI-5 | Avisos de defasagem fora da página | `pages/InicioPage.js`, `components/SaudeDosDados.js` | CARGA-PAI-1, CARGA-GES-3 | Início e Saúde dos dados mostram "carga atrasada" com link para `#/cargas` quando alguma etapa passa do limite de defasagem | PLANEJADO |

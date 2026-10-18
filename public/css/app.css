@@ -532,3 +532,15 @@ cargas-page header { flex-wrap: wrap; }
 cargas-page section { margin-bottom: 1.5rem; }
 cargas-page dialog { color: var(--bs-body-color); background: var(--bs-body-bg); }
 cargas-page dialog::backdrop { background: rgb(0 0 0 / 45%); }
+
+/* === OPCOES LAYOUT === */
+/* Plano OPCX: contexto do ativo-objeto ao lado da cadeia de opcoes. */
+.opcoes-layout { display: flex; gap: 1rem; align-items: flex-start; }
+.opcoes-sidebar { width: 260px; flex-shrink: 0; position: sticky; top: 1rem; }
+.opcoes-principal { flex: 1; min-width: 0; }
+
+/* Celular: sidebar empilhada acima da tabela, sem ficar presa no topo. */
+@media (max-width: 767px) {
+  .opcoes-layout { flex-direction: column; align-items: stretch; }
+  .opcoes-sidebar { width: 100%; position: static; }
+}

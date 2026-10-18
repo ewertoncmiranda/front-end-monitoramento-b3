@@ -10,29 +10,35 @@ globalThis.HTMLElement = class {
 };
 globalThis.customElements = { define() {} };
 
-// mock de localStorage para carteirasStore
-const _armazenamento = new Map();
-globalThis.localStorage = {
-  getItem: (k) => _armazenamento.get(k) ?? null,
-  setItem: (k, v) => _armazenamento.set(k, String(v)),
-  removeItem: (k) => _armazenamento.delete(k),
+// Gestor simulado: PUT /carteiras/{id}/ativos/{simbolo}
+const chamadas = [];
+let statusGestor = 200;
+globalThis.fetch = async (url, init = {}) => {
+  const corpo = init.body ? JSON.parse(init.body) : {};
+  chamadas.push({ url, metodo: init.method, corpo });
+  const simbolo = decodeURIComponent(url.split('/').pop());
+  return {
+    ok: statusGestor < 300,
+    status: statusGestor,
+    text: async () => JSON.stringify({ simbolo, dataEntrada: corpo.dataEntrada, capitalAlocado: corpo.capitalAlocado, naturezaCapital: 'ALOCACAO_SIMULADA_LEGADA' }),
+  };
 };
 
 // importa apenas a classe; customElements.define já foi substituído
 const { CarteiraAdicionarAtivo } = await import(
   '../public/js/components/carteiras/CarteiraAdicionarAtivo.js'
 );
-const { adicionarAtivo } = await import('../public/js/utils/carteirasStore.js');
 
 let casos = 0;
-function caso(nome, fn) { fn(); casos++; console.log(`  ok  ${nome}`); }
+async function caso(nome, fn) { await fn(); casos++; console.log(`  ok  ${nome}`); }
 
 // helper para criar uma instância sem precisar do DOM real
-function criarInstancia() {
+function criarInstancia(busca = null) {
   const inst = Object.create(CarteiraAdicionarAtivo.prototype);
   // inicializa o estado como o constructor faria
   inst._carteiraId = null;
   inst._simbolo = '';
+  inst.querySelector = (seletor) => (seletor === '#seletor-ativo' ? busca : null);
   return inst;
 }
 
@@ -42,6 +48,15 @@ caso('setCarteiraId armazena id', () => {
   const inst = criarInstancia();
   inst.setCarteiraId('c1');
   assert.equal(inst._carteiraId, 'c1');
+});
+
+caso('setCarteiraId da a busca uma chave por carteira e herda o ticker guardado', () => {
+  const atributos = {};
+  const busca = { simbolos: ['VALE3'], setAttribute: (n, v) => { atributos[n] = v; } };
+  const inst = criarInstancia(busca);
+  inst.setCarteiraId('c7');
+  assert.equal(atributos.chave, 'carteira-c7');
+  assert.equal(inst._simbolo, 'VALE3');
 });
 
 caso('_validarCampos rejeita simbolo vazio', () => {
@@ -79,47 +94,59 @@ caso('_validarCampos aceita dados validos', () => {
   assert.equal(err, null, 'dados validos nao devem gerar erro');
 });
 
-caso('emit ativo-adicionado em dados validos', () => {
-  // prepara localStorage com uma carteira
-  const carteiraId = 'c_test_emit';
-  const dadosIniciais = {
-    carteiras: [{ id: carteiraId, nome: 'Teste', ativos: [] }],
+// Formulario simulado: campos, botao, busca e area de erro.
+function instanciaComFormulario({ existentes = [] } = {}) {
+  const campos = {
+    '#data-entrada': { value: '2026-01-10' },
+    '#capital': { value: '500' },
+    '#btn-adicionar': { disabled: false },
+    '#seletor-ativo': { limpar() { this.limpo = true; } },
+    '#form-adicionar-ativo': { prepend(div) { this.erro = div.textContent; } },
   };
-  _armazenamento.set('b3-carteiras', JSON.stringify(dadosIniciais));
-
-  const inst = criarInstancia();
-  inst.setCarteiraId(carteiraId);
-
-  // captura eventos despachados
-  const events = [];
-  inst.dispatchEvent = (e) => events.push(e);
-
-  // simula _submeter com estado válido lido da "instância"
-  // (em vez de mockar querySelector, chamamos _validarCampos + adicionarAtivo diretamente)
+  const inst = Object.create(CarteiraAdicionarAtivo.prototype);
   inst._simbolo = 'VALE3';
-  const simbolo = inst._simbolo;
-  const dataEntrada = '2026-01-10';
-  const capital = 500;
+  inst._carteiraId = 'c_test';
+  inst._existentes = existentes;
+  inst.querySelector = (sel) => campos[sel] ?? null;
+  inst.eventos = [];
+  inst.dispatchEvent = (e) => inst.eventos.push(e);
+  return { inst, campos };
+}
+globalThis.CustomEvent = class { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } };
+globalThis.document = { createElement: () => ({ className: '', textContent: '' }) };
+globalThis.window = { confirm: () => true };
 
-  // valida
-  const erro = inst._validarCampos(simbolo, dataEntrada, capital);
-  assert.equal(erro, null);
+await caso('submeter grava no gestor, limpa a busca e emite ativo-adicionado', async () => {
+  chamadas.length = 0;
+  const { inst, campos } = instanciaComFormulario();
+  await inst._submeter();
+  assert.equal(chamadas.length, 1);
+  assert.equal(chamadas[0].metodo, 'PUT');
+  assert.equal(chamadas[0].url, '/carteiras/c_test/ativos/VALE3');
+  assert.deepEqual(chamadas[0].corpo, { dataEntrada: '2026-01-10', capitalAlocado: 500 });
+  assert.equal(campos['#seletor-ativo'].limpo, true);
+  assert.equal(inst.eventos[0].type, 'ativo-adicionado');
+  assert.equal(inst.eventos[0].detail.ativo.capital, 500);
+});
 
-  // usa adicionarAtivo (importado no topo) para reproduzir o que _submeter faria
-  const ativo = adicionarAtivo(carteiraId, { simbolo, dataEntrada, capital });
+await caso('ticker ja na carteira: pede confirmacao; recusar nao grava', async () => {
+  chamadas.length = 0;
+  globalThis.window.confirm = () => false;
+  const { inst } = instanciaComFormulario({ existentes: ['VALE3'] });
+  await inst._submeter();
+  assert.equal(chamadas.length, 0);
+  assert.equal(inst.eventos.length, 0);
+  globalThis.window.confirm = () => true;
+});
 
-  inst.dispatchEvent(
-    new CustomEvent('ativo-adicionado', {
-      detail: { simbolo, dataEntrada, capital, ativo },
-      bubbles: true,
-    })
-  );
-
-  assert.equal(events.length, 1, 'deve ter emitido 1 evento');
-  assert.equal(events[0].type, 'ativo-adicionado');
-  assert.equal(events[0].detail.simbolo, 'VALE3');
-  assert.equal(events[0].detail.capital, 500);
-  assert.ok(events[0].detail.ativo, 'detail.ativo deve estar presente');
+await caso('gestor recusa: mostra o motivo, nao emite evento e reabilita o botao', async () => {
+  statusGestor = 400;
+  const { inst, campos } = instanciaComFormulario();
+  await inst._submeter();
+  assert.equal(inst.eventos.length, 0);
+  assert.match(campos['#form-adicionar-ativo'].erro, /recusou os dados/);
+  assert.equal(campos['#btn-adicionar'].disabled, false);
+  statusGestor = 200;
 });
 
 console.log(`\nTotal: ${casos} casos passaram.\n`);
