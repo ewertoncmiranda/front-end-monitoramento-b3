@@ -1,5 +1,5 @@
 import { BaseComponent } from '../components/base/BaseComponent.js';
-import { listarCargas, obterCarga, obterUltimasCargas } from '../api/cargasApi.js';
+import { LIMITE_MAXIMO_CARGAS, listarCargas, obterCarga, obterUltimasCargas } from '../api/cargasApi.js';
 import { listaCargas, cargaAtiva, escaparHtml, rotuloEtapa, dataCarga } from '../analise/cargas.js';
 import '../components/cargas/EstadoEtapas.js';
 import '../components/cargas/HistoricoCargas.js';
@@ -54,7 +54,7 @@ export class CargasPage extends BaseComponent {
     try {
       const opcoes = { signal: this._abort.signal };
       const [ultimas, historico] = await Promise.all([
-        obterUltimasCargas(opcoes), listarCargas({ limite: 500 }, opcoes),
+        obterUltimasCargas(opcoes), listarCargas({ limite: LIMITE_MAXIMO_CARGAS }, opcoes),
       ]);
       if (!this._viva) return;
       const lista = listaCargas(historico);
