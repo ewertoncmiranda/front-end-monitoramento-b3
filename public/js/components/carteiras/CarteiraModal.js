@@ -1,7 +1,7 @@
 // CART-PAI-3 — modal para criar / editar carteira.
 // Sem Shadow DOM: Bootstrap global continua valendo.
 import { BaseComponent } from '../base/BaseComponent.js';
-import { criarCarteira, atualizarCarteira } from '../../utils/carteirasStore.js';
+import { atualizarCarteira, criarCarteira, mensagemDeErro } from '../../api/carteirasApi.js';
 
 const ESTRATEGIAS = [
   'Fundamentalista',
@@ -37,6 +37,7 @@ export class CarteiraModal extends BaseComponent {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
+        <div data-erro-carteira class="alert alert-danger py-2 small d-none" role="alert"></div>
         <div class="mb-3">
           <label for="carteira-nome" class="form-label">Nome</label>
           <input
@@ -81,6 +82,7 @@ export class CarteiraModal extends BaseComponent {
 
   /** Abre o modal para criar uma nova carteira. */
   abrirNova() {
+    this._mostrarErro('');
     this._modo = 'nova';
     this._id = null;
     this._campoNome().value = '';
@@ -94,6 +96,7 @@ export class CarteiraModal extends BaseComponent {
    * @param {{ id: string, nome: string, estrategia: string, cor: string }} carteira
    */
   abrirEdicao(carteira) {
+    this._mostrarErro('');
     this._modo = 'edicao';
     this._id = carteira.id;
     this._campoNome().value = carteira.nome;
@@ -130,22 +133,35 @@ export class CarteiraModal extends BaseComponent {
     return this.querySelector('#carteira-cor');
   }
 
-  _confirmar() {
+  async _confirmar() {
     const nome = this._campoNome().value.trim();
     if (nome.length < 2) return;
 
     const estrategia = this._campoEstrategia().value;
     const cor = this._campoCor().value;
+    const botao = this.querySelector('#btn-confirmar-carteira');
+    this._mostrarErro('');
+    if (botao) botao.disabled = true;
 
-    let carteira;
-    if (this._modo === 'nova') {
-      carteira = criarCarteira({ nome, estrategia, cor });
-    } else {
-      carteira = atualizarCarteira(this._id, { nome, estrategia, cor });
+    try {
+      const carteira = this._modo === 'nova'
+        ? await criarCarteira({ nome, estrategia, cor })
+        : await atualizarCarteira(this._id, { nome, estrategia, cor });
+      this.dispatchEvent(new CustomEvent('carteira-salva', { detail: { carteira } }));
+      this.fechar();
+    } catch (erro) {
+      // O modal fica aberto com o que foi digitado: nada se perde.
+      this._mostrarErro(mensagemDeErro(erro));
+    } finally {
+      if (botao) botao.disabled = false;
     }
+  }
 
-    this.dispatchEvent(new CustomEvent('carteira-salva', { detail: { carteira } }));
-    this.fechar();
+  _mostrarErro(mensagem) {
+    const alvo = this.querySelector('[data-erro-carteira]');
+    if (!alvo) return;
+    alvo.textContent = mensagem;
+    alvo.classList?.toggle('d-none', !mensagem);
   }
 }
 

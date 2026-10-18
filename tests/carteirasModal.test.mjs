@@ -16,6 +16,14 @@ globalThis.localStorage = {
   removeItem: (k) => { delete armazenamento[k]; },
 };
 
+// Gestor simulado: devolve a carteira enviada com o id gerado pelo servidor.
+let statusGestor = 201;
+globalThis.fetch = async (url, init = {}) => {
+  const corpo = init.body ? JSON.parse(init.body) : {};
+  const resposta = { id: 'srv-1', ...corpo, moedaBase: 'BRL', status: 'ATIVA', criadaEm: '2026-10-18T10:00:00', ativos: [] };
+  return { ok: statusGestor < 300, status: statusGestor, text: async () => JSON.stringify(resposta) };
+};
+
 // Mock de window.bootstrap
 globalThis.window = globalThis;
 globalThis.bootstrap = {
@@ -28,7 +36,7 @@ globalThis.bootstrap = {
 const { CarteiraModal } = await import('../public/js/components/carteiras/CarteiraModal.js');
 
 let casos = 0;
-function caso(nome, fn) { fn(); casos++; console.log(`  ok  ${nome}`); }
+async function caso(nome, fn) { await fn(); casos++; console.log(`  ok  ${nome}`); }
 
 function limpar() {
   delete armazenamento['b3-carteiras'];
@@ -67,7 +75,7 @@ function criarInstancia() {
   return instance;
 }
 
-caso('abrirNova limpa os campos', () => {
+await caso('abrirNova limpa os campos', () => {
   limpar();
   const instance = criarInstancia();
   // Pre-popula com dados de edição para garantir que abrirNova limpa
@@ -86,7 +94,7 @@ caso('abrirNova limpa os campos', () => {
   assert.equal(instance._campoCor().value, '#0d6efd');
 });
 
-caso('abrirEdicao popula os campos com a carteira', () => {
+await caso('abrirEdicao popula os campos com a carteira', () => {
   limpar();
   const instance = criarInstancia();
   const carteira = { id: 'c1', nome: 'Test', estrategia: 'Graham', cor: '#ff0000', ativos: [] };
@@ -100,7 +108,7 @@ caso('abrirEdicao popula os campos com a carteira', () => {
   assert.equal(instance._campoCor().value, '#ff0000');
 });
 
-caso('confirmar emite carteira-salva com carteira nova', () => {
+await caso('confirmar emite carteira-salva com carteira nova', async () => {
   limpar();
   const instance = criarInstancia();
   instance._modo = 'nova';
@@ -114,17 +122,17 @@ caso('confirmar emite carteira-salva com carteira nova', () => {
   // fechar não deve lançar sem _modal
   instance.fechar = () => {};
 
-  instance._confirmar();
+  await instance._confirmar();
 
   assert.equal(events.length, 1);
   assert.equal(events[0].type, 'carteira-salva');
   assert.equal(events[0].detail.carteira.nome, 'Minha Carteira');
   assert.equal(events[0].detail.carteira.estrategia, 'Dividendos');
   assert.equal(events[0].detail.carteira.cor, '#123456');
-  assert.ok(events[0].detail.carteira.id.startsWith('c_'));
+  assert.equal(events[0].detail.carteira.id, 'srv-1', 'o id vem do gestor');
 });
 
-caso('confirmar nao emite evento quando nome vazio', () => {
+await caso('confirmar nao emite evento quando nome vazio', async () => {
   limpar();
   const instance = criarInstancia();
   instance._modo = 'nova';
@@ -133,12 +141,34 @@ caso('confirmar nao emite evento quando nome vazio', () => {
   const events = [];
   instance.dispatchEvent = (e) => events.push(e);
 
-  instance._confirmar();
+  await instance._confirmar();
 
   assert.equal(events.length, 0);
 });
 
-caso('fechar nao emite evento', () => {
+await caso('falha ao salvar: modal fica aberto, mostra o erro e nao emite evento', async () => {
+  statusGestor = 400;
+  const instance = criarInstancia();
+  const alerta = { textContent: '', classList: { toggle(classe, ligar) { this.oculto = ligar; } } };
+  const original = instance.querySelector;
+  instance.querySelector = (sel) => (sel === '[data-erro-carteira]' ? alerta : original(sel));
+  instance._campoNome().value = 'Carteira X';
+  let fechou = false;
+  instance.fechar = () => { fechou = true; };
+  const events = [];
+  instance.dispatchEvent = (e) => events.push(e);
+
+  await instance._confirmar();
+
+  assert.equal(events.length, 0);
+  assert.equal(fechou, false);
+  assert.match(alerta.textContent, /recusou os dados/);
+  assert.equal(alerta.classList.oculto, false);
+  assert.equal(instance._campoNome().value, 'Carteira X', 'o que foi digitado continua no campo');
+  statusGestor = 201;
+});
+
+await caso('fechar nao emite evento', () => {
   limpar();
   const instance = criarInstancia();
   const events = [];

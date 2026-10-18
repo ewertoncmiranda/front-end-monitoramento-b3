@@ -24,6 +24,17 @@ export async function httpDelete(path, body) {
   return handleResponse(response);
 }
 
+/** POST/PUT com corpo JSON (Content-Type explicito: o @RequestBody do gestor exige). */
+export async function httpEnviarJson(metodo, path, corpo) {
+  const response = await executarFetch((signal) => fetch(`${apiConfig.baseUrl}${path}`, {
+    method: metodo,
+    headers: { 'Content-Type': 'application/json' },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+    signal,
+  }));
+  return handleResponse(response);
+}
+
 // Tempo limite por chamada: sem ele, gestor parado deixa a tela em spinner para sempre.
 export const TEMPO_LIMITE_MS = 20000;
 
