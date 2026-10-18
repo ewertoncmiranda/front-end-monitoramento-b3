@@ -432,6 +432,21 @@ TASK-ETL-5. Única tarefa que cria uma rota nova. Requer endpoint dedicado no ge
 - Com o foco na coluna mais recente, a seta ← leva o foco ao período anterior.
 - `npm test` verde.
 
+## Plano integrado OPDB/CARTDB — escopo frontend (2026-10-17)
+
+| ID | Tarefa | Escopo | Dependências | Aceite | Status |
+|---|---|---|---|---|---|
+| OPDB-PAI-1 | Tornar opções legíveis e confiáveis | Exibir `tipo_opcao` do backend (CALL/PUT), pregão/data de referência e estados carregando, vazio, erro e desatualizado; remover classificação derivada de BDI | OPDB-GES-1 | Tipo exibido coincide com resposta; cadeia ausente/vencida é explicada sem sugerir que não existem opções; testes cobrem estados e tipo | PLANEJADO |
+| CARTDB-PAI-1 | Migração assistida da carteira local | Importar `b3-carteiras` para a instância compartilhada com operação idempotente; alocações antigas ficam como legado, sem inferir compra/quantidade/preço; manter cópia até confirmação do servidor | CARTDB-GES-1, CARTDB-GES-6 | Repetição não duplica; falha preserva local; V42 não gera transações implicitamente | PLANEJADO |
+| CARTDB-PAI-2 | CRUD persistente de Carteiras | Criar/editar/arquivar via API, com estados de carregamento/erro/vazio; sem fluxo de login ou promessa de privacidade por usuário | CARTDB-GES-1 | Recarregar mantém dados; arquivamento explicado; erro não perde estado local | PLANEJADO |
+| CARTDB-PAI-3 | Registrar operações | Formulário de compra/venda com quantidade, preço executado informado, custos e data; deixar claro que é registro do usuário, não execução da ordem | CARTDB-GES-2 | Valores validados, confirmação antes de salvar, histórico auditável e posição consolidada coerente | PLANEJADO |
+| CARTDB-PAI-4 | Registrar proventos recebidos | Informar tipo, ativo, data, quantidade elegível, valor bruto/retenção/líquido e referência; separar anúncio de recebimento | CARTDB-GES-3 | Totais e deduplicação visíveis; correções geram lançamento compensatório, sem editar/apagar histórico | PLANEJADO |
+| CARTDB-PAI-5 | Mostrar posição e custo | Exibir quantidade líquida, preço médio/custo, valor de mercado e data da cotação, diferenciando campos ausentes/legados | CARTDB-GES-2, CARTDB-GES-4 | Sem quantidade/preço não rotular alocação antiga como posição comprada | PLANEJADO |
+| CARTDB-PAI-6 | Retorno e proventos no tempo | Exibir patrimônio, retorno total (realizado/não realizado), proventos líquidos e metodologia/data de corte da série persistida | CARTDB-GES-4..5 | Lacunas identificadas; não usar zero como dado ausente; números reconciliam com operações e recebimentos | PLANEJADO |
+| CARTDB-PAI-7 | Estados de sincronização e aviso de compartilhamento | Tratar erro de rede, vazio e sincronização; deixar claro que dados são compartilhados pela instância | CARTDB-PAI-1..6 | UI não sugere isolamento por usuário; falha de rede não relata gravação bem-sucedida | PLANEJADO |
+
+Implementação sequencial: concluir V43+ e API compartilhada do gestor antes da interface; depois importar legado e implementar CRUD, ledger, proventos e retorno. Não executar em paralelo com `OPT-PAI-3` ou `OPCX-PAI-3`, nem dividir os arquivos compartilhados de Carteiras. A ordem global e os contratos estão no hub `infra-b3-ecossytem/SPEC.md`.
+
 ---
 
 ## Plano GEM: manchetes dos favoritos, assistente e card IA (2026-10-08)
@@ -824,42 +839,43 @@ Mesmas do Plano F360 (regras 1–7, seção acima). Cada tarefa possui posse exc
 
 ---
 
-## Plano CART: feature Carteiras (2026-10-17)
+## Plano CART: feature Carteiras (revisado 2026-10-18)
 
-**Status:** PLANEJADO · **Rótulo das tarefas:** `CART-PAI-*`. IDs reservados; não renomear.
+**Status:** PLANEJADO — o store local atual não atende persistência financeira · IDs `CART-PAI-*` preservados como plano de interface/legado.
 
-**Objetivo:** nova aba `#/carteiras`. O usuário cria carteiras nomeadas, cada uma com uma das 7 estratégias (`Fundamentalista`, `Dividendos`, `Momentum`, `Reversão`, `Crescimento`, `Graham`, `Qualidade`). Cada carteira agrega N ativos monitorados com data de entrada e capital alocado. O painel exibe a evolução patrimonial desde a entrada mais antiga. Persistência 100% em `localStorage` — zero dependência de backend novo.
+**Objetivo:** `#/carteiras` persistida no backend e compartilhada na instância single-user. Registrar operações informadas pelo usuário (quantidade comprada/vendida, preço, custos e data), recebimentos de proventos e snapshots históricos de patrimônio/retorno. Cotações oficiais vêm do COTAHIST; a aplicação não executa ordens nem declara custódia. `localStorage` é apenas origem de importação legada e cache transitório, nunca fonte de verdade. Não há entidade de dono; nome é apenas rótulo descritivo.
 
 ### Regras de execução paralela
 
-Mesmas do Plano F360 (regras 1–7). Branch `feature-cart-pai-N` a partir de `develop`. A CART-PAI-7 (página) depende de todas as demais; as restantes podem rodar em paralelo assim que a CART-PAI-1 (store) e a CART-PAI-2 (api de preço) estiverem merged.
+Pré-requisitos: schema V43+ e API compartilhada do gestor. Mudanças de banco somente em Infra; operações e proventos persistidos no gestor; interface consome contrato estabilizado. Sem importar silenciosamente dados órfãos V42.
 
 ### Tarefas desta aplicação
 
 | ID | Tarefa | Arquivos (posse exclusiva) | Depende | Aceite | Status |
 |---|---|---|---|---|---|
-| CART-PAI-1 | **Store de carteiras:** CRUD sobre `localStorage['b3-carteiras']`; exportar `listarCarteiras`, `obterCarteira(id)`, `criarCarteira({nome, estrategia, cor})`, `atualizarCarteira(id, campos)`, `removerCarteira(id)`, `adicionarAtivo(carteiraId, {simbolo, dataEntrada, capital})`, `removerAtivo(carteiraId, simbolo)`; estrutura `{ id, nome, estrategia, cor, criadaEm, ativos: [{simbolo, dataEntrada, capital}] }`; `tests/carteiras.test.mjs` cobre CRUD completo e `localStorage` indisponível | novo: `public/js/utils/carteirasStore.js` | — | Testes verde; `null` de `localStorage` não quebra | PLANEJADO |
-| CART-PAI-2 | **API de preço por data:** wrapper sobre `buscarPregoes` que resolve o fechamento em `dataIso` (ou o mais próximo disponível); exportar `buscarPrecoNaData(simbolo, dataIso) → {dataEfetiva, preco}\|null` e `calcularRetornoAtivo(simbolo, dataIso) → {precoEntrada, precoAtual, retorno}`; `tests/carteiras.test.mjs` (seção própria) com `fetch` falso | novo: `public/js/api/carteirasPrecoApi.js` | — | `null` quando não há dado; testes cobrem found, not found e erro de rede | PLANEJADO |
-| CART-PAI-3 | **Modal "Nova/Editar carteira"** `<carteira-modal>`: campos nome (text), estratégia (select das 7), cor (`<input type="color">`); emite `carteira-salva` com `{carteira}` ao confirmar; cancela sem salvar | novo: `public/js/components/carteiras/CarteiraModal.js` | CART-PAI-1 | Modal abre/fecha sem efeito colateral; `localStorage` atualizado ao salvar | PLANEJADO |
-| CART-PAI-4 | **Linha de ativo** `<carteira-ativo-linha>`: recebe `{simbolo, dataEntrada, capital}` via `setAtivo(obj)`; chama `calcularRetornoAtivo` e exibe símbolo, data de entrada, capital, retorno (%) e badge ▲/▼; spinner enquanto carrega; `—` em falha | novo: `public/js/components/carteiras/CarteiraAtivoLinha.js` | CART-PAI-2 | Retorno calculado e formatado; `null` vira `—` | PLANEJADO |
-| CART-PAI-5 | **Cabeçalho da carteira** `<carteira-cabecalho>`: recebe `Carteira` via `setCarteira(obj)`; calcula patrimônio ponderado (`Σ capital × (1 + retorno)`), retorno médio ponderado; exibe nome, estratégia, badge cor, patrimônio e retorno; linha "vs CDI" via `taxasBase.js` existente | novo: `public/js/components/carteiras/CarteiraCabecalho.js` | CART-PAI-2 | Patrimônio e retorno corretos; CDI calculado sem chamada extra | PLANEJADO |
-| CART-PAI-6 | **Formulário "Adicionar ativo"** `<carteira-adicionar-ativo>`: campos `<seletor-de-ativos>`, data de entrada (`input[type=date]`), capital (`input[type=number]`); valida data não futura e capital > 0; emite `ativo-adicionado` ao salvar | novo: `public/js/components/carteiras/CarteiraAdicionarAtivo.js` | CART-PAI-1 | Data futura rejeitada; capital ≤ 0 rejeitado; evento emitido com `{simbolo, dataEntrada, capital}` | PLANEJADO |
-| CART-PAI-7 | **Página principal** `<carteiras-page>` (`#/carteiras`): pills por carteira, botão "Nova", `<carteira-cabecalho>`, tabela de `<carteira-ativo-linha>`, `<carteira-adicionar-ativo>` e `<carteira-modal>`; estado vazio com CTA; rota e link de nav | novos: `public/js/pages/CarteirasPage.js`; editados: `public/js/router.js`, `public/index.html`, `public/js/navegacao.js` | CART-PAI-1..6 | `#/carteiras` carrega sem erro; criar e remover carteira persiste no reload; estado vazio com mensagem amigável | PLANEJADO |
+| CART-PAI-1 | **Store/API compartilhada e importação legado:** migrar `b3-carteiras` idempotentemente; fonte de verdade é API, cache local só transitório; preservar registros e alocações V42 sem criar transações inferidas | `public/js/utils/carteirasStore.js` | CARTDB-GES-1/6 | Sem owner/autenticação; falha mantém cópia e mostra erro | PLANEJADO |
+| CART-PAI-2 | **Formulários de operação:** compra/venda com ticker, quantidade, preço unitário, custos e data; confirmação explícita de registro informado, não ordem executada | componentes Carteiras | CARTDB-GES-2 | Dados completos persistidos; correções via estorno referenciado, sem editar/apagar o ledger | PLANEJADO |
+| CART-PAI-3 | **Proventos recebidos:** registrar dividendos/JCP/rendimentos, datas, quantidade elegível, bruto, retenção, líquido e referência | componentes Carteiras | CARTDB-GES-3 | Recebimento distinto de anúncio; deduplicação/ajustes explícitos | PLANEJADO |
+| CART-PAI-4 | **Preço de custo e posição:** derivar quantidade líquida e custo das operações; preço de mercado vem do serviço oficial e traz pregão/fonte | componentes Carteiras | CARTDB-GES-2/4 | Alocações antigas não aparecem como compras; sem dado usar estado indisponível | PLANEJADO |
+| CART-PAI-5 | **Retorno histórico:** consumir snapshots versionados, decompor realizado/não realizado/proventos e mostrar método/data de corte | `CarteirasPage.js` e gráfico | CARTDB-GES-4/5 | Reconciliável; ausência não vira zero; fluxo externo tratado conforme metodologia | PLANEJADO |
+| CART-PAI-6 | **Estados de sincronização e compartilhamento:** erro de rede, arquivamento, sincronização e aviso de dados compartilhados na instância | store/page | CARTDB-PAI-1 | UI nunca indica privacidade por usuário nem confirma persistência antes da resposta | PLANEJADO |
+| CART-PAI-7 | **Página e navegação:** integrar CRUD, operações, proventos, posição e retorno em `#/carteiras`, com estados vazios/legado/erro | `CarteirasPage.js`, router, navegação | CART-PAI-1..6 | Fluxos acessíveis, dados persistem após reload e critérios financeiros reconciliam com API | PLANEJADO |
 
 ### Grupos para agentes paralelos
 
 | Grupo | Tarefas | Pode iniciar em |
 |---|---|---|
-| **A — Store e API** | CART-PAI-1, CART-PAI-2 | imediato (paralelo entre si) |
-| **B — Componentes** | CART-PAI-3, CART-PAI-4, CART-PAI-5, CART-PAI-6 | após CART-PAI-1 e CART-PAI-2 merged (paralelo entre si) |
-| **C — Página e roteamento** | CART-PAI-7 | após todos os componentes merged |
+| **A — fundação** | V43+, CARTDB-GES-1..6 | antes de qualquer tela financeira |
+| **B — persistência frontend** | CART-PAI-1..3, 6 | após API compartilhada estabilizada |
+| **C — posição e desempenho** | CART-PAI-4..5, 7 | após ledger, eventos e snapshots disponíveis |
 
 ### Aceite do plano
 
 - `#/carteiras` carrega sem erro de console; link de navegação ativo.
-- Criar, editar e remover carteira persiste no `localStorage` após reload.
+- Operações (quantidade/preço), proventos recebidos e retorno histórico persistem no servidor; a aplicação informa que os dados são compartilhados na instância.
+- A importação local é idempotente e nunca transforma capital alocado em execução real.
 - Adicionar e remover ativo persiste.
-- Retorno calculado a partir da data de entrada; patrimônio = Σ capital × (1 + retorno).
+- Retorno e patrimônio vêm dos snapshots versionados; alocações simuladas V42 não entram como posições compradas nem como retorno realizado.
 - `npm test` verde.
 
 ---
