@@ -15,6 +15,8 @@ import { buscarAlertasOperacionais } from '../api/operacionalV2Api.js';
 import { htmlAlertasOperacionais } from '../components/inicio/AlertasOperacionais.js';
 import '../components/LoadingSpinner.js';
 import '../components/cargas/AvisoDefasagem.js';
+import '../components/inicio/CarrosselMercado.js';
+import { cardPanoramaProvisorio } from '../components/inicio/cardPanoramaProvisorio.js';
 
 // Unica responsabilidade: a pagina Inicio (REQ-UX-7) - um resumo do que mudou:
 // saude dos dados, favoritos com variacao e comunicados da semana. Cada bloco
@@ -33,6 +35,7 @@ export class InicioPage extends BaseComponent {
         </form>
       </div>
       <aviso-defasagem-cargas></aviso-defasagem-cargas>
+      <carrossel-mercado class="d-block mb-3" titulo="Panorama do mercado"></carrossel-mercado>
       <div class="row g-3">
         <section class="col-12" aria-labelledby="ini-alertas"><div class="card shadow-sm"><div class="card-body">
           <div class="d-flex justify-content-between"><h6 id="ini-alertas">Alertas operacionais</h6><a class="small" href="#/operabilidade">Abrir cockpit</a></div>
@@ -56,6 +59,10 @@ export class InicioPage extends BaseComponent {
       const simbolo = this.querySelector('#inicio-ativo').value.trim().toUpperCase();
       if (/^[A-Z0-9]{4,8}$/.test(simbolo)) window.location.hash = `#/gestao/${encodeURIComponent(simbolo)}`;
     });
+
+    // Panorama do mercado (Plano MERC): cada card carrega e falha sozinho no carrossel.
+    const carrossel = this.querySelector('carrossel-mercado');
+    if (carrossel) carrossel.cards = [cardPanoramaProvisorio()];
 
     const favoritosP = listarFavoritos();
     const newsletterP = buscarNewsletter();
