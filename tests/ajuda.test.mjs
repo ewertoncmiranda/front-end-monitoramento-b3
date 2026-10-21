@@ -51,4 +51,9 @@ listeners.get('click')({ target: botao });
 listeners.get('click')({ target: fecharBotao });
 assert.equal(popoverAberto, false);
 
+listeners.get('click')({ target: botao });
+listeners.get('keydown')({ key: 'Escape' });
+assert.equal(popoverAberto, false);
+assert.equal(atributos.get('aria-expanded'), 'false');
+
 console.log('ajuda: abre, fecha ao clicar fora ou no × e escapa título/texto');

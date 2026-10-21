@@ -12,6 +12,19 @@ function fechar(container) {
   botao?.setAttribute('aria-expanded', 'false');
 }
 
+function posicionar(popover, botao) {
+  if (!popover?.getBoundingClientRect || !botao?.getBoundingClientRect) return;
+  const largura = document.documentElement?.clientWidth || globalThis.innerWidth;
+  const altura = globalThis.innerHeight;
+  if (!largura || !altura) return;
+  const ancora = botao.getBoundingClientRect();
+  const caixa = popover.getBoundingClientRect();
+  const esquerda = Math.max(8, Math.min(ancora.right - caixa.width, largura - caixa.width - 8));
+  const abaixo = ancora.bottom + 6;
+  const topo = abaixo + caixa.height <= altura - 8 ? abaixo : Math.max(8, ancora.top - caixa.height - 6);
+  Object.assign(popover.style, { position: 'fixed', left: `${esquerda}px`, right: 'auto', top: `${topo}px`, maxHeight: `${altura - 16}px`, overflowY: 'auto' });
+}
+
 function inicializarEventos() {
   if (typeof document === 'undefined' || eventosInicializados) return;
   eventosInicializados = true;
@@ -30,8 +43,27 @@ function inicializarEventos() {
     if (!popover) return;
 
     const aberto = !popover.classList.contains('visivel');
+    document.querySelectorAll(`${CONTAINER} ${POPOVER}.visivel`).forEach((outro) => {
+      if (outro !== popover) fechar(outro.closest(CONTAINER));
+    });
     popover.classList.toggle('visivel', aberto);
     botao.setAttribute('aria-expanded', String(aberto));
+    if (aberto) posicionar(popover, botao);
+  });
+
+  const fecharAbertos = () => document.querySelectorAll(`${CONTAINER} ${POPOVER}.visivel`).forEach((p) => fechar(p.closest(CONTAINER)));
+  document.addEventListener('scroll', (evento) => {
+    if (!evento.target?.closest?.(POPOVER)) fecharAbertos();
+  }, true);
+  globalThis.addEventListener?.('resize', fecharAbertos);
+
+  document.addEventListener('keydown', (evento) => {
+    if (evento.key !== 'Escape') return;
+    document.querySelectorAll(`${CONTAINER} ${POPOVER}.visivel`).forEach((popover) => {
+      const container = popover.closest(CONTAINER);
+      fechar(container);
+      container?.querySelector(BOTAO)?.focus?.();
+    });
   });
 
   document.addEventListener('mousedown', (evento) => {

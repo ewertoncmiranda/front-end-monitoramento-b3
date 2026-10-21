@@ -165,8 +165,8 @@ await caso('card: mock de buscarPanorama → renderiza lista de setores', async 
   assert.match(host.innerHTML, /andou junto/, 'selo textoSelo("JUNTO")');
   assert.match(host.innerHTML, /pregão de/, 'rodape com data do pregao');
   // Outros por ultimo
-  const idxBancos = host.innerHTML.indexOf('Bancos');
-  const idxOutros = host.innerHTML.indexOf('Outros');
+  const idxBancos = host.innerHTML.indexOf('>Bancos<');
+  const idxOutros = host.innerHTML.indexOf('>Outros<');
   assert.ok(idxBancos < idxOutros, '"Outros" aparece depois de "Bancos"');
   // Chips apenas para nao-Outros
   assert.match(host.innerHTML, /BAN4/, 'chip melhor para Bancos');
@@ -273,6 +273,35 @@ await caso('card: clique expande setor e configura ranking-tickers', async () =>
   clicar(1);
   assert.equal(botoes[1].getAttribute('aria-expanded'), 'false', 'segundo clique colapsa');
   assert.equal(rankings[1].hidden, true, 'ranking 1 oculto apos colapso');
+});
+
+await caso('DTO real: setor e empresas aparecem; nomes e selo ganham ajuda sem botões aninhados', async () => {
+  const host = criarHostSimples();
+  await cardSetoresEmpresas({ buscar: async () => ({ janela: '5d', dataInicial: '2026-10-13', dataPregao: '2026-10-19', setores: [
+    { setor: 'Telecomunicações', empresas: 3, variacaoMediana: 0.037, coesao: 2 / 3, selo: 'MISTO', melhores: [], piores: [] },
+    { setor: 'Outros', empresas: 7, variacaoMediana: 0.2, selo: 'JUNTO', melhores: [{ simbolo: 'ABC3' }], piores: [] },
+  ] }) }).render(host);
+  assert.match(host.innerHTML, />Telecomunicações</);
+  assert.match(host.innerHTML, /3 ações/);
+  assert.match(host.innerHTML, /66,7% das ações/);
+  assert.match(host.innerHTML, /13\/10\/2026 a 19\/10\/2026/);
+  assert.match(host.innerHTML, /mediana/);
+  assert.match(host.innerHTML, /pontos percentuais/);
+  assert.match(host.innerHTML, /Não é aumento de lucro/);
+  assert.doesNotMatch(host.innerHTML, /ABC3/);
+  for (const botao of host.innerHTML.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)) assert.doesNotMatch(botao[1], /<button\b/);
+});
+
+await caso('ajudas explicam queda conjunta, amostra e escapam nome externo', async () => {
+  const { explicacaoSelo } = await import('../public/js/analise/panoramaMercado.js');
+  assert.match(explicacaoSelo({ selo: 'JUNTO', coesao: 0.8 }), /80%/);
+  assert.match(explicacaoSelo({ selo: 'JUNTO' }), /pode cair/);
+  assert.match(explicacaoSelo({ selo: 'MISTO' }), /50% a menos de 70%/);
+  assert.match(explicacaoSelo({ selo: 'DISPERSO' }), /menos de 50%/);
+  const host = criarHostSimples();
+  await cardSetoresEmpresas({ buscar: async () => ({ setores: [{ setor: '<img src=x>', empresas: 1, variacaoMediana: null }] }) }).render(host);
+  assert.doesNotMatch(host.innerHTML, /<img/);
+  assert.match(host.innerHTML, /Sem dado/);
 });
 
 console.log(`mercSetoresEmpresas.test.mjs ok (${casos} casos)`);
