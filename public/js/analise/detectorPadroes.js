@@ -36,6 +36,19 @@ function maiorOuIgual(a, b, escala) {
   return a >= b - Math.abs(escala) * TOLERANCIA_RELATIVA;
 }
 
+// MICRO-PAI-1: no dia ex o preco bruto cai pelo valor do provento. Esse gap
+// tem causa conhecida (a marca ex da B3), nao e movimento de mercado.
+function temMarcaEx(c) {
+  return Boolean(c && c.marcaEx);
+}
+
+function variacaoDeAbertura(candles, i) {
+  if (i < 1) return 0;
+  const anterior = candles[i - 1].close;
+  if (!anterior) return 0;
+  return Math.abs(candles[i].open - anterior) / anterior;
+}
+
 // --- geometria de uma vela -------------------------------------------------
 
 function medidas(c) {
@@ -184,6 +197,7 @@ export const PADROES = [
       if (i < 1) return false;
       const a = candles[i - 1];
       const b = candles[i];
+      if (temMarcaEx(b)) return false; // depende do gap de abertura, explicado pela data ex
       return (
         a.close < a.open &&
         b.close > b.open &&
@@ -204,6 +218,7 @@ export const PADROES = [
       if (i < 1) return false;
       const a = candles[i - 1];
       const b = candles[i];
+      if (temMarcaEx(b)) return false; // depende do gap de abertura, explicado pela data ex
       return (
         a.close > a.open &&
         b.close < b.open &&
@@ -292,7 +307,18 @@ export const ALERTAS = [
       if (i < 1) return false;
       const anterior = candles[i - 1].close;
       if (!anterior) return false;
+      if (temMarcaEx(candles[i])) return false; // gap explicado por data ex: ver 'gap-data-ex'
       return Math.abs(candles[i].open - anterior) / anterior > 0.02;
+    },
+  },
+  {
+    id: 'gap-data-ex',
+    nome: 'Gap explicado por data ex',
+    resumo: 'Gap explicado por data ex: o preco caiu pelo provento, nao por venda. Ignorado como gap e nos padroes que dependem dele.',
+    armadilha: 'Preco nao ajustado por proventos',
+    regra: 'vela com marca ex e abertura diferindo do fechamento anterior em mais de 2%',
+    detectar(candles, i) {
+      return temMarcaEx(candles[i]) && variacaoDeAbertura(candles, i) > 0.02;
     },
   },
   {

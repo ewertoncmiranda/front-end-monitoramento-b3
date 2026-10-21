@@ -18,6 +18,8 @@ import {
   agruparPorCandle,
   marcadoresDeComunicados,
 } from '../../analise/comunicadosPorCandle.js';
+import { linhaPrecoMedio, precoMedioDisponivel } from '../../analise/overlays/overlayPrecoMedio.js';
+import { listaDataEx, marcadoresDataEx } from '../../analise/overlays/overlayDataEx.js';
 import { formatarData } from '../ComunicadoItem.js';
 import { renderNoticiasDoCandle } from '../NoticiasDoCandle.js';
 import { escaparHtml } from '../../utils/html.js';
@@ -48,6 +50,8 @@ export class PainelCandles extends BaseComponent {
     this._dataAberta = null;
     this._requisicaoComunicados = 0;
     this._requisicaoVelas = 0;
+    this._precoMedioLigado = false;
+    this._tecnico = { linhas: [], marcadores: [] };
   }
 
   static get observedAttributes() {
@@ -134,6 +138,11 @@ export class PainelCandles extends BaseComponent {
     });
 
     this.addEventListener('change', (evento) => {
+      if (evento.target.id === 'overlay-preco-medio') {
+        this._precoMedioLigado = evento.target.checked;
+        this.aplicarOverlaysProprios();
+        return;
+      }
       if (evento.target.id !== 'base-preco') return;
       this._base = evento.target.checked ? 'ajustado' : 'bruto';
       this.carregar();
@@ -186,12 +195,26 @@ export class PainelCandles extends BaseComponent {
     });
 
     tecnico.addEventListener('tecnico-alterado', (evento) => {
-      grafico.setLinhas(evento.detail.linhas);
-      grafico.setMarcadoresTecnico(evento.detail.marcadores);
+      this._tecnico = { linhas: evento.detail.linhas, marcadores: evento.detail.marcadores };
+      this.aplicarOverlaysProprios();
     });
 
     this._candles = candles;
+    this._tecnico = { linhas: [], marcadores: [] };
+    this.aplicarOverlaysProprios();
     this.carregarComunicados(grafico, candles);
+  }
+
+  /**
+   * Junta ao que o painel tecnico emite (que substitui linhas e marcadores a
+   * cada toggle) o preco medio do dia e as datas ex, sem um apagar o outro.
+   */
+  aplicarOverlaysProprios() {
+    const grafico = this.querySelector('candle-chart');
+    if (!grafico) return;
+    const extras = this._precoMedioLigado ? linhaPrecoMedio(this._candles, this._intervalo) : [];
+    grafico.setLinhas([...this._tecnico.linhas, ...extras]);
+    grafico.setMarcadoresTecnico([...this._tecnico.marcadores, ...marcadoresDataEx(this._candles)]);
   }
 
   async buscarVelas(simbolo) {
@@ -316,8 +339,35 @@ export class PainelCandles extends BaseComponent {
         <span class="text-danger" aria-hidden="true">●</span> fato relevante
         <span class="text-primary ms-2" aria-hidden="true">●</span> outros comunicados
       </p>
+      ${this.controlesOverlays(candles)}
       <candle-chart></candle-chart>
+      ${this.listaDataExHtml(candles)}
     `;
+  }
+
+  controlesOverlays(candles) {
+    if (!this._pregoes) return '';
+    const disponivel = precoMedioDisponivel(candles, this._intervalo);
+    const motivo = this._intervalo !== 'dia'
+      ? 'disponível só em velas de dia (semana e mês não trazem a média de cada dia)'
+      : 'este gestor não informou o preço médio';
+    return `
+      <div class="form-check form-switch small mb-1">
+        <input class="form-check-input" type="checkbox" role="switch" id="overlay-preco-medio"
+               ${disponivel ? '' : 'disabled'} ${disponivel && this._precoMedioLigado ? 'checked' : ''}>
+        <label class="form-check-label" for="overlay-preco-medio">
+          Preço médio do dia${disponivel ? '' : ` <span class="text-muted">— ${motivo}</span>`}
+        </label>
+      </div>`;
+  }
+
+  listaDataExHtml(candles) {
+    const itens = listaDataEx(candles);
+    if (!itens.length) return '';
+    return `
+      <ul class="small text-muted list-unstyled mb-0 mt-1" aria-label="Datas ex no período">
+        ${itens.map((i) => `<li title="${escaparHtml(i.descricao)}">▪ ${escaparHtml(i.dataFormatada)} — ${escaparHtml(i.descricao)}</li>`).join('')}
+      </ul>`;
   }
 
   avisoBanco(pregoes) {
