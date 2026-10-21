@@ -22,6 +22,8 @@ const ROTAS = {
   comunicados: (s, hoje) => `/empresas/${s}/comunicados?desde=${umAnoAtras(hoje)}`,
   noticias: (s) => `/noticias/${s}`,
   opcoes: (s) => `/ativos/${s}/opcoes`,
+  insiders: (s) => `/ativos/${s}/insiders`,
+  recompras: (s) => `/ativos/${s}/recompras`,
   operacional: (s) => `/operacional/tickers/${s}`,
   backtest: () => '/validacao/backtest',
   diario: (s) => `/validacao/diario?simbolo=${s}&limite=60`,

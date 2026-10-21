@@ -9,6 +9,7 @@ export const SECOES = Object.freeze([
   { id: 'valuation', rotulo: 'Valuation', ancora: true },
   { id: 'fundamentos', rotulo: 'Fundamentos', ancora: true },
   { id: 'proventos', rotulo: 'Proventos', ancora: true },
+  { id: 'insiders', rotulo: 'Quem está dentro', ancora: true },
   { id: 'opcoes', rotulo: 'Opções', ancora: true },
   { id: 'eventos', rotulo: 'Eventos', ancora: true },
   { id: 'operacao', rotulo: 'Operação', ancora: true },
