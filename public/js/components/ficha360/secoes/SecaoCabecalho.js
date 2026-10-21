@@ -2,6 +2,7 @@ import { BaseComponent } from '../../base/BaseComponent.js';
 import { velasDoBanco } from '../../../api/pregoesApi.js';
 import { dataBr, moeda, numero, pontos, precoDasVelas, rotuloDaFonte } from '../../../analise/fichaDoAtivo.js';
 import { htmlAlertaStatusCvm, htmlSeloStatusCvm } from '../../../analise/statusCvm.js';
+import { htmlFaixaConfiabilidade } from '../../../analise/ficha360/confiabilidade.js';
 import { escaparHtml } from '../../../utils/html.js';
 import { esqueleto } from '../../ficha/esqueleto.js';
 import '../../FavoritoToggle.js';
@@ -70,7 +71,7 @@ function htmlPreco(p) {
     <div class="f360-cab-mudo">${escaparHtml(rotuloDaFonte(p.fonte))} · ${dataBr(p.data)}</div>`;
 }
 
-export function htmlCabecalho(d, plano = null) {
+export function htmlCabecalho(d, plano = null, confiabilidade = null) {
   const linha = [d.setor, d.cnae ? `CNAE ${d.cnae}` : null, d.uf ? `sede em ${d.uf}` : null].filter(Boolean);
   const ids = [
     ['CNPJ', d.cnpj],
@@ -92,7 +93,8 @@ export function htmlCabecalho(d, plano = null) {
         <div class="f360-cab-mudo f360-cab-ids">${ids.map(([r, v]) => `<span>${r} ${escaparHtml(v ?? '—')}</span>`).join('')}</div>
       </div>
       <div class="f360-cab-cotacao text-end">${htmlPreco(d.preco)}</div>
-    </div>`;
+    </div>
+    ${htmlFaixaConfiabilidade(confiabilidade)}`;
 }
 
 const ESTILO = `
@@ -105,6 +107,14 @@ const ESTILO = `
     .f360-cab-ids { display: flex; flex-wrap: wrap; column-gap: .9rem; }
     .f360-cab-preco { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .f360-cab-var { font-size: 1rem; font-weight: 600; }
+    .f360-conf { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .35rem; margin-top: .5rem; font-size: .75rem; }
+    .f360-conf-selo { display: inline-block; padding: .1rem .5rem; border-radius: 999px; border: 1px solid var(--bs-border-color, #cbd5e1); color: var(--f360-texto-mudo, var(--bs-secondary-color)); }
+    .f360-conf-ok { color: var(--bs-body-color); }
+    .f360-conf-alerta { background: #fef3c7; border-color: #b45309; color: #78350f; font-weight: 600; }
+    .f360-conf-critico { background: #fee2e2; border-color: #be123c; color: #7f1d1d; font-weight: 700; }
+    .f360-conf-sem, .f360-conf-sem-dado summary { color: #64748b; background: transparent; }
+    .f360-conf-sem-dado summary { cursor: pointer; display: inline-block; }
+    .f360-conf-resumo { font-weight: 700; }
     .f360-cab-selo { color: #fff; font-size: .8rem; }
     @media (max-width: 575.98px) {
       .f360-cab-simbolo, .f360-cab-preco { font-size: 1.25rem; }
@@ -146,15 +156,16 @@ export class SecaoCabecalho extends BaseComponent {
   }
 
   template() {
-    return this._dados ? ESTILO + htmlCabecalho(this._dados, this._plano) : esqueleto(2);
+    return this._dados ? ESTILO + htmlCabecalho(this._dados, this._plano, this._confiabilidade) : esqueleto(2);
   }
 
   async carregar() {
     const ctx = this._contexto;
     if (!ctx) return;
-    const [ativo, identidade, base, pregoes] = await Promise.all(
-      ['ativo', 'identidade', 'base', 'pregoes'].map((k) => ctx.obter(k)));
+    const [ativo, identidade, base, pregoes, confiabilidade] = await Promise.all(
+      ['ativo', 'identidade', 'base', 'pregoes', 'confiabilidade'].map((k) => ctx.obter(k)));
     if (ctx !== this._contexto) return;
+    this._confiabilidade = confiabilidade;
     this._dados = dadosDoCabecalho(ctx.simbolo, { ativo, identidade, base, pregoes });
     this.innerHTML = this.template();
   }

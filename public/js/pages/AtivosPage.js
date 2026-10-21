@@ -8,6 +8,7 @@ import { escaparHtml } from '../utils/html.js';
 import { htmlSelo } from '../utils/selos.js';
 import { buscarFiltrosOperacionais, buscarTickers } from '../api/operacionalV2Api.js';
 import { filtrosAtivos, htmlFiltrosOperacionais, temFiltroOperacional } from '../components/ativos/FiltrosOperacionais.js';
+import { FILTROS_CONFIABILIDADE, filtrarPorConfiabilidade } from '../analise/ficha360/confiabilidade.js';
 import '../components/LoadingSpinner.js';
 import '../components/StatusAlert.js';
 
@@ -35,6 +36,7 @@ export class AtivosPage extends BaseComponent {
     this.tamanho = 30;
     Object.assign(this, lerFiltrosBase(window.location.hash));
     this.pagePayload = null;
+    this.confiabilidade = '';
   }
 
   template() {
@@ -65,6 +67,12 @@ export class AtivosPage extends BaseComponent {
           <button type="button" class="btn btn-primary w-100" id="ativos-filtrar">Filtrar</button>
         </div>
       </div>
+      <div class="row g-2 mb-3">
+        <div class="col-md-4">
+          <label for="ativos-confiabilidade" class="form-label small mb-1">Confiabilidade (cadastro CVM, nesta página)</label>
+          <select class="form-select form-select-sm" id="ativos-confiabilidade">${Object.entries(FILTROS_CONFIABILIDADE).map(([v, r]) => `<option value="${v}">${r}</option>`).join('')}</select>
+        </div>
+      </div>
       <div data-filtros-operacionais>${htmlFiltrosOperacionais({}, this)}</div>
       <div id="ativos-resultado"><loading-spinner></loading-spinner></div>
       <div id="ativos-paginacao" class="d-flex justify-content-between align-items-center mt-3"></div>
@@ -85,6 +93,10 @@ export class AtivosPage extends BaseComponent {
     });
     this.querySelector('#ativos-busca').addEventListener('keydown', (evento) => {
       if (evento.key === 'Enter') this.querySelector('#ativos-filtrar').click();
+    });
+    this.querySelector('#ativos-confiabilidade').addEventListener('change', (evento) => {
+      this.confiabilidade = evento.target.value;
+      this.desenharTabela();
     });
     this.addEventListener('change', (evento) => {
       const filtro = evento.target.closest('[data-filtro-operacional]');
@@ -204,13 +216,21 @@ export class AtivosPage extends BaseComponent {
           this.pagePayload = { ...base, content: baseItens.map((item) => ({ ...item, operacional: porSimbolo.get(String(item.simbolo).toUpperCase()) })) };
         }
       }
-      resultado.innerHTML = htmlTabelaAtivos(this.pagePayload.content || [], { visao: this.visao });
-      resultado.querySelectorAll('table').forEach(aplicarOrdenacao);
+      this.desenharTabela();
       this.renderPaginacao(this.pagePayload);
     } catch (erro) {
       resultado.innerHTML = `<status-alert mensagem="${escaparHtml(erro.message)}" variante="danger"></status-alert>`;
       this.querySelector('#ativos-paginacao').innerHTML = '';
     }
+  }
+
+  // Filtro de confiabilidade sobre as linhas ja carregadas (a listagem do gestor
+  // ainda nao filtra por isso; ver docs/cons/FONTES-PAI-4.md).
+  desenharTabela() {
+    const resultado = this.querySelector('#ativos-resultado');
+    const itens = filtrarPorConfiabilidade(this.pagePayload?.content || [], this.confiabilidade);
+    resultado.innerHTML = htmlTabelaAtivos(itens, { visao: this.visao });
+    resultado.querySelectorAll('table').forEach(aplicarOrdenacao);
   }
 
   renderPaginacao(payload) {
