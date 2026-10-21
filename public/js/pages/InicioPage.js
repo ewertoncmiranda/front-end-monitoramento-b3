@@ -17,6 +17,7 @@ import '../components/LoadingSpinner.js';
 import '../components/cargas/AvisoDefasagem.js';
 import '../components/inicio/CarrosselMercado.js';
 import { cardPanoramaProvisorio } from '../components/inicio/cardPanoramaProvisorio.js';
+import { cardSetoresEmpresas } from '../components/inicio/cards/CardSetoresEmpresas.js';
 
 // Unica responsabilidade: a pagina Inicio (REQ-UX-7) - um resumo do que mudou:
 // saude dos dados, favoritos com variacao e comunicados da semana. Cada bloco
@@ -62,7 +63,7 @@ export class InicioPage extends BaseComponent {
 
     // Panorama do mercado (Plano MERC): cada card carrega e falha sozinho no carrossel.
     const carrossel = this.querySelector('carrossel-mercado');
-    if (carrossel) carrossel.cards = [cardPanoramaProvisorio()];
+    if (carrossel) carrossel.cards = [cardSetoresEmpresas(), cardPanoramaProvisorio()];
 
     const favoritosP = listarFavoritos();
     const newsletterP = buscarNewsletter();
