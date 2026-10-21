@@ -15,6 +15,7 @@ const ROTAS = {
   fundamentosHistorico: (s) => `/analises/${s}/fundamentos-cvm/historico?anos=5`,
   identidade: (s) => `/ativos/${s}/identidade`,
   base: (s) => `/base/ativos?q=${s}&pagina=0&tamanho=10`,
+  confiabilidade: (s) => `/ativos/${s}/confiabilidade`,
   opiniao: (s) => `/ativos/${s}/opiniao`,
   fatores: (s) => `/ativos/${s}/fatores`,
   proventos: (s) => `/ativos/${s}/proventos-contabeis`,
