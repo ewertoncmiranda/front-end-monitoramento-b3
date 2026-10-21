@@ -15,6 +15,356 @@ import { normalizar } from '../estudos/texto.js';
 //      varia por setor - margem de 2% e otima pra supermercado e pessima pra
 //      software.
 
+// MACRO-PAI-4: verbetes dos planos MACRO, FONTES e MICRO. Cada um tem id unico,
+// definicao curta, "como ler" e um link #/... para onde aparece no painel.
+// Nenhum verbete recomenda compra ou venda: descreve como ler o dado.
+const GRUPOS_MACRO_FONTES_MICRO = [
+  {
+    id: 'macro-juros',
+    titulo: 'Juros, inflação e a régua da renda fixa',
+    resumo: 'Como o painel compara uma ação com o que a renda fixa paga hoje.',
+    termos: [
+      {
+        id: 'juro-real',
+        termo: 'Juro real',
+        definicao:
+          'O que a Selic rende acima da inflação esperada. Se o banco paga 14,50% ao ano e se espera 5,22% de inflação, sobram cerca de 8,82% de ganho de verdade, depois de descontar a perda de poder de compra.',
+        comoLer:
+          'Juro real alto quer dizer que a renda fixa paga bem acima da inflação, e por isso o dinheiro "exige" mais de qualquer outro investimento. Juro real perto de zero quer dizer que a renda fixa mal repõe a inflação. A conta usa o IPCA esperado do boletim Focus (do ano seguinte depois de junho); se faltar, usa o IPCA acumulado em 12 meses, e o cartão informa qual fonte usou.',
+        onde: 'Primeiro cartão do "Painel de decisão" da tela de Índices.',
+        link: { rotulo: 'Índices', href: '#/indices' },
+      },
+      {
+        id: 'ciclo-selic',
+        termo: 'Ciclo da Selic',
+        definicao:
+          'A direção recente da taxa Selic: em alta, em queda ou estável. O painel compara a meta de hoje com a de cerca de 90 dias atrás.',
+        comoLer:
+          'O selo mostra ▲ ALTA, ▼ QUEDA ou ■ ESTÁVEL, sempre com texto, nunca só com cor. Variação menor que 0,01 ponto percentual conta como estável. Descreve o que já aconteceu nos últimos meses; não prevê a próxima decisão do Banco Central.',
+        onde: 'Segundo cartão do "Painel de decisão" da tela de Índices.',
+        link: { rotulo: 'Índices', href: '#/indices' },
+      },
+      {
+        id: 'barreira-compra',
+        termo: 'Barreira de compra',
+        definicao:
+          'O earnings yield mínimo que uma ação precisa ter para empatar com a Selic meta. Earnings yield é o lucro por ação dividido pelo preço, em %: o "juro" que o lucro da empresa representa sobre o que você paga.',
+        comoLer:
+          'Ação com earnings yield acima da barreira rende em lucro mais que a Selic; abaixo, menos. O cartão mostra também a mediana da base (o valor do meio entre todos os ativos analisados) e lista até 20 ativos acima da barreira, com a distância em pontos percentuais. Lucro é estimativa contábil e pode oscilar: estar acima da barreira não é garantia de nada.',
+        onde: 'Cartão "barreira" e bloco "Ativos acima da barreira" da tela de Índices.',
+        link: { rotulo: 'Índices', href: '#/indices' },
+      },
+      {
+        id: 'expectativas-focus',
+        termo: 'Expectativas do Focus',
+        sigla: 'Boletim Focus do Banco Central',
+        definicao:
+          'Pesquisa semanal do Banco Central com a mediana das previsões do mercado para Selic, IPCA e outros números, ano a ano.',
+        comoLer:
+          'São opiniões de analistas, não resultados: servem de referência do que o mercado espera, e as previsões mudam de semana para semana. O painel guarda a mediana (todos os respondentes) da Selic e do IPCA para o ano corrente e o seguinte.',
+        onde: 'Cartões "Focus" da tela de Índices (Selic e IPCA esperados).',
+        link: { rotulo: 'Índices', href: '#/indices' },
+      },
+      {
+        id: 'ipca-12m',
+        termo: 'IPCA acumulado em 12 meses',
+        definicao:
+          'A inflação oficial somada ao longo dos últimos 12 meses (série 13522 do Banco Central). Em setembro de 2026 estava em 4,58%.',
+        comoLer:
+          'É a inflação que já aconteceu, diferente do IPCA esperado do Focus, que é previsão. O painel também calcula o acumulado a partir dos meses (exige 12 meses seguidos) e confere com a série oficial. Quando falta algum mês, o valor fica oculto em vez de ser inventado.',
+        onde: 'Cartão "IPCA 12 meses" e variações da tela de Índices.',
+        link: { rotulo: 'Índices', href: '#/indices' },
+      },
+      {
+        id: 'curva-ntnb',
+        termo: 'Curva de juros real (NTN-B / Tesouro IPCA+)',
+        definicao:
+          'NTN-B é o título público que paga inflação (IPCA) mais uma taxa fixa; no Tesouro Direto aparece como Tesouro IPCA+. A curva real mostra essa taxa fixa para cada vencimento.',
+        comoLer:
+          'Curva normal (▲): vencimentos longos pagam mais que os curtos. Invertida (▼): pagam menos. Plana (■): quase iguais. O painel usa como referência o vencimento mais perto de 5 anos a partir da data-base, e mostra qual vencimento foi usado. A taxa é a de compra do título naquele dia.',
+        onde: 'Cartão "Juro real: NTN-B (Tesouro IPCA+)" da tela de Índices.',
+        link: { rotulo: 'Índices', href: '#/indices' },
+      },
+      {
+        id: 'premio-risco',
+        termo: 'Prêmio de risco',
+        definicao:
+          'A diferença, em pontos percentuais, entre o earnings yield da ação e o juro real da NTN-B de referência. Mede o que a ação "paga a mais" (ou a menos) do que a renda fixa protegida da inflação.',
+        comoLer:
+          'O selo diz ▲ Acima, ▼ Abaixo ou = Igual à renda fixa. Exemplo: earnings yield de 12,50% menos juro real de 7,20% dá +5,30 p.p. Prêmio positivo não elimina o risco da ação; só mostra a comparação. Há também a linha "contra a Selic meta" (earnings yield menos Selic).',
+        onde: 'Bloco "Rendimento contra renda fixa" da seção Valuation da ficha.',
+        link: { rotulo: 'Ficha, seção Valuation', href: '#/ativo?secao=valuation' },
+      },
+      {
+        id: 'graham-ajustado',
+        termo: 'Graham ajustado pelo juro',
+        definicao:
+          'O valor de Graham (Graham Number) multiplicado por 4,4 e dividido por Y, onde Y é a Selic meta. A fórmula original de Graham usava 4,4% como o rendimento de títulos de alta qualidade da época; aqui Y nominal (a Selic) substitui esse rendimento.',
+        comoLer:
+          'Com juros altos o valor ajustado fica menor que o Graham Number puro, porque o dinheiro parado rende mais. Exemplo: 78,75 × 4,4 / 14,5 = 23,90. Sem Selic disponível o cartão não aparece. É só exibição: não altera a recomendação oficial do sistema.',
+        onde: 'Ao lado do "Graham Number (valor atual)" na seção Valuation da ficha.',
+        link: { rotulo: 'Ficha, seção Valuation', href: '#/ativo?secao=valuation' },
+      },
+    ],
+  },
+  {
+    id: 'bancos-fontes',
+    titulo: 'Bancos, quem está dentro e confiabilidade',
+    resumo: 'Indicadores que só fazem sentido para bancos, sinais de quem administra a empresa e selos de alerta.',
+    termos: [
+      {
+        id: 'basileia',
+        termo: 'Índice de Basileia',
+        definicao:
+          'Quanto o banco tem de capital próprio em relação ao risco que assume nos empréstimos e aplicações. É uma regra internacional de segurança financeira.',
+        comoLer:
+          'Quanto maior, mais folga. O mínimo regulatório usado como referência é 10,5% (já com o adicional de conservação de capital). Exemplo: 15,2% está acima do mínimo, e o selo diz "Em dia". Os valores vêm do IF.data do Banco Central, por trimestre.',
+        onde: 'Painel do banco na seção Fundamentos da ficha (só para bancos).',
+        link: { rotulo: 'Ficha, seção Fundamentos', href: '#/ativo?secao=fundamentos' },
+      },
+      {
+        id: 'capital-principal',
+        termo: 'Capital principal',
+        definicao:
+          'A parte mais sólida do capital do banco (basicamente o patrimônio dos acionistas e lucros retidos), a que absorve prejuízos primeiro.',
+        comoLer:
+          'Também em % do risco assumido. Acompanhe a série trimestral: queda seguida indica que o banco está consumindo capital. Não tem selo próprio; o painel só exibe o valor e o gráfico pequeno de 8 trimestres.',
+        onde: 'Painel do banco na seção Fundamentos da ficha.',
+        link: { rotulo: 'Ficha, seção Fundamentos', href: '#/ativo?secao=fundamentos' },
+      },
+      {
+        id: 'inadimplencia',
+        termo: 'Inadimplência',
+        definicao:
+          'A fatia dos empréstimos do banco que os clientes deixaram de pagar no prazo.',
+        comoLer:
+          'O selo dispara "Atenção" quando a inadimplência subiu mais de 0,5 ponto percentual em 4 trimestres. Esse 0,5 é uma constante revisável: escolha de implementação do sistema, não regra regulatória. Taxa alta em si é normal em banco de crédito mais arriscado; o que o selo observa é a tendência.',
+        onde: 'Painel do banco na seção Fundamentos da ficha.',
+        link: { rotulo: 'Ficha, seção Fundamentos', href: '#/ativo?secao=fundamentos' },
+      },
+      {
+        id: 'roe-banco',
+        termo: 'ROE do banco (contra a Selic)',
+        sigla: 'Retorno sobre o patrimônio líquido',
+        definicao:
+          'O lucro anual do banco dividido pelo patrimônio dos acionistas. É o indicador central para banco, onde dívida e EBITDA não servem como nas outras empresas.',
+        comoLer:
+          'O selo "Acima" aparece quando o ROE é maior ou igual à Selic meta, usada como custo de capital de referência (o que o acionista conseguiria sem risco). Exemplo: ROE de 21,5% contra Selic de 14,75%. Sem Selic, o selo fica "Sem dado". Veja também o verbete ROE na seção "Os indicadores".',
+        onde: 'Painel do banco na seção Fundamentos da ficha.',
+        link: { rotulo: 'Ficha, seção Fundamentos', href: '#/ativo?secao=fundamentos' },
+      },
+      {
+        id: 'pvp-banco',
+        termo: 'P/VP do banco',
+        sigla: 'Preço sobre valor patrimonial',
+        definicao:
+          'O preço da ação dividido pelo patrimônio contábil por ação. Em banco, o patrimônio é a base do negócio, por isso o P/VP é a medida mais usada de "quanto se paga".',
+        comoLer:
+          'Perto de 1 significa pagar cerca de um real por real de patrimônio. Acima disso, o mercado desconta um ROE alto. O P/VP herda a limitação do VPA usado, que é do último exercício anual; sem o dado, o painel avisa o motivo.',
+        onde: 'Painel do banco na seção Fundamentos da ficha.',
+        link: { rotulo: 'Ficha, seção Fundamentos', href: '#/ativo?secao=fundamentos' },
+      },
+      {
+        id: 'roe-sobre-pvp',
+        termo: 'ROE/P/VP',
+        definicao:
+          'O ROE dividido pelo P/VP: quanto de retorno sobre o patrimônio vem para cada unidade de P/VP paga.',
+        comoLer:
+          'Exemplo: ROE 21,5 / P/VP 2,00 = 10,75. Maior indica mais retorno por unidade de preço pago sobre o patrimônio. Serve para comparar bancos entre si, não para dizer sozinho se vale a pena.',
+        onde: 'Painel do banco na seção Fundamentos da ficha.',
+        link: { rotulo: 'Ficha, seção Fundamentos', href: '#/ativo?secao=fundamentos' },
+      },
+      {
+        id: 'compra-liquida-insiders',
+        termo: 'Compra líquida de administradores (insiders)',
+        definicao:
+          'Insiders são diretores, conselheiros e controladores, que conhecem a empresa por dentro. Compra líquida é o que eles compraram menos o que venderam, em ações, nas janelas de 3, 6 e 12 meses.',
+        comoLer:
+          'O selo (▲ Compra líquida, ▼ Venda líquida, ● Neutro) usa a janela de 6 meses: compra líquida dividida por compras mais vendas; a partir de +0,10 é compra líquida, a partir de -0,10 é venda líquida. O corte de 0,10 e a janela de 6 meses são constantes revisáveis, escolhas de implementação. O dado chega com atraso, pois vale a partir da entrega à CVM. É sinal de confirmação, não gatilho.',
+        onde: 'Seção "Quem está dentro" da ficha (depende da integração da FONTES-PAI-3).',
+        link: { rotulo: 'Ficha, seção Quem está dentro', href: '#/ativo?secao=insiders' },
+      },
+      {
+        id: 'recompra-liquida',
+        termo: 'Recompra líquida',
+        definicao:
+          'Quanto a empresa comprou de ações dela mesma no período, medido pela mudança no saldo de ações em tesouraria (ações recompradas e guardadas).',
+        comoLer:
+          'O saldo de tesouraria é negativo no balanço; a recompra é a variação com o sinal trocado. Variação positiva do saldo pode ser cancelamento de ações ou entrega a plano de remuneração, e o dado não distingue. Quando as contas de tesouraria não estão carregadas, o painel diz o motivo.',
+        onde: 'Bloco de recompras da seção "Quem está dentro" da ficha.',
+        link: { rotulo: 'Ficha, seção Quem está dentro', href: '#/ativo?secao=insiders' },
+      },
+      {
+        id: 'selos-confiabilidade',
+        termo: 'Selos de confiabilidade',
+        definicao:
+          'Cinco avisos sobre a qualidade da empresa como emissora de dados e de dividendos: cadastro, auditor, dívida, fundos e dividendo. Cada um é OK, ALERTA, CRÍTICO ou SEM DADO.',
+        comoLer:
+          'O selo-resumo mostra o pior nível entre os cinco (CRÍTICO, depois ALERTA, depois OK); "sem dado" não conta como pior. Passe o mouse (ou use leitor de tela) para ler o detalhe. Os limiares (dívida 50%, dividendo 100%, auditor 24 meses) são constantes revisáveis do sistema. Um alerta pede atenção e pesquisa, não é veredito.',
+        onde: 'Faixa sob o cabeçalho da ficha; filtro "Confiabilidade" na tabela de ativos (por enquanto só o cadastro CVM, na página carregada).',
+        link: { rotulo: 'Ficha do ativo', href: '#/ativo' },
+      },
+      {
+        id: 'selo-cadastro',
+        termo: 'Selo de cadastro',
+        definicao: 'Situação da empresa no registro da CVM.',
+        comoLer: 'ATIVO é OK; suspensa ou cancelada é CRÍTICO; qualquer outra situação é ALERTA. O detalhe traz a data da situação e, se houver, o motivo.',
+        onde: 'Faixa de confiabilidade da ficha e filtro da tabela de ativos.',
+        link: { rotulo: 'Tabela de ativos', href: '#/ativos' },
+      },
+      {
+        id: 'selo-auditor',
+        termo: 'Selo de auditor',
+        definicao: 'Avisa quando a empresa trocou de auditoria independente.',
+        comoLer: 'Troca iniciada nos últimos 24 meses (constante revisável) é ALERTA e mostra auditor atual, anterior, data e justificativa. Troca por rodízio obrigatório é comum e não é, sozinha, sinal de problema.',
+        onde: 'Faixa de confiabilidade da ficha.',
+        link: { rotulo: 'Ficha do ativo', href: '#/ativo' },
+      },
+      {
+        id: 'selo-divida',
+        termo: 'Selo de dívida',
+        definicao: 'Mede quanto da dívida em títulos (debêntures e similares) vence nos próximos 12 meses.',
+        comoLer: 'Saldo que vence em 12 meses dividido pelo saldo total. Acima de 50% (constante revisável) é ALERTA. Exemplo: 600 de 1.000 = 60%. Vencimento concentrado exige que a empresa gere caixa ou refinancie.',
+        onde: 'Faixa de confiabilidade da ficha.',
+        link: { rotulo: 'Ficha do ativo', href: '#/ativo' },
+      },
+      {
+        id: 'selo-fundos',
+        termo: 'Selo de fundos',
+        definicao: 'Mostra quantos fundos de investimento têm a ação e se entraram ou saíram fundos desde a competência anterior.',
+        comoLer: 'É informativo: o nível é sempre OK. Atenção à defasagem em meses informada no detalhe, pois a posição dos fundos é divulgada com atraso.',
+        onde: 'Faixa de confiabilidade da ficha.',
+        link: { rotulo: 'Ficha do ativo', href: '#/ativo' },
+      },
+      {
+        id: 'selo-dividendo',
+        termo: 'Selo de dividendo',
+        definicao: 'Verifica se o que a empresa pagou em dividendos e juros sobre capital próprio cabe no lucro do mesmo ano (payout).',
+        comoLer: 'Payout acima de 100% do lucro líquido (constante revisável) é ALERTA: a empresa pagou mais do que lucrou, o que pode não se repetir. Exemplo: payout de 120%. Sem demonstração anual ou lucro do mesmo exercício, fica "sem dado".',
+        onde: 'Faixa de confiabilidade da ficha.',
+        link: { rotulo: 'Ficha do ativo', href: '#/ativo' },
+      },
+    ],
+  },
+  {
+    id: 'microestrutura',
+    titulo: 'Datas ex, ofertas e opções',
+    resumo: 'O que acontece no dia do provento e como ler as ofertas de compra e venda.',
+    termos: [
+      {
+        id: 'data-ex',
+        termo: 'Data ex',
+        definicao:
+          'A partir deste dia, quem compra a ação deixa de ter direito ao provento (dividendo, JCP etc.) já declarado. O preço costuma abrir menor por isso.',
+        comoLer:
+          'A tabela lista os eventos dos últimos 24 meses com o tipo (dividendo, JCP, rendimento, bonificação, desdobramento...). A próxima data ex é uma estimativa por sazonalidade, com confiança MÉDIA ou BAIXA, e só indica a época provável. O plano de operação avisa quando a data estimada está a até 10 dias (constante revisável). No gráfico, o dia aparece com marcador e a mesma queda não conta como gap de mercado.',
+        onde: 'Bloco "Datas ex" da seção Proventos; marcadores no gráfico; aviso no plano de operação.',
+        link: { rotulo: 'Ficha, seção Proventos', href: '#/ativo?secao=proventos' },
+      },
+      {
+        id: 'ajuste-implicito',
+        termo: 'Ajuste implícito',
+        definicao:
+          'Quanto o preço caiu "sozinho" na data ex: fechamento do pregão anterior menos a abertura do dia ex. Também mostrado em % do fechamento anterior.',
+        comoLer:
+          'Exemplo da PETR4 (JCP, 02/06/2026): 42,37 menos 41,90 = R$ 0,47, ou 1,11%. Compare com o valor declarado do provento: a razão do ajuste (ajuste dividido pelo valor declarado) mostra quanto do provento o preço "descontou". Variação normal de mercado no dia se mistura com o ajuste.',
+        onde: 'Tabela "Datas ex" da seção Proventos.',
+        link: { rotulo: 'Ficha, seção Proventos', href: '#/ativo?secao=proventos' },
+      },
+      {
+        id: 'yield-evento',
+        termo: 'Yield do evento',
+        definicao:
+          'O valor declarado do provento dividido pelo fechamento do pregão anterior à data ex: o rendimento daquele pagamento sobre o preço.',
+        comoLer:
+          'Um provento de R$ 0,50 sobre fechamento de R$ 42,37 dá 1,18% (exemplo didático). A soma dos yields em 12 meses aparece no resumo. Fica vazio quando o valor declarado não foi encontrado.',
+        onde: 'Tabela "Datas ex" e resumo da seção Proventos.',
+        link: { rotulo: 'Ficha, seção Proventos', href: '#/ativo?secao=proventos' },
+      },
+      {
+        id: 'preco-medio-dia',
+        termo: 'Preço médio do dia',
+        definicao:
+          'O preço médio dos negócios do pregão (campo do arquivo COTAHIST da B3), diferente do fechamento, que é só o último negócio.',
+        comoLer:
+          'Uma linha tracejada "Preço médio do dia" pode ser ligada no gráfico de velas diárias. Fica desligada em velas de semana ou mês e nos períodos vindos da BRAPI, porque não há como compor a média confiável. No plano de operação, serve de entrada de referência ao lado do último preço.',
+        onde: 'Gráfico de velas (caixa de seleção) e plano de operação.',
+        link: { rotulo: 'Ficha, seção Gráfico', href: '#/ativo?secao=grafico' },
+      },
+      {
+        id: 'melhor-oferta',
+        termo: 'Melhor oferta de compra e de venda',
+        definicao:
+          'No livro de ofertas, a maior oferta de compra (o que alguém aceita pagar) e a menor oferta de venda (o que alguém aceita receber).',
+        comoLer:
+          'O fechamento é o último negócio, que pode ter acontecido horas antes; as melhores ofertas mostram onde o mercado está agora. Oferta ausente, zero ou cruzada (venda menor que compra) é tratada como sem oferta.',
+        onde: 'Cadeia de opções e velas diárias do plano de operação.',
+        link: { rotulo: 'Opções', href: '#/opcoes' },
+      },
+      {
+        id: 'spread-ofertas',
+        termo: 'Spread entre as ofertas (em %)',
+        definicao:
+          'A diferença entre a melhor venda e a melhor compra, dividida pelo preço justo e multiplicada por 100.',
+        comoLer:
+          'É o custo de entrar e sair na hora. Exemplo didático: compra 1,90 e venda 2,10 dão spread de 0,20 sobre 2,00, ou 10%. Para opções pouco negociadas é comum ser alto. Veja também "Spread" na seção "Como se analisa".',
+        onde: 'Coluna "Spread %" da cadeia de opções; resumo da seção Opções.',
+        link: { rotulo: 'Opções', href: '#/opcoes' },
+      },
+      {
+        id: 'preco-justo-spread',
+        termo: 'Preço justo pelo meio do spread',
+        definicao:
+          'A média entre a melhor oferta de compra e a de venda. É uma estimativa do preço "do momento" quando o último negócio está velho.',
+        comoLer:
+          'O painel usa esse meio no prêmio, no ponto de equilíbrio e no hedge das opções quando há oferta; sem oferta, volta ao último negócio. A coluna "Prêmio usado" diz qual dos dois foi usado: "pelo meio do spread" ou "último negócio". Não é cotação garantida de execução.',
+        onde: 'Coluna "Preço justo" da cadeia de opções.',
+        link: { rotulo: 'Opções', href: '#/opcoes' },
+      },
+      {
+        id: 'strike-corrigido',
+        termo: 'Strike corrigido (INDOPC)',
+        definicao:
+          'Strike é o preço de exercício da opção. Algumas séries têm o strike corrigido por um índice, indicado no campo INDOPC do COTAHIST.',
+        comoLer:
+          'O selo "⚠ strike corrigido" aparece quando o campo INDOPC traz qualquer valor diferente de vazio ou "0". O painel não interpreta qual índice é: mostra só o código no título do selo. Confira a série antes de comparar o strike com o preço da ação.',
+        onde: 'Selo na cadeia de opções.',
+        link: { rotulo: 'Opções', href: '#/opcoes' },
+      },
+      {
+        id: 'defasagem-ultimo-negocio',
+        termo: 'Defasagem do último negócio',
+        definicao:
+          'Quando o último fechamento está mais de 10% longe do meio do spread, o último negócio é considerado velho para representar o preço atual.',
+        comoLer:
+          'A regra: |fechamento − meio| / meio > 10% (constante revisável). Aparece o selo "⏱ último negócio defasado". Nesse caso desconfie de qualquer cálculo feito com o fechamento. Séries sem nenhuma oferta recebem o selo "∅ sem oferta" e podem ser escondidas pelo filtro "Só séries com oferta".',
+        onde: 'Selos na cadeia de opções.',
+        link: { rotulo: 'Opções', href: '#/opcoes' },
+      },
+      {
+        id: 'custo-execucao',
+        termo: 'Custo de execução',
+        definicao:
+          'O spread mediano dos últimos 21 pregões com oferta, tratado como o custo de entrar e sair da posição (ida e volta).',
+        comoLer:
+          'Mediana é o valor do meio, que ignora dias extremos. O plano de operação mostra esse custo e o alvo líquido: o alvo e o ganho potencial descontados do custo. Sem ofertas nas velas, nada é mostrado.',
+        onde: 'Avisos do plano de operação, na seção Decisão.',
+        link: { rotulo: 'Ficha, seção Decisão', href: '#/ativo?secao=decisao' },
+      },
+      {
+        id: 'alvo-liquido',
+        termo: 'Alvo líquido',
+        definicao:
+          'O alvo de preço do plano de operação e o ganho potencial já descontados do custo de execução (ida e volta).',
+        comoLer:
+          'Em operação de compra, o alvo líquido é o alvo menos o preço atual vezes o custo em %; em venda, o ajuste vai no sentido oposto. O ganho potencial cai pelo mesmo número de pontos percentuais. É a conta do plano, não uma promessa de resultado.',
+        onde: 'Avisos do plano de operação, na seção Decisão.',
+        link: { rotulo: 'Ficha, seção Decisão', href: '#/ativo?secao=decisao' },
+      },
+    ],
+  },
+];
+
 export const GLOSSARIO = [
   {
     id: 'mercado',
@@ -284,18 +634,24 @@ export const GLOSSARIO = [
         onde: 'Calculado na hora, cruzando o LPA do balanco com a cotacao atual.',
       },
       {
+        id: 'pvp',
         termo: 'P/VP',
         sigla: 'Preco sobre valor patrimonial',
         definicao: 'Preco da acao dividido pelo VPA.',
         pergunta: 'Estou pagando quanto por cada R$ 1 de patrimonio?',
         referencia: 'Abaixo de 1 significa pagar menos que o patrimonio contabil.',
+        comoLer: 'Compare com o ROE: P/VP alto com ROE alto pode ser coerente. Para banco, veja "P/VP do banco" na secao de bancos.',
+        link: { rotulo: 'Ficha, seção Fundamentos', href: '#/ativo?secao=fundamentos' },
       },
       {
+        id: 'roe',
         termo: 'ROE',
         sigla: 'Retorno sobre o patrimonio liquido',
         definicao: 'Lucro liquido dividido pelo patrimonio liquido, em %.',
         pergunta: 'A empresa rende bem sobre o dinheiro dos socios?',
         referencia: 'Acima de 15% e considerado bom.',
+        comoLer: 'Olhe a serie de varios anos, nao um ano so, e lembre que a faixa boa varia por setor. Para banco o painel compara o ROE com a Selic meta.',
+        link: { rotulo: 'Ficha, seção Fundamentos', href: '#/ativo?secao=fundamentos' },
       },
       {
         termo: 'ROIC',
@@ -540,6 +896,7 @@ export const GLOSSARIO = [
       },
     ],
   },
+  ...GRUPOS_MACRO_FONTES_MICRO,
   {
     id: 'estrutura',
     titulo: 'Tendência, suporte e resistência',
@@ -897,9 +1254,12 @@ export const GLOSSARIO = [
         onde: 'Coluna fechamento_ajustado; passou a alimentar o calculo tecnico em 26/09/2026.',
       },
       {
+        id: 'spread',
         termo: 'Spread',
         definicao:
           'Diferenca entre a melhor oferta de compra e a de venda. Em ativo pouco liquido, o spread pode consumir o movimento inteiro que o grafico mostra.',
+        comoLer: 'Em porcentagem, o painel divide a diferenca pelo preco justo (meio das ofertas). Veja "Spread entre as ofertas (em %)".',
+        link: { rotulo: 'Opções', href: '#/opcoes' },
       },
       {
         termo: 'Escala logaritmica',
@@ -1243,21 +1603,23 @@ function renderGrupo(grupo) {
 
 function renderTermo(t) {
   // O dataset concentra tudo que a busca varre: termo, sigla e definicao.
-  const indice = normalizar([t.termo, t.sigla, t.definicao, t.pergunta, t.onde, t.exemplo, t.cuidado]
+  const indice = normalizar([t.termo, t.sigla, t.definicao, t.comoLer, t.pergunta, t.onde, t.exemplo, t.cuidado]
     .filter(Boolean)
     .join(' '));
 
   return `
     <div class="col" data-verbete="${escapar(indice)}">
-      <div class="border-start border-3 ps-3 h-100">
+      <div ${t.id ? `id="verbete-${t.id}" ` : ''}class="border-start border-3 ps-3 h-100">
         <div class="fw-semibold">${t.termo}</div>
         ${t.sigla ? `<div class="text-muted small fst-italic">${t.sigla}</div>` : ''}
         <p class="small mb-1 mt-1">${t.definicao}</p>
         ${t.exemplo ? `<p class="small mb-1"><strong>Exemplo:</strong> ${t.exemplo}</p>` : ''}
         ${t.cuidado ? `<p class="small mb-1 text-secondary"><strong>Cuidado:</strong> ${t.cuidado}</p>` : ''}
         ${t.pergunta ? `<p class="small mb-1"><span class="text-muted">Responde:</span> ${t.pergunta}</p>` : ''}
+        ${t.comoLer ? `<p class="small mb-1"><strong>Como ler:</strong> ${t.comoLer}</p>` : ''}
         ${t.referencia ? `<p class="small mb-1"><span class="badge bg-light text-dark">Referencia</span> ${t.referencia}</p>` : ''}
         ${t.onde ? `<p class="small text-muted mb-0">Aqui: ${t.onde}</p>` : ''}
+        ${t.link ? `<p class="small mb-0"><a href="${t.link.href}">Abrir: ${t.link.rotulo}</a></p>` : ''}
       </div>
     </div>
   `;
