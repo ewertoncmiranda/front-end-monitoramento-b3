@@ -107,6 +107,11 @@ export class CandleChart extends BaseComponent {
       );
     });
 
+    chart.subscribeCrosshairMove?.((parametro) => {
+      const dataIso = dataDoClique(parametro?.time);
+      this.dispatchEvent(new CustomEvent('candle-apontado', { detail: { dataIso }, bubbles: true }));
+    });
+
     this._chart = chart;
     this._serie = serie;
     this.aplicarMarcadores();

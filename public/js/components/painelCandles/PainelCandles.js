@@ -19,7 +19,8 @@ import {
   marcadoresDeComunicados,
 } from '../../analise/comunicadosPorCandle.js';
 import { linhaPrecoMedio, precoMedioDisponivel } from '../../analise/overlays/overlayPrecoMedio.js';
-import { listaDataEx, marcadoresDataEx } from '../../analise/overlays/overlayDataEx.js';
+import { buscarResumoProventos } from '../../api/proventosResumoApi.js';
+import { htmlResumoProventos, htmlFaixaEventos, htmlEventoDaVela } from '../../analise/resumoProventos.js';
 import { formatarData } from '../ComunicadoItem.js';
 import { renderNoticiasDoCandle } from '../NoticiasDoCandle.js';
 import { escaparHtml } from '../../utils/html.js';
@@ -51,6 +52,8 @@ export class PainelCandles extends BaseComponent {
     this._requisicaoComunicados = 0;
     this._requisicaoVelas = 0;
     this._precoMedioLigado = false;
+    this._mostrarEventos = false;
+    this._resumoProventos = null;
     this._tecnico = { linhas: [], marcadores: [] };
   }
 
@@ -118,10 +121,21 @@ export class PainelCandles extends BaseComponent {
   afterRender() {
     this.addEventListener('candle-clicado', (evento) => {
       this.abrirNoticias(evento.detail.dataIso);
+      this.mostrarEventoDaVela(evento.detail.dataIso);
     });
+
+    this.addEventListener('candle-apontado', (evento) => this.mostrarEventoDaVela(evento.detail.dataIso));
 
     // Delegação: os controles são recriados a cada render do bloco fixo.
     this.addEventListener('click', (evento) => {
+      const eventoEx = evento.target.closest('[data-evento-ex]');
+      if (eventoEx) {
+        const data = eventoEx.dataset.eventoEx;
+        const candle = this._candles.find((c) => c.dataIso <= data && (c.dataFim || c.dataIso) >= data);
+        this.querySelector('candle-chart')?.focarData(candle?.dataIso || data);
+        this.mostrarEventoDaVela(candle?.dataIso || data);
+        return;
+      }
       const botaoRange = evento.target.closest('[data-range]');
       if (botaoRange && botaoRange.dataset.range !== this._range) {
         this._range = botaoRange.dataset.range;
@@ -138,6 +152,12 @@ export class PainelCandles extends BaseComponent {
     });
 
     this.addEventListener('change', (evento) => {
+      if (evento.target.id === 'mostrar-eventos-ex') {
+        this._mostrarEventos = evento.target.checked;
+        const faixa = this.querySelector('#faixa-eventos-ex');
+        if (faixa) faixa.hidden = !this._mostrarEventos;
+        return;
+      }
       if (evento.target.id === 'overlay-preco-medio') {
         this._precoMedioLigado = evento.target.checked;
         this.aplicarOverlaysProprios();
@@ -164,6 +184,7 @@ export class PainelCandles extends BaseComponent {
     this.querySelector('#painel-candles-noticias-painel').innerHTML =
       '<p class="small text-muted p-3">Clique em uma vela no gráfico para ver os comunicados da CVM daquele dia.</p>';
     this.fecharNoticias();
+    this._resumoProventos = null;
 
     let candles;
     try {
@@ -203,18 +224,19 @@ export class PainelCandles extends BaseComponent {
     this._tecnico = { linhas: [], marcadores: [] };
     this.aplicarOverlaysProprios();
     this.carregarComunicados(grafico, candles);
+    this.carregarResumoProventos(candles, requisicao);
   }
 
   /**
    * Junta ao que o painel tecnico emite (que substitui linhas e marcadores a
-   * cada toggle) o preco medio do dia e as datas ex, sem um apagar o outro.
+   * cada toggle) o preço médio do dia, preservando os indicadores selecionados.
    */
   aplicarOverlaysProprios() {
     const grafico = this.querySelector('candle-chart');
     if (!grafico) return;
     const extras = this._precoMedioLigado ? linhaPrecoMedio(this._candles, this._intervalo) : [];
     grafico.setLinhas([...this._tecnico.linhas, ...extras]);
-    grafico.setMarcadoresTecnico([...this._tecnico.marcadores, ...marcadoresDataEx(this._candles)]);
+    grafico.setMarcadoresTecnico(this._tecnico.marcadores);
   }
 
   async buscarVelas(simbolo) {
@@ -341,7 +363,10 @@ export class PainelCandles extends BaseComponent {
       </p>
       ${this.controlesOverlays(candles)}
       <candle-chart></candle-chart>
-      ${this.listaDataExHtml(candles)}
+      <div class="form-check form-switch small mt-2"><input type="checkbox" class="form-check-input" role="switch" aria-controls="faixa-eventos-ex" id="mostrar-eventos-ex" ${this._mostrarEventos ? 'checked' : ''}><label for="mostrar-eventos-ex" class="form-check-label">Mostrar eventos no eixo das datas</label></div>
+      <div id="faixa-eventos-ex" class="my-2" ${this._mostrarEventos ? '' : 'hidden'}></div>
+      <div id="evento-ex-da-vela" class="small text-muted mt-1" role="status" aria-live="polite"></div>
+      <div id="resumo-proventos-periodo">${htmlResumoProventos(null)}</div>
     `;
   }
 
@@ -361,13 +386,31 @@ export class PainelCandles extends BaseComponent {
       </div>`;
   }
 
-  listaDataExHtml(candles) {
-    const itens = listaDataEx(candles);
-    if (!itens.length) return '';
-    return `
-      <ul class="small text-muted list-unstyled mb-0 mt-1" aria-label="Datas ex no período">
-        ${itens.map((i) => `<li title="${escaparHtml(i.descricao)}">▪ ${escaparHtml(i.dataFormatada)} — ${escaparHtml(i.descricao)}</li>`).join('')}
-      </ul>`;
+  async carregarResumoProventos(candles, requisicao) {
+    const area = this.querySelector('#resumo-proventos-periodo');
+    if (!area) return;
+    if (!candles.length) { area.innerHTML = ''; return; }
+    try {
+      const dto = await buscarResumoProventos(this._simbolo, {
+        de: candles[0].dataIso,
+        ate: candles.at(-1).dataFim || candles.at(-1).dataIso,
+      });
+      if (requisicao !== this._requisicaoVelas || !this.isConnected) return;
+      this._resumoProventos = dto;
+      area.innerHTML = htmlResumoProventos(dto);
+      const faixa = this.querySelector('#faixa-eventos-ex');
+      if (faixa) faixa.innerHTML = htmlFaixaEventos(dto.eventos);
+    } catch {
+      if (requisicao !== this._requisicaoVelas || !this.isConnected) return;
+      area.innerHTML = htmlResumoProventos(null, { erro: true });
+    }
+  }
+
+  mostrarEventoDaVela(dataIso) {
+    const area = this.querySelector('#evento-ex-da-vela');
+    if (!area) return;
+    const candle = this._candles.find((c) => c.dataIso === dataIso);
+    area.innerHTML = htmlEventoDaVela(this._resumoProventos?.eventos, candle);
   }
 
   avisoBanco(pregoes) {
