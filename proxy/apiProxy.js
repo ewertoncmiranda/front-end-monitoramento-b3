@@ -26,6 +26,10 @@ const ROTAS_PROXIADAS = [
   '/simulador',
   // Carteiras persistentes (gestor CARTDB-GES-1)
   '/carteiras',
+  // Saude da cadeia de opcoes (gestor SaudeOpcoesController, GET /opcoes/saude)
+  '/opcoes',
+  // Proventos por emissora (gestor ProventoController, GET /proventos/{ticker})
+  '/proventos',
 ];
 
 export function registrarProxy(app, backendUrl) {
