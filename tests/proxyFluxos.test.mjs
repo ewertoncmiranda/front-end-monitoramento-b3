@@ -70,6 +70,17 @@ try {
   const panorama = await fetch(`${base}/mercado/panorama?janela=21d`).then(resposta => resposta.json());
   assert.equal(panorama.url, '/mercado/panorama?janela=21d');
   assert.equal(panorama.metodo, 'GET');
+  // CONS-PAI-1: /opcoes e /proventos agora chegam ao gestor.
+  const saudeOpcoes = await fetch(`${base}/opcoes/saude`);
+  assert.equal(saudeOpcoes.status, 200);
+  const corpoSaude = await saudeOpcoes.json();
+  assert.equal(corpoSaude.url, '/opcoes/saude');
+  assert.equal(corpoSaude.metodo, 'GET');
+  const proventos = await fetch(`${base}/proventos/PETR4?limite=5`);
+  assert.equal(proventos.status, 200);
+  const corpoProventos = await proventos.json();
+  assert.equal(corpoProventos.url, '/proventos/PETR4?limite=5');
+  assert.equal(corpoProventos.metodo, 'GET');
 } finally {
   await fechar(frontend);
   await fechar(backend);

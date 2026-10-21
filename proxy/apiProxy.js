@@ -28,6 +28,10 @@ const ROTAS_PROXIADAS = [
   '/carteiras',
   // Panorama do mercado no carrossel da Inicio (gestor MERC-GES-1)
   '/mercado',
+  // Saude da cadeia de opcoes (gestor SaudeOpcoesController, GET /opcoes/saude)
+  '/opcoes',
+  // Proventos por emissora (gestor ProventoController, GET /proventos/{ticker})
+  '/proventos',
 ];
 
 export function registrarProxy(app, backendUrl) {
