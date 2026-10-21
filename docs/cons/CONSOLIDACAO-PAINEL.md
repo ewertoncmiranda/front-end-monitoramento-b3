@@ -6,6 +6,8 @@ Status: **IMPLEMENTADO**.
 
 Branch única: `feature-consolidacao-painel`, criada de `origin/develop` em `237fc77`. Todas as entregas abaixo foram integradas com commits de merge, preservando os commits e o histórico das branches de origem.
 
+PR único: [#82 — consolidação CONS e MERC](https://github.com/ewertoncmiranda/front-end-monitoramento-b3/pull/82). Os 13 PRs substituídos abaixo foram encerrados após confirmar que seus commits estão no histórico da consolidação. Na conferência do GitHub, o PR único está `MERGEABLE`/`CLEAN`.
+
 | PR substituído | Entrega |
 |---|---|
 | #68 | MERC-PAI-2 — setores e empresas |
@@ -36,6 +38,7 @@ MERC-PAI-1 e MERC-PAI-3 já estavam na develop; seus componentes e testes foram 
 ## Evidência
 
 - `npm test` completo passou após a integração, incluindo os testes descobertos por `tests/ficha360/executar.mjs`, MERC e índices macro.
+- Os 57 comandos do `npm test` foram preservados; `node --check` validou a sintaxe de 50 arquivos JS/MJS integrados.
 - Regressão de integração valida os oito cards reais e sua ordem, sem placeholder.
 - Regressão valida o plano financeiro com e sem painel IF.data, preservando LPA e evitando cartões EBITDA/ROIC inadequados.
 - `git merge-base --is-ancestor` confirmou **13/13 branches de origem** como ancestrais do resultado consolidado.
