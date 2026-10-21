@@ -74,8 +74,9 @@ export function importarCarteiras(payload) {
   return httpEnviarJson('POST', `${ROTA}/importacoes`, payload);
 }
 
-/** O gestor nao devolve o motivo no corpo do erro: a mensagem sai do status. */
+/** Prefere o `motivo` do gestor (corpo do erro); sem ele, a mensagem sai do status. */
 export function mensagemDeErro(erro) {
+  if (erro?.motivo && [400, 409, 422].includes(erro.status)) return `O gestor recusou: ${erro.motivo}`;
   switch (erro?.status) {
     case 0: return erro.message || 'Sem conexão com o gestor.';
     case 400: return 'O gestor recusou os dados (confira nome, estratégia, cor, data e capital).';

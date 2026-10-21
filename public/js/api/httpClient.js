@@ -3,9 +3,10 @@
 import { apiConfig } from '../config/apiConfig.js';
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, motivo = null) {
     super(message);
     this.status = status;
+    this.motivo = motivo; // `message` do corpo de erro do gestor, quando houver
   }
 }
 
@@ -55,9 +56,20 @@ async function executarFetch(fazerRequisicao) {
 
 async function handleResponse(response) {
   if (!response.ok) {
-    throw new ApiError(`Falha na requisicao (HTTP ${response.status})`, response.status);
+    throw new ApiError(`Falha na requisicao (HTTP ${response.status})`, response.status, await lerMotivo(response));
   }
   // Corpo vazio (ex.: 202 de /ativos/registrar, 204 generico) nao e JSON valido.
   const texto = await response.text();
   return texto ? JSON.parse(texto) : null;
+}
+
+/** O gestor devolve { message } nos erros; falha ao ler nunca mascara o erro HTTP. */
+async function lerMotivo(response) {
+  try {
+    const texto = typeof response.text === 'function' ? await response.text() : '';
+    const motivo = texto ? JSON.parse(texto)?.message : null;
+    return typeof motivo === 'string' && motivo.trim() ? motivo.trim().slice(0, 300) : null;
+  } catch {
+    return null;
+  }
 }

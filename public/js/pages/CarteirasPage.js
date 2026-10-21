@@ -9,7 +9,7 @@ import {
 import { escaparHtml } from '../utils/html.js';
 import '../components/carteiras/CarteiraModal.js';
 import '../components/carteiras/CarteiraCabecalho.js';
-import '../components/carteiras/CarteiraAtivoLinha.js';
+import '../components/carteiras/CarteiraPosicoes.js';
 import '../components/carteiras/CarteiraAdicionarAtivo.js';
 
 /** Painel de importacao: so aparece enquanto houver carteiras guardadas no navegador. */
@@ -45,23 +45,12 @@ export function htmlListaCarteiras(carteiras) {
   <button class="btn btn-primary" data-acao="nova-carteira">Criar primeira carteira</button>
 </div>`;
   }
-  return carteiras.map((c) => {
-    const ativos = c.ativos ?? [];
-    const linhas = ativos
-      .map((a) => `<carteira-ativo-linha data-simbolo="${escaparHtml(a.simbolo)}"></carteira-ativo-linha>`)
-      .join('');
-    return `
+  return carteiras.map((c) => `
 <div class="mb-4" data-carteira-id="${escaparHtml(c.id)}">
   <carteira-cabecalho></carteira-cabecalho>
-  ${ativos.length > 0 ? `<div class="table-responsive mb-2">
-    <table class="table table-sm align-middle">
-      <thead><tr><th>Ativo</th><th>Entrada</th><th>Capital</th><th>Retorno</th><th></th></tr></thead>
-      <tbody>${linhas}</tbody>
-    </table>
-  </div>` : ''}
+  <carteira-posicoes></carteira-posicoes>
   <carteira-adicionar-ativo></carteira-adicionar-ativo>
-</div>`;
-  }).join('');
+</div>`).join('');
 }
 
 export class CarteirasPage extends BaseComponent {
@@ -73,7 +62,7 @@ export class CarteirasPage extends BaseComponent {
     <button class="btn btn-primary" data-acao="nova-carteira">Nova carteira</button>
   </div>
   <p class="small text-muted mb-3">Carteiras salvas no gestor: sobrevivem a recarregar a página e a reiniciar o Docker.
-    São compartilhadas por quem usa esta instância (não há separação por usuário). Capital é alocação simulada, não compra executada.</p>
+    São compartilhadas por quem usa esta instância (não há separação por usuário). Aqui você registra a quantidade de ações: o registro é informado, não ordem executada.</p>
   <carteira-modal id="modal-carteira"></carteira-modal>
   <div id="carteiras-importacao"></div>
   <div id="carteiras-erro"></div>
@@ -97,7 +86,11 @@ export class CarteirasPage extends BaseComponent {
       if (carteira) this.querySelector('#modal-carteira')?.abrirEdicao(carteira);
     });
     this.addEventListener('remover-carteira', (e) => this.remover(e.detail?.carteira));
-    this.addEventListener('ativo-adicionado', () => this.carregar());
+    this.addEventListener('ativo-adicionado', (e) => this._cartao(e.target)?.querySelector('carteira-posicoes')?.carregar());
+    this.addEventListener('carteira-alterada', () => this.carregar());
+    this.addEventListener('carteira-resumo', (e) => this._cartao(e.target)?.querySelector('carteira-cabecalho')?.setResumo?.(e.detail?.resumo));
+    this.addEventListener('comprar-mais', (e) => this._cartao(e.target)?.querySelector('carteira-adicionar-ativo')?.preencher?.(e.detail?.simbolo));
+    this.addEventListener('foco-adicionar', (e) => this._cartao(e.target)?.querySelector('carteira-adicionar-ativo')?.querySelector('busca-ativos')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }));
     this.carregar();
   }
 
@@ -156,11 +149,13 @@ export class CarteirasPage extends BaseComponent {
       if (!card) return;
       card.querySelector('carteira-cabecalho')?.setCarteira(c);
       const ativos = c.ativos ?? [];
-      card.querySelectorAll('carteira-ativo-linha').forEach((linha, i) => {
-        if (ativos[i]) linha.setAtivo(ativos[i]);
-      });
+      card.querySelector('carteira-posicoes')?.setCarteira(c);
       card.querySelector('carteira-adicionar-ativo')?.setCarteiraId(c.id, ativos.map((a) => a.simbolo));
     });
+  }
+
+  _cartao(el) {
+    return el?.closest?.('[data-carteira-id]') ?? null;
   }
 
   _lista() {

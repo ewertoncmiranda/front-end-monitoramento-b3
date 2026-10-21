@@ -8,7 +8,7 @@ globalThis.HTMLElement = class {
   querySelectorAll() { return []; }
   addEventListener() {}
 };
-globalThis.customElements = { define() {} };
+globalThis.customElements = { define() {}, get() { return undefined; } };
 globalThis.CSS = { escape: (s) => s };
 
 const _storage = new Map();
@@ -32,27 +32,29 @@ caso('lista vazia convida a criar a primeira carteira', () => {
   assert.match(htmlListaCarteiras([]), /Nenhuma carteira criada ainda[\s\S]*data-acao="nova-carteira"/);
 });
 
-caso('uma carteira vira um card com cabecalho e formulario de ativo', () => {
+caso('uma carteira vira um bloco com cabecalho, posicoes (cards) e formulario de acoes', () => {
   const html = htmlListaCarteiras([carteira]);
   assert.match(html, /data-carteira-id="c1"/);
   assert.match(html, /<carteira-cabecalho>/);
+  assert.match(html, /<carteira-posicoes>/);
   assert.match(html, /<carteira-adicionar-ativo>/);
-  assert.doesNotMatch(html, /<table/, 'sem ativos, sem tabela');
+  assert.doesNotMatch(html, /<table|carteira-ativo-linha/, 'a tabela agora e uma visao alternativa dentro de carteira-posicoes');
 });
 
-caso('carteira com ativos ganha tabela e uma linha por ativo', () => {
+caso('carteira com ativos legados continua sendo um unico bloco', () => {
   const html = htmlListaCarteiras([{ ...carteira, ativos: [{ simbolo: 'PETR4' }, { simbolo: 'VALE3' }] }]);
-  assert.equal((html.match(/<carteira-ativo-linha/g) || []).length, 2);
+  assert.equal((html.match(/<carteira-posicoes>/g) || []).length, 1);
 });
 
 caso('_renderizarCarteiras passa ao formulario os tickers ja presentes', () => {
   const pagina = new CarteirasPage();
   let idRecebido = null;
   let simbolos = null;
+  let posicoesRecebeu = null;
   const card = {
     querySelector: (sel) => (sel === 'carteira-adicionar-ativo'
       ? { setCarteiraId: (id, s) => { idRecebido = id; simbolos = s; } }
-      : sel === 'carteira-cabecalho' ? { setCarteira() {} } : null),
+      : sel === 'carteira-cabecalho' ? { setCarteira() {} } : sel === 'carteira-posicoes' ? { setCarteira: (c) => { posicoesRecebeu = c.id; } } : null),
     querySelectorAll: () => [],
   };
   const lista = { innerHTML: '', querySelector: (sel) => (sel === '[data-carteira-id="c1"]' ? card : null) };
@@ -60,13 +62,15 @@ caso('_renderizarCarteiras passa ao formulario os tickers ja presentes', () => {
   pagina._renderizarCarteiras([{ ...carteira, ativos: [{ simbolo: 'PETR4' }] }]);
   assert.equal(idRecebido, 'c1');
   assert.deepEqual(simbolos, ['PETR4']);
+  assert.equal(posicoesRecebeu, 'c1', 'carteira-posicoes recebe a carteira');
 });
 
 caso('pagina explica persistencia no gestor e que nao ha separacao por usuario', () => {
   const html = new CarteirasPage().template();
   assert.match(html, /salvas no gestor/);
   assert.match(html, /não há separação por usuário/);
-  assert.match(html, /alocação simulada/);
+  assert.match(html, /quantidade de ações/);
+  assert.match(html, /não ordem executada/);
   assert.doesNotMatch(html, /Modo navegador/);
 });
 
