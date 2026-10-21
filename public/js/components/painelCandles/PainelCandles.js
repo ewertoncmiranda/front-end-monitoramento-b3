@@ -363,7 +363,7 @@ export class PainelCandles extends BaseComponent {
       </p>
       ${this.controlesOverlays(candles)}
       <candle-chart></candle-chart>
-      <div class="form-check form-switch small mt-2"><input type="checkbox" class="form-check-input" role="switch" aria-controls="faixa-eventos-ex" id="mostrar-eventos-ex" ${this._mostrarEventos ? 'checked' : ''}><label for="mostrar-eventos-ex" class="form-check-label">Mostrar eventos no eixo das datas</label></div>
+      <div class="form-check form-switch small mt-2"><input type="checkbox" class="form-check-input" role="switch" aria-controls="faixa-eventos-ex" id="mostrar-eventos-ex" ${this._mostrarEventos ? 'checked' : ''}><label for="mostrar-eventos-ex" class="form-check-label">Mostrar eventos do período</label></div>
       <div id="faixa-eventos-ex" class="my-2" ${this._mostrarEventos ? '' : 'hidden'}></div>
       <div id="evento-ex-da-vela" class="small text-muted mt-1" role="status" aria-live="polite"></div>
       <div id="resumo-proventos-periodo">${htmlResumoProventos(null)}</div>

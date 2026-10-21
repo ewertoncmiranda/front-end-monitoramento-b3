@@ -20,10 +20,10 @@ export function htmlEventoDaVela(eventos, candle) {
   return itens.map((e) => `${h(data(e.dataEx))}: ${h(nomeTipo(e.tipo))} · ${h(reais(e.valorPorAcao))} por ação · ajuste observado ${h(pct(e.ajustePercentual))}`).join('<br>');
 }
 
-/** Faixa independente do preço, com eventos consolidados e acesso por teclado. */
+/** Faixa de eventos consolidada, independente do preço e acessível por teclado. */
 export function htmlFaixaEventos(eventos) {
   if (!eventos?.length) return '<p class="small text-muted mb-0">Nenhum evento identificado no período.</p>';
-  return `<div class="d-flex flex-wrap gap-2" aria-label="Eventos no eixo das datas">${eventos.map((e) => `<button type="button" class="btn btn-sm btn-outline-secondary" data-evento-ex="${h(e.dataEx)}" title="${h(nomeTipo(e.tipo))}"><span class="text-warning" aria-hidden="true">●</span> ${h(data(e.dataEx))}</button>`).join('')}</div>`;
+  return `<div class="d-flex flex-wrap gap-2" aria-label="Eventos do período">${eventos.map((e) => `<button type="button" class="btn btn-sm btn-outline-secondary" data-evento-ex="${h(e.dataEx)}" title="${h(nomeTipo(e.tipo))}"><span class="text-warning" aria-hidden="true">●</span> ${h(data(e.dataEx))}</button>`).join('')}</div>`;
 }
 
 function card(titulo, valor, detalhe, explicacao) {
