@@ -1,6 +1,7 @@
 import { BaseComponent } from '../../base/BaseComponent.js';
 import { montarPlano } from '../../../analise/ficha360/planoDeOperacao.js';
 import { escaparHtml } from '../../../utils/html.js';
+import { htmlAvisosPlano } from '../../../analise/ficha360/datasEx.js';
 
 /**
  * F360-PAI-3: Seção Decisão - plano de operação e faixa de decisão
@@ -33,12 +34,13 @@ export class SecaoDecisao extends BaseComponent {
     this.render();
 
     try {
-      const [analise, fundamentosCvm, pregoes, backtest, opiniao] = await Promise.all([
+      const [analise, fundamentosCvm, pregoes, backtest, opiniao, datasEx] = await Promise.all([
         this.contexto.obter('analise'),
         this.contexto.obter('fundamentosCvm'),
         this.contexto.obter('pregoes'),
         this.contexto.obter('backtest'),
         this.contexto.obter('opiniao'),
+        this.contexto.obter('datasEx'),
       ]);
 
       this.plano = montarPlano({
@@ -47,6 +49,7 @@ export class SecaoDecisao extends BaseComponent {
         pregoes,
         backtest,
         opiniao,
+        datasEx,
       });
 
       // Emitir evento f360:plano
@@ -170,6 +173,8 @@ export class SecaoDecisao extends BaseComponent {
               <strong>${rrStr}</strong>
             </div>
           </div>
+
+          ${htmlAvisosPlano(this.plano)}
 
           ${motivos && motivos.length > 0 ? `
             <div class="mt-3 pt-3 border-top">

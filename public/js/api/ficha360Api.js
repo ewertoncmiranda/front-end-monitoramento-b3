@@ -15,6 +15,7 @@ const ROTAS = {
   fundamentosHistorico: (s) => `/analises/${s}/fundamentos-cvm/historico?anos=5`,
   identidade: (s) => `/ativos/${s}/identidade`,
   base: (s) => `/base/ativos?q=${s}&pagina=0&tamanho=10`,
+  confiabilidade: (s) => `/ativos/${s}/confiabilidade`,
   opiniao: (s) => `/ativos/${s}/opiniao`,
   fatores: (s) => `/ativos/${s}/fatores`,
   proventos: (s) => `/ativos/${s}/proventos-contabeis`,
@@ -22,9 +23,14 @@ const ROTAS = {
   comunicados: (s, hoje) => `/empresas/${s}/comunicados?desde=${umAnoAtras(hoje)}`,
   noticias: (s) => `/noticias/${s}`,
   opcoes: (s) => `/ativos/${s}/opcoes`,
+  insiders: (s) => `/ativos/${s}/insiders`,
+  recompras: (s) => `/ativos/${s}/recompras`,
   operacional: (s) => `/operacional/tickers/${s}`,
   backtest: () => '/validacao/backtest',
   diario: (s) => `/validacao/diario?simbolo=${s}&limite=60`,
+  premioRisco: (s) => `/ativos/${s}/premio-risco`,
+  banco: (s) => `/ativos/${s}/banco`,
+  datasEx: (s) => `/ativos/${s}/datas-ex`,
   pregoes: (s, hoje) => `/ativos/${s}/pregoes?intervalo=dia&de=${umAnoAtras(hoje)}`,
 };
 

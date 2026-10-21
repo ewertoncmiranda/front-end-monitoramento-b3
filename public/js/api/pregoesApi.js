@@ -60,6 +60,17 @@ export function velasDoBanco(resposta) {
       codigo: v.codigo,
       fonte: v.fonte,
       fatorAjuste: 1,
+      // MICRO-GES-1: opcionais; gestor antigo nao envia e a tela segue sem eles.
+      precoMedio: numeroOuNull(v.precoMedio),
+      melhorOfertaCompra: numeroOuNull(v.melhorOfertaCompra),
+      melhorOfertaVenda: numeroOuNull(v.melhorOfertaVenda),
+      marcaEx: typeof v.marcaEx === 'string' && v.marcaEx.trim() ? v.marcaEx.trim() : null,
     };
   });
+}
+
+function numeroOuNull(valor) {
+  if (valor === null || valor === undefined || valor === '') return null;
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : null;
 }

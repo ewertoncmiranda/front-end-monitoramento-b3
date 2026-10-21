@@ -1,6 +1,10 @@
 import { BaseComponent } from './base/BaseComponent.js';
 import { escaparHtml } from '../utils/html.js';
 import { aplicarOrdenacao } from '../utils/sortTable.js';
+import {
+  precoJusto, spreadPercentual, strikeCorrigido, temOferta, precoParaCalculo,
+  ultimoNegocioDefasado, ROTULO_ORIGEM, LIMITE_DEFASAGEM_ULTIMO_NEGOCIO,
+} from '../analise/opcoesMicro.js';
 
 // BDI 12 = call, 14 = put (B3 COTAHIST).
 const BDI_TIPO = { '12': 'CALL', '14': 'PUT' };
@@ -44,13 +48,13 @@ const REC_CLASSE = {
 export class OpcoesPainel extends BaseComponent {
   constructor() {
     super();
-    this._filtros = { vencimento: '', tipo: '', minNegocios: 0, minVolume: 0, minLiquidez: 0, maxDistancia: '' };
+    this._filtros = { vencimento: '', tipo: '', minNegocios: 0, minVolume: 0, minLiquidez: 0, maxDistancia: '', soComOferta: false };
     this._dados = null;
   }
 
   setDados(dados) {
     this._dados = dados;
-    this._filtros = { vencimento: '', tipo: '', minNegocios: 0, minVolume: 0, minLiquidez: 0, maxDistancia: '' };
+    this._filtros = { vencimento: '', tipo: '', minNegocios: 0, minVolume: 0, minLiquidez: 0, maxDistancia: '', soComOferta: false };
     this.innerHTML = dados ? this._template(dados) : '';
     this._bindFiltros();
     this.querySelectorAll('table').forEach(aplicarOrdenacao);
@@ -94,6 +98,7 @@ export class OpcoesPainel extends BaseComponent {
         minVolume:    Number(form.querySelector('[data-filtro-min-volume]')?.value || 0),
         minLiquidez:  Number(form.querySelector('[data-filtro-min-liquidez]')?.value || 0),
         maxDistancia: form.querySelector('[data-filtro-max-distancia]')?.value ?? '',
+        soComOferta:  !!form.querySelector('[data-filtro-so-oferta]')?.checked,
       };
       this._atualizarTabelas();
     });
@@ -294,6 +299,13 @@ function _barraFiltros(vencimentos) {
           placeholder="—" class="form-control form-control-sm" style="width:110px"
           title="Exibe apenas opções cujo strike está a no máximo N% do preço atual. Requer preço do ativo-objeto. Sem dado passa pelo filtro.">
       </div>
+      <div class="col-auto">
+        <div class="form-check mb-1">
+          <input data-filtro-so-oferta class="form-check-input" type="checkbox" id="opc-so-oferta">
+          <label class="form-check-label small" for="opc-so-oferta"
+            title="Exibe apenas séries com oferta de compra e venda válidas (preço justo disponível).">Só séries com oferta</label>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -328,6 +340,7 @@ function _filtrar(opcoes, tipo, filtros, precoAtual) {
   if (filtros.tipo && filtros.tipo !== tipo) return [];
   return opcoes.filter((o) => {
     if (filtros.vencimento && o.data_vencimento !== filtros.vencimento) return false;
+    if (filtros.soComOferta && !temOferta(o)) return false;
 
     // null passes all numeric filters (shown as "sem dado" but not excluded)
     if (filtros.minNegocios > 0 && o.numero_negocios != null
@@ -387,8 +400,8 @@ function _avisosPedagogicos() {
             ilimitado (CALL descoberta). Considere o custo como percentual do ativo-objeto.</dd>
           <dt class="col-sm-3">Spread bid/ask</dt>
           <dd class="col-sm-9">Séries ilíquidas têm spread elevado.
-            O preço médio exibido aqui é do último negócio, não do livro de ofertas atual;
-            a execução real pode diferir.</dd>
+            Quando há ofertas, o prêmio usado é o meio do spread (preço justo); sem ofertas, é o último negócio,
+            que pode diferir da execução real.</dd>
           <dt class="col-sm-3">Payoff assimétrico</dt>
           <dd class="col-sm-9">O ganho máximo (comprador) ou a perda máxima (lançador) são assimétricos.
             Analise o payoff ao vencimento (curva break-even) antes de qualquer decisão.</dd>
@@ -441,8 +454,13 @@ function _tabelaOpcoes(opcoes, tipo, ctx) {
 
   const linhas = opcoes.map((o) => {
     const exercicio = Number(o.preco_exercicio ?? 0);
-    const medio     = Number(o.preco_medio ?? o.fechamento ?? 0);
+    // MICRO-PAI-2: premio pelo meio do spread quando existir; senao ultimo negocio.
+    const usado     = precoParaCalculo(o);
+    const medio     = usado.valor ?? 0;
     const premio    = medio;
+    const justo     = precoJusto(o);
+    const spread    = spreadPercentual(o);
+    const defasado  = ultimoNegocioDefasado(o);
     const moneyness = _moneyness(tipo, exercicio, medio, precoAtual);
 
     // Cruzamento 1: distância real do strike ao preço do ativo-objeto
@@ -496,12 +514,16 @@ function _tabelaOpcoes(opcoes, tipo, ctx) {
 
     const beVal = breakeven != null ? breakeven.toFixed(2) : '';
     return `<tr class="${moneyness.classe}">
-      <td class="fw-semibold">${escaparHtml(o.simbolo)}</td>
+      <td class="fw-semibold">${escaparHtml(o.simbolo)}${strikeCorrigido(o) ? ` <span class="opc-crossref badge text-bg-info ms-1" title="Strike corrigido por índice (INDOPC ${escaparHtml(String(o.indiceCorrecao ?? o.indice_correcao).trim())}): o exercício muda até o vencimento">⚠ strike corrigido</span>` : ''}</td>
       <td data-sort-value="${escaparHtml(o.data_vencimento ?? '')}">${_fmtData(o.data_vencimento)}${badgeExDiv}</td>
       <td class="text-end" data-sort-value="${exercicio || ''}">${_fmtMoeda(exercicio)}</td>
       <td class="text-end" data-sort-value="${distPerc != null ? distPerc.toFixed(2) : ''}">${distStr}</td>
       <td class="text-end" data-sort-value="${o.fechamento ?? ''}">${_fmtMoeda(o.fechamento)}</td>
-      <td class="text-end" data-sort-value="${medio || ''}">${_fmtMoeda(medio)}</td>
+      <td class="text-end" data-sort-value="${medio || ''}">${_fmtMoeda(medio)}<div class="text-muted opc-origem">${usado.origem ? escaparHtml(ROTULO_ORIGEM[usado.origem]) : ''}</div></td>
+      <td class="text-end" data-sort-value="${justo ?? ''}">${justo != null
+        ? `${_fmtMoeda(justo)}${defasado ? ` <span class="badge text-bg-warning" title="Último fechamento difere mais de ${Math.round(LIMITE_DEFASAGEM_ULTIMO_NEGOCIO * 100)}% do meio do spread">⏱ último negócio defasado</span>` : ''}`
+        : '<span class="badge text-bg-secondary" title="Sem oferta de compra e venda válidas">∅ sem oferta</span>'}</td>
+      <td class="text-end" data-sort-value="${spread != null ? spread.toFixed(2) : ''}">${spread != null ? `${spread.toFixed(1)}%` : '—'}</td>
       <td class="text-end" data-sort-value="${beVal}">${_fmtMoeda(breakeven)}${badge63d}</td>
       <td class="text-end" data-sort-value="${diasAtrVal}">${diasAtrStr}</td>
       ${isPut ? `<td class="text-end" data-sort-value="${hedgeVal}">${hedgeStr}</td>` : ''}
@@ -524,7 +546,9 @@ function _tabelaOpcoes(opcoes, tipo, ctx) {
             ${thSort('Exercício', 'exercicio')}
             <th class="text-end" data-sort="distancia" title="(Strike − Preço atual) / Preço atual">Distância <span class="sort-icon">⇅</span></th>
             ${thSort('Fechamento', 'fechamento')}
-            ${thSort('Prêmio médio', 'premio')}
+            ${thSort('Prêmio usado', 'premio')}
+            <th class="text-end" data-sort="justo" title="Meio do spread entre melhor compra e melhor venda">Preço justo <span class="sort-icon">⇅</span></th>
+            <th class="text-end" data-sort="spread" title="(venda − compra) / meio, em pontos percentuais">Spread % <span class="sort-icon">⇅</span></th>
             <th class="text-end" data-sort="breakeven" title="Strike ± prêmio: ponto de equilíbrio ao vencimento">Break-even <span class="sort-icon">⇅</span></th>
             <th class="text-end" data-sort="diasatr" title="Distância strike/ATR14: quantas ATR14 até o strike">~ATR <span class="sort-icon">⇅</span></th>
             ${isPut ? `<th class="text-end" data-sort="hedge" title="Prêmio como % do preço do ativo — custo do hedge">Hedge% <span class="sort-icon">⇅</span></th>` : ''}

@@ -437,8 +437,8 @@ TASK-ETL-5. Única tarefa que cria uma rota nova. Requer endpoint dedicado no ge
 | ID | Tarefa | Escopo | Dependências | Aceite | Status |
 |---|---|---|---|---|---|
 | OPDB-PAI-1 | Tornar opções legíveis e confiáveis | Exibir `tipo_opcao` do backend (CALL/PUT), pregão/data de referência e estados carregando, vazio, erro e desatualizado; remover classificação derivada de BDI | OPDB-GES-1 | Tipo exibido coincide com resposta; cadeia ausente/vencida é explicada sem sugerir que não existem opções; testes cobrem estados e tipo | PLANEJADO |
-| CARTDB-PAI-1 | Migração assistida da carteira local | Importar `b3-carteiras` para a instância compartilhada com operação idempotente; alocações antigas ficam como legado, sem inferir compra/quantidade/preço; manter cópia até confirmação do servidor | CARTDB-GES-1, CARTDB-GES-6 | Repetição não duplica; falha preserva local; V42 não gera transações implicitamente | PLANEJADO |
-| CARTDB-PAI-2 | CRUD persistente de Carteiras | Criar/editar/arquivar via API, com estados de carregamento/erro/vazio; sem fluxo de login ou promessa de privacidade por usuário | CARTDB-GES-1 | Recarregar mantém dados; arquivamento explicado; erro não perde estado local | PLANEJADO |
+| CARTDB-PAI-1 | Migração assistida da carteira local | Importar `b3-carteiras` para a instância compartilhada com operação idempotente; alocações antigas ficam como legado, sem inferir compra/quantidade/preço; manter cópia até confirmação do servidor | CARTDB-GES-1, CARTDB-GES-6 | Repetição não duplica; falha preserva local; V42 não gera transações implicitamente | IMPLEMENTADO (develop) |
+| CARTDB-PAI-2 | CRUD persistente de Carteiras | Criar/editar/arquivar via API, com estados de carregamento/erro/vazio; sem fluxo de login ou promessa de privacidade por usuário | CARTDB-GES-1 | Recarregar mantém dados; arquivamento explicado; erro não perde estado local | IMPLEMENTADO (develop) |
 | CARTDB-PAI-3 | Registrar operações | Formulário de compra/venda com quantidade, preço executado informado, custos e data; deixar claro que é registro do usuário, não execução da ordem | CARTDB-GES-2 | Valores validados, confirmação antes de salvar, histórico auditável e posição consolidada coerente | PLANEJADO |
 | CARTDB-PAI-4 | Registrar proventos recebidos | Informar tipo, ativo, data, quantidade elegível, valor bruto/retenção/líquido e referência; separar anúncio de recebimento | CARTDB-GES-3 | Totais e deduplicação visíveis; correções geram lançamento compensatório, sem editar/apagar histórico | PLANEJADO |
 | CARTDB-PAI-5 | Mostrar posição e custo | Exibir quantidade líquida, preço médio/custo, valor de mercado e data da cotação, diferenciando campos ausentes/legados | CARTDB-GES-2, CARTDB-GES-4 | Sem quantidade/preço não rotular alocação antiga como posição comprada | PLANEJADO |
@@ -894,9 +894,9 @@ Mesmas do Plano F360 (regras 1–7). Branch `feature-opcx-pai-N` a partir de `de
 
 | ID | Tarefa | Arquivos (posse exclusiva) | Depende | Aceite | Status |
 |---|---|---|---|---|---|
-| OPCX-PAI-1 | **Sidebar de contexto** `<ativo-contexto-opcoes>`: recebe `contexto` (resultado de `_montarContexto` em `OpcaoPage.js`) via `setContexto(obj)`; bloco 1 — preço atual, variação do dia, máx/mín 63d, barra de posição no range, variação no período; bloco 2 — Graham Number, recomendação (badge), margem de segurança, vol21d, ATR14, volume relativo, ex-dividendos; `null` vira `—`; `tests/opcx.test.mjs` cobre render com contexto completo e com tudo `null` | novo: `public/js/components/opcoes/AtivoContextoOpcoes.js` | — | Ambos os blocos renderizam; `null` universal produz `—` em todos os campos; sem erro de console | PLANEJADO |
-| OPCX-PAI-2 | **CSS layout duas colunas:** seção `/* === OPCOES LAYOUT === */` ao final de `app.css`; `.opcoes-layout { display:flex; gap:1rem; align-items:flex-start }`, `.opcoes-sidebar { width:260px; flex-shrink:0; position:sticky; top:1rem }`, `.opcoes-principal { flex:1; min-width:0 }`; breakpoint `max-width:767px` empilha sidebar acima do principal | editado: `public/css/app.css` | — | Layout visível em 1280 px (lado a lado) e em 375 px (empilhado); sem rolagem horizontal | PLANEJADO |
-| OPCX-PAI-3 | **Refatoração de `OpcaoPage.js`:** importa `AtivoContextoOpcoes`; move `<saude-cadeia-opcoes>` para `<details open>` no rodapé; em `_renderizar` envolve painel + seletor em `.opcoes-layout` com `<aside class="opcoes-sidebar"><ativo-contexto-opcoes></ativo-contexto-opcoes></aside>`; após `painel.setDados(dados)`, chama `contextoEl.setContexto(this._contexto)`; mantém toda a lógica e imports existentes | editado: `public/js/pages/OpcaoPage.js` | OPCX-PAI-1, OPCX-PAI-2 | Tela sem ativo: só seletor + saúde colapsada. Com ativo: sidebar ao lado da tabela. Mobile: sidebar empilhada acima. `npm test` verde | PLANEJADO |
+| OPCX-PAI-1 | **Sidebar de contexto** `<ativo-contexto-opcoes>`: recebe `contexto` (resultado de `_montarContexto` em `OpcaoPage.js`) via `setContexto(obj)`; bloco 1 — preço atual, variação do dia, máx/mín 63d, barra de posição no range, variação no período; bloco 2 — Graham Number, recomendação (badge), margem de segurança, vol21d, ATR14, volume relativo, ex-dividendos; `null` vira `—`; `tests/opcx.test.mjs` cobre render com contexto completo e com tudo `null` | novo: `public/js/components/opcoes/AtivoContextoOpcoes.js` | — | Ambos os blocos renderizam; `null` universal produz `—` em todos os campos; sem erro de console | IMPLEMENTADO (develop) |
+| OPCX-PAI-2 | **CSS layout duas colunas:** seção `/* === OPCOES LAYOUT === */` ao final de `app.css`; `.opcoes-layout { display:flex; gap:1rem; align-items:flex-start }`, `.opcoes-sidebar { width:260px; flex-shrink:0; position:sticky; top:1rem }`, `.opcoes-principal { flex:1; min-width:0 }`; breakpoint `max-width:767px` empilha sidebar acima do principal | editado: `public/css/app.css` | — | Layout visível em 1280 px (lado a lado) e em 375 px (empilhado); sem rolagem horizontal | IMPLEMENTADO (develop) |
+| OPCX-PAI-3 | **Refatoração de `OpcaoPage.js`:** importa `AtivoContextoOpcoes`; move `<saude-cadeia-opcoes>` para `<details open>` no rodapé; em `_renderizar` envolve painel + seletor em `.opcoes-layout` com `<aside class="opcoes-sidebar"><ativo-contexto-opcoes></ativo-contexto-opcoes></aside>`; após `painel.setDados(dados)`, chama `contextoEl.setContexto(this._contexto)`; mantém toda a lógica e imports existentes | editado: `public/js/pages/OpcaoPage.js` | OPCX-PAI-1, OPCX-PAI-2 | Tela sem ativo: só seletor + saúde colapsada. Com ativo: sidebar ao lado da tabela. Mobile: sidebar empilhada acima. `npm test` verde | IMPLEMENTADO (develop) |
 
 ### Grupos para agentes paralelos
 
@@ -948,11 +948,88 @@ Ordem na tela, de cima para baixo:
 
 | ID | Tarefa | Arquivos | Depende | Aceite | Status |
 |---|---|---|---|---|---|
-| CARGA-PAI-1 | Rota, API e estado por etapa | `api/cargasApi.js`, `pages/CargasPage.js`, `components/cargas/EstadoEtapas.js`, `analise/cargas.js` (rótulos, selos, defasagem — puro), `router.js`, `navegacao.js`, `proxy/apiProxy.js` (`/cargas`); `tests/cargas.test.mjs` | CARGA-GES-1 (contrato) | `#/cargas` no grupo Avaliação; cartões com última tentativa, último sucesso e defasagem; estados vazio/503/erro; testes da lógica pura (status, defasagem, rótulos) | PLANEJADO |
-| CARGA-PAI-2 | Histórico e detalhe da execução | `components/cargas/HistoricoCargas.js`, `components/cargas/DetalheCarga.js`; `tests/cargasDetalhe.test.mjs` | CARGA-PAI-1 | Tabela com filtros e paginação; detalhe com parâmetros, linha do tempo, métricas, alertas, erros e arquivos; texto externo escapado; erro longo copiável | PLANEJADO |
-| CARGA-PAI-3 | Disparo pelo painel | `components/cargas/RodarCarga.js` (modal); `tests/cargasDisparo.test.mjs` | CARGA-PAI-2, CARGA-GES-2, DEC-CARGA-1 | Modal valida e resume antes de confirmar; 202 abre a execução; 409 aponta a carga em andamento; 503 explica que o ETL está fora | PLANEJADO |
-| CARGA-PAI-4 | Acompanhamento ao vivo | `pages/CargasPage.js`, `components/cargas/DetalheCarga.js` | CARGA-PAI-3 | Polling de 5 s só com execução ativa e página aberta; para ao terminar; cartões e detalhe atualizam sem recarregar a página | PLANEJADO |
-| CARGA-PAI-5 | Avisos de defasagem fora da página | `pages/InicioPage.js`, `components/SaudeDosDados.js` | CARGA-PAI-1, CARGA-GES-3 | Início e Saúde dos dados mostram "carga atrasada" com link para `#/cargas` quando alguma etapa passa do limite de defasagem | PLANEJADO |
+| CARGA-PAI-1 | Rota, API e estado por etapa | `api/cargasApi.js`, `pages/CargasPage.js`, `components/cargas/EstadoEtapas.js`, `analise/cargas.js` (rótulos, selos, defasagem — puro), `router.js`, `navegacao.js`, `proxy/apiProxy.js` (`/cargas`); `tests/cargas.test.mjs` | CARGA-GES-1 (contrato) | `#/cargas` no grupo Avaliação; cartões com última tentativa, último sucesso e defasagem; estados vazio/503/erro; testes da lógica pura (status, defasagem, rótulos) | IMPLEMENTADO (develop) |
+| CARGA-PAI-2 | Histórico e detalhe da execução | `components/cargas/HistoricoCargas.js`, `components/cargas/DetalheCarga.js`; `tests/cargasDetalhe.test.mjs` | CARGA-PAI-1 | Tabela com filtros e paginação; detalhe com parâmetros, linha do tempo, métricas, alertas, erros e arquivos; texto externo escapado; erro longo copiável | IMPLEMENTADO (develop) |
+| CARGA-PAI-3 | Disparo pelo painel | `components/cargas/RodarCarga.js` (modal); `tests/cargasDisparo.test.mjs` | CARGA-PAI-2, CARGA-GES-2, DEC-CARGA-1 | Modal valida e resume antes de confirmar; 202 abre a execução; 409 aponta a carga em andamento; 503 explica que o ETL está fora | IMPLEMENTADO (develop) |
+| CARGA-PAI-4 | Acompanhamento ao vivo | `pages/CargasPage.js`, `components/cargas/DetalheCarga.js` | CARGA-PAI-3 | Polling de 5 s só com execução ativa e página aberta; para ao terminar; cartões e detalhe atualizam sem recarregar a página | IMPLEMENTADO (develop) |
+| CARGA-PAI-5 | Avisos de defasagem fora da página | `pages/InicioPage.js`, `components/SaudeDosDados.js` | CARGA-PAI-1, CARGA-GES-3 | Início e Saúde dos dados mostram "carga atrasada" com link para `#/cargas` quando alguma etapa passa do limite de defasagem | IMPLEMENTADO (develop) |
+
+---
+
+## Plano MACRO: `#/indices` como painel de custo de oportunidade (2026-10-20)
+
+**Status:** PLANEJADO · **Rótulo das tarefas:** `MACRO-PAI-*`; o gestor tem `MACRO-GES-*` na SPEC dele. Hoje `pages/IndicesMacroPage.js` mostra 8 cartões com o valor atual e 6 pontos, sem gráfico, acumulado, tendência, expectativa nem ligação com os ativos. O objetivo é que a tela responda: "com os juros de hoje, quais ações compensam?".
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos (posse exclusiva) | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| MACRO-PAI-1 | Cabeçalho de decisão | `pages/IndicesMacroPage.js` (topo); `api/indicesMacroApi.js` (`buscarPainelMacro`) | MACRO-GES-3 | Mostra juro real, ciclo da Selic, Focus de Selic e IPCA e a barreira de compra (earnings yield mínimo), cada um com a leitura do gestor; sem o `/painel`, o bloco some e os cartões continuam | PLANEJADO |
+| MACRO-PAI-2 | Cartões com gráfico e agrupados | `pages/IndicesMacroPage.js` (cartões); novo `analise/macro/series.js` (variações e acumulado, puro) | — (MACRO-GES-4 opcional) | Sparkline de 12 meses com `<f360-sparkline>`; variação em 1, 3 e 12 meses; acumulado em 12 meses para IPCA e IGP-M; tabela de pontos vira detalhe ao clicar; grupos **Juros**, **Inflação**, **Câmbio** e **Atividade**; funciona com o endpoint atual | PLANEJADO |
+| MACRO-PAI-3 | Ligação com os ativos | `pages/IndicesMacroPage.js` (bloco "Ativos acima da barreira"); `components/ficha360/secoes/SecaoValuation.js` (linha earnings yield × Selic) | MACRO-GES-3 | Lista de ativos com earnings yield acima da Selic e do juro real, em cartões de ticker (reaproveitando os da busca de ativos) que levam a `#/ativo/{T}`; na ficha, uma linha compara o earnings yield do ativo com a Selic atual, no padrão de `FundamentosCard` | PLANEJADO |
+| MACRO-PAI-4 | Glossário, fórmulas e testes | `pages/GlossarioPage.js`, `pages/FormulasPage.js`; novo `tests/indicesMacro.test.mjs` (no `npm test`) | MACRO-PAI-2 | Verbetes de juro real, Focus, barreira de earnings yield e IPCA em 12 meses; testes da lógica pura de `analise/macro/series.js` e da renderização dos cartões | PLANEJADO |
+
+### Grupos para agentes paralelos
+
+| Onda | Tarefas | Observação |
+|---|---|---|
+| 0 | MACRO-PAI-2 | Já roda com o endpoint atual |
+| 1 | MACRO-PAI-4 | |
+| 2 | MACRO-PAI-1, MACRO-PAI-3 | Dependem do `/indices-macro/painel`; os dois mexem em `IndicesMacroPage.js`, então rodam em sequência ou com seções delimitadas |
+
+### Aceite do plano
+`http://127.0.0.1:8082/#/indices` mostra o cabeçalho de decisão, os cartões agrupados com sparkline e a lista de ativos acima da barreira, cada um levando à ficha; `npm test` passa.
+
+---
+
+## Plano consolidado CONS: MACRO + FONTES + MICRO enxuto, migration única (2026-10-20)
+
+**Status:** PLANEJADO · **Rótulos:** `FONTES-PAI-*`, `MICRO-PAI-*`, `CONS-PAI-*`, `MACRO-PAI-*` · **Contrato, ondas e dependências entre serviços:** `infra-b3-ecossytem/SPEC.md`, Plano consolidado CONS. Escopo painel. As tarefas `MACRO-PAI-*` estão no Plano MACRO acima e fazem parte deste plano; aqui ficam os donos de arquivo. Fontes públicas sem cadastro nem chave. Uma única migration nova (V45, CONS-INFRA-1). Regra de independência: cada tarefa tem posse exclusiva dos arquivos listados; arquivos compartilhados têm um único dono.
+
+### Tarefas desta aplicação
+| ID | Tarefa | Arquivos (posse) | Depende | Aceite |
+|---|---|---|---|---|
+| **MACRO-PAI-2** | Cartões com gráfico em `#/indices` | `IndicesMacroPage.js` (dono das tarefas MACRO-PAI-1, 2 e 3 e de FONTES-PAI-5), `analise/macro/series.js` | — **independente** | Funciona com o endpoint atual |
+| **MICRO-PAI-1** | Gráfico: marca ex e preço médio; padrões ignoram o gap do dia ex | `painelCandles/`, `analise/overlays/`, detector de padrões | MICRO-GES-1 | Sem sinal falso no dia ex |
+| **MICRO-PAI-2** | Opções: preço justo pelo meio do spread e spread % | `SecaoOpcoes`, `OpcaoPage` (opcoes-painel) | MICRO-GES-1 | Séries sem oferta marcadas |
+| **CONS-PAI-1** | Proxy: `/opcoes`, `/proventos` e rotas novas | `proxy/apiProxy.js` | — **independente** | `/opcoes/saude` deixa de dar 404 |
+| **MACRO-PAI-1/3, FONTES-PAI-5** | Cabeçalho de decisão, ativos acima da barreira, curva NTN-B (feitas em sequência, mesmo dono) | `IndicesMacroPage.js` | MACRO-GES-3, FONTES-GES-1 | |
+| **FONTES-PAI-1** | Valuation: prêmio de risco, Graham com juros e linha earnings yield × Selic (dono de `SecaoValuation`, absorve parte de MACRO-PAI-3) | `SecaoValuation.js` | FONTES-GES-1, MACRO-GES-3 | |
+| **FONTES-PAI-2** | Ficha de banco | `SecaoFundamentos.js` | FONTES-GES-2 | |
+| **FONTES-PAI-3** | Seção "Quem está dentro" | nova `SecaoInsiders.js` | FONTES-GES-3 | |
+| **FONTES-PAI-4** | Selos de confiabilidade e filtro | `SecaoCabecalho.js`, tabela de ativos | FONTES-GES-4 | |
+| **MICRO-PAI-3** | Renda: calendário ex e custo do spread no plano | `SecaoProventos.js`, `planoDeOperacao.js` | MICRO-GES-2 | |
+| **MACRO-PAI-4** | Glossário e Fórmulas (dono único) | `GlossarioPage.js`, `FormulasPage.js` | todas as tarefas PAI acima | Verbetes de todos os planos |
+
+### Ondas de execução
+| Onda | Tarefas em paralelo, sem colisão | Por que podem rodar juntas |
+|---|---|---|
+| **0** | CONS-SPEC-1, FONTES-ETL-1, 2, 5, 6, MICRO-ETL-1, 2, MACRO-GES-1, 2, 4, MICRO-GES-1, MACRO-PAI-2, CONS-PAI-1 | Não tocam no banco nem em arquivo compartilhado |
+| **1** | **CONS-INFRA-1 (V45, execução única)**, FONTES-ETL-3, 4, 7, MACRO-GES-3, MICRO-PAI-1, MICRO-PAI-2 | A V45 só espera o inventário. Os leitores da onda 1 são arquivos próprios |
+| **2** | FONTES-ETL-8, CONS-INFRA-2 | O ETL-8 é o único que mexe no catálogo |
+| **3** | CONS-INFRA-3 (backfill), FONTES-GES-1..4, MICRO-GES-2 | Precisam das tabelas com dados |
+| **4** | MACRO-PAI-1/3 + FONTES-PAI-5, FONTES-PAI-1..4, MICRO-PAI-3 | Uma tarefa por arquivo |
+| **5** | MACRO-PAI-4 | Textos por último. O score pelo backtest saiu daqui: ver `SINAIS-INS-*` no gerar-insights |
+
+### Status de execução (2026-10-21)
+
+Resultado de cada tarefa executada: estado, branch e observação. As entregas foram integradas em `feature-consolidacao-painel`, preservando todos os commits originais e resolvendo os conflitos de código e testes. Regra permanente: uma feature, uma branch e vários commits; não criar branches por tarefa. Evidência em `docs/cons/CONSOLIDACAO-PAINEL.md`.
+
+| ID | Estado | Branch | Observação |
+|---|---|---|---|
+| MACRO-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MACRO-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MACRO-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MACRO-PAI-4 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` | 34 verbetes e 24 fórmulas; links da seção `insiders` dependem da integração de FONTES-PAI-3 |
+| FONTES-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| FONTES-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| FONTES-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| FONTES-PAI-4 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` | filtro da tabela só pelo cadastro CVM, na página carregada |
+| FONTES-PAI-5 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MICRO-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MICRO-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MICRO-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` | inclui a correção do plano de operação com a resposta real de /pregoes |
+| CONS-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` | /opcoes e /proventos no proxy |
 
 ## Plano MERC: carrossel "Panorama do mercado" na Início (2026-10-20)
 
