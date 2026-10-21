@@ -1,7 +1,7 @@
 import { BaseComponent } from '../../base/BaseComponent.js';
 import { escaparHtml } from '../../../utils/html.js';
 import { formatarMoeda, formatarNumero, formatarPercentual } from '../../../utils/numero.js';
-import { METRICAS_FUNDAMENTOS, itemAtual } from '../../../analise/ficha360/seriesFundamentos.js';
+import { NOTA_PLANO_FINANCEIRO, ehPlanoFinanceiro, itemAtual, metricasDoPlano } from '../../../analise/ficha360/seriesFundamentos.js';
 import '../Sparkline.js';
 
 function fmt(valor, formato) {
@@ -20,7 +20,8 @@ export class SecaoFundamentos extends BaseComponent {
     const [fc, hist] = await Promise.all([this._contexto.obter('fundamentosCvm'), this._contexto.obter('fundamentosHistorico')]);
     if (!this.isConnected) return;
     const fundamentos = fc || {}; const pontos = hist?.pontos || [];
-    this.innerHTML = `<section class="ficha-cartao"><h2 class="h6">Fundamentos</h2>${METRICAS_FUNDAMENTOS.map((g) => `<section class="mb-3"><h3 class="h6">${g.grupo}</h3><div class="row g-2">${g.itens.map(([key, label, formato]) => {
+    const nota = ehPlanoFinanceiro(fundamentos.plano_contas) ? `<p class="small text-body-secondary" data-nota-plano>${escaparHtml(NOTA_PLANO_FINANCEIRO)}</p>` : '';
+    this.innerHTML = `<section class="ficha-cartao"><h2 class="h6">Fundamentos</h2>${nota}${metricasDoPlano(fundamentos.plano_contas).map((g) => `<section class="mb-3"><h3 class="h6">${g.grupo}</h3><div class="row g-2">${g.itens.map(([key, label, formato]) => {
       const atual = itemAtual(fundamentos, pontos, key);
       const historicoPresente = pontos.length > 0;
       return `<div class="col-12 col-md-6"><div class="ficha-cartao h-100"><span class="ficha-rotulo">${label}</span><div class="d-flex align-items-center justify-content-between gap-2"><strong>${escaparHtml(fmt(atual.valor, formato))}</strong><span aria-label="Tendência ${atual.direcao.direcao}">${atual.direcao.simbolo}</span><f360-sparkline data-metrica="${key}"></f360-sparkline></div>${historicoPresente ? '' : '<small class="text-body-secondary">histórico indisponível</small>'}</div></div>`;
