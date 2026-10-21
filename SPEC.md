@@ -953,3 +953,33 @@ Ordem na tela, de cima para baixo:
 | CARGA-PAI-3 | Disparo pelo painel | `components/cargas/RodarCarga.js` (modal); `tests/cargasDisparo.test.mjs` | CARGA-PAI-2, CARGA-GES-2, DEC-CARGA-1 | Modal valida e resume antes de confirmar; 202 abre a execução; 409 aponta a carga em andamento; 503 explica que o ETL está fora | PLANEJADO |
 | CARGA-PAI-4 | Acompanhamento ao vivo | `pages/CargasPage.js`, `components/cargas/DetalheCarga.js` | CARGA-PAI-3 | Polling de 5 s só com execução ativa e página aberta; para ao terminar; cartões e detalhe atualizam sem recarregar a página | PLANEJADO |
 | CARGA-PAI-5 | Avisos de defasagem fora da página | `pages/InicioPage.js`, `components/SaudeDosDados.js` | CARGA-PAI-1, CARGA-GES-3 | Início e Saúde dos dados mostram "carga atrasada" com link para `#/cargas` quando alguma etapa passa do limite de defasagem | PLANEJADO |
+
+## Plano MERC: carrossel "Panorama do mercado" na Início (2026-10-20)
+
+**Status:** PLANEJADO · **Contexto, regras de cálculo, contrato JSON e ordem:** `infra-b3-ecossytem/SPEC.md`, Plano MERC. Rótulo `MERC-PAI-*`, reservado. O painel só fala com o gestor (`GET /mercado/panorama`); não recalcula nada, só ordena para exibir, formata e desenha.
+
+### Onde e como aparece
+
+- No topo da `InicioPage`, logo abaixo do `<aviso-defasagem-cargas>` e antes dos alertas operacionais.
+- Seletor de período compartilhado pelos cards que dependem dele: **1 dia · 5 dias (padrão) · 21 dias · no ano**. O card de liquidez não muda com o seletor e diz isso.
+- Cada card mostra no rodapé a data do pregão e o universo considerado (ex.: "196 ações líquidas · pregão de 19-10-2026").
+
+### Componentes
+
+| Componente | Responsabilidade |
+|---|---|
+| `<carrossel-mercado>` | Recebe uma lista de cards. Troca sozinho a cada 10 s e para com mouse em cima ou foco dentro; setas, bolinhas, teclado (←/→) e swipe no celular; respeita `prefers-reduced-motion` (sem rotação automática); `aria-roledescription="carrossel"`, cada card com `aria-label` e anúncio "card N de M". Cada card carrega e falha sozinho. |
+| `<ranking-tickers>` | Reutilizado em todos os cards com ranking: duas colunas, "Maiores" e "Menores", 10 linhas cada, com posição, ticker clicável (`#/ativo/XXXX`), setor, valor formatado e barra proporcional. No celular as colunas viram abas "Maiores \| Menores". Valor com sinal e texto, nunca só cor (tokens C4 do Plano F360). |
+| `analise/panoramaMercado.js` | Puro e testável: formatação, ordem de exibição, texto dos selos de coesão (`JUNTO` "andou junto", `MISTO` "misto", `DISPERSO` "disperso"), escala das barras, estado vazio por bloco de `indisponivel`. |
+| `api/mercadoApi.js` | `buscarPanorama(janela)`, no padrão dos outros clientes de API. |
+
+### Tarefas desta aplicação
+
+| ID | Tarefa | Arquivos | Depende | Aceite | Status |
+|---|---|---|---|---|---|
+| MERC-PAI-1 | Carrossel e ranking reutilizáveis | `components/inicio/CarrosselMercado.js`, `components/inicio/RankingTickers.js`, `api/mercadoApi.js`, `InicioPage.js` (só o encaixe) | contrato do hub | Rotação, pausa, teclado, swipe, reduced-motion e ARIA conforme a tabela acima; `<ranking-tickers>` com 10+10, abas no celular e ticker clicável; carrossel com card de exemplo enquanto o gestor não responde; um card com erro não afeta os outros nem a Início; testes node (`tests/merc*.test.mjs`, no `npm test`) | PLANEJADO |
+| MERC-PAI-2 | Card setores × empresas | `components/inicio/cards/CardSetoresEmpresas.js`, `analise/panoramaMercado.js` | MERC-PAI-1, MERC-GES-1 | Lista de setores pela mediana, com barra divergente, nº de empresas, selo de coesão e chips "melhor"/"pior"; ao clicar no setor expande os 10 melhores e 10 piores (por desvio da mediana), com variação e desvio; "Outros" sempre por último; segue o seletor de período; estado vazio quando `setores` está em `indisponivel`; testes | PLANEJADO |
+| MERC-PAI-3 | Cards de altas/quedas, liquidez, negociação e amplitude | `components/inicio/cards/CardAltasQuedas.js`, `CardLiquidez.js`, `CardNegociacao.js`, `CardAmplitude.js` | MERC-PAI-1, MERC-GES-1 | Altas/quedas, liquidez (volume médio 63d, presença e spread; selos "boa para operar" e "liquidez baixa: cuidado com spread") e negociação (volume financeiro e nº de negócios no período) com `<ranking-tickers>` 10+10; liquidez avisa que não depende do período; amplitude com subiram/caíram/estáveis e % acima da média 21; testes | PLANEJADO |
+| MERC-PAI-4 | Cards de volume fora do normal, macro e eventos | `components/inicio/cards/CardVolumeAnormal.js`, `CardMacro.js`, `CardEventos.js` | MERC-PAI-1, MERC-GES-2 | Volume anormal top 10 (razão sobre a média 21d), macro sem ranking, eventos (10 mais recentes, com link para a ficha); estado vazio por bloco; testes | PLANEJADO |
+
+MERC-PAI-2 e MERC-PAI-3 podem rodar em paralelo depois da MERC-PAI-1 (arquivos distintos). Status em `docs/merc/<ID>.md`.
