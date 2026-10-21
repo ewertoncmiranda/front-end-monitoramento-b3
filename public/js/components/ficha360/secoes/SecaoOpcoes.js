@@ -1,6 +1,7 @@
 import { BaseComponent } from '../../base/BaseComponent.js';
 import { escaparHtml } from '../../../utils/html.js';
 import { formatarMoeda } from '../../../utils/numero.js';
+import { resumoMicroestrutura } from '../../../analise/opcoesMicro.js';
 
 export function resumoOpcoes(resposta) {
   const opcoes = Array.isArray(resposta?.opcoes) ? resposta.opcoes : [];
@@ -17,6 +18,7 @@ export function resumoOpcoes(resposta) {
     calls: opcoes.filter((o) => String(o.bdi) === '12' && Number(o.numero_negocios ?? o.numeroNegocios ?? 0) > 0).length,
     puts: opcoes.filter((o) => String(o.bdi) === '14' && Number(o.numero_negocios ?? o.numeroNegocios ?? 0) > 0).length,
     strikeMaisNegociado: top ? Number(top[0]) : null,
+    micro: resumoMicroestrutura(opcoes),
     status: resposta?.status || null,
     motivo: resposta?.motivo || null,
   };
@@ -30,7 +32,7 @@ export class SecaoOpcoes extends BaseComponent {
     if (!this._contexto || !this.isConnected) return;
     const r = resumoOpcoes(await this._contexto.obter('opcoes'));
     if (!this.isConnected) return;
-    this.innerHTML = `<section class="ficha-cartao"><h2 class="h6">Opções</h2><dl class="row small"><dt class="col-7">Vencimentos</dt><dd class="col-5">${r.vencimentos.length ? escaparHtml(r.vencimentos.join(', ')) : '—'}</dd><dt class="col-7">CALL válidas</dt><dd class="col-5">${r.calls}</dd><dt class="col-7">PUT válidas</dt><dd class="col-5">${r.puts}</dd><dt class="col-7">Strike mais negociado</dt><dd class="col-5">${escaparHtml(formatarMoeda(r.strikeMaisNegociado))}</dd><dt class="col-7">Estado da cadeia</dt><dd class="col-5">${escaparHtml(r.status || '—')}</dd></dl><p class="small text-body-secondary">${escaparHtml(r.motivo || 'Sem cadeia válida disponível.')}</p><a href="#/opcoes/${encodeURIComponent(this._contexto.simbolo)}">Abrir cadeia de opções</a></section>`;
+    this.innerHTML = `<section class="ficha-cartao"><h2 class="h6">Opções</h2><dl class="row small"><dt class="col-7">Vencimentos</dt><dd class="col-5">${r.vencimentos.length ? escaparHtml(r.vencimentos.join(', ')) : '—'}</dd><dt class="col-7">CALL válidas</dt><dd class="col-5">${r.calls}</dd><dt class="col-7">PUT válidas</dt><dd class="col-5">${r.puts}</dd><dt class="col-7">Strike mais negociado</dt><dd class="col-5">${escaparHtml(formatarMoeda(r.strikeMaisNegociado))}</dd><dt class="col-7">Séries com oferta (venc. mais próximo)</dt><dd class="col-5">${r.micro.series ? `${r.micro.comOferta} de ${r.micro.series}` : '—'}</dd><dt class="col-7">Spread mediano</dt><dd class="col-5">${r.micro.spreadMediano != null ? `${r.micro.spreadMediano.toFixed(1)}%` : '—'}</dd><dt class="col-7">Estado da cadeia</dt><dd class="col-5">${escaparHtml(r.status || '—')}</dd></dl><p class="small text-body-secondary">${escaparHtml(r.motivo || 'Sem cadeia válida disponível.')}</p><a href="#/opcoes/${encodeURIComponent(this._contexto.simbolo)}">Abrir cadeia de opções</a></section>`;
   }
 }
 if (!customElements.get('secao-opcoes')) customElements.define('secao-opcoes', SecaoOpcoes);
