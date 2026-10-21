@@ -544,3 +544,73 @@ cargas-page dialog::backdrop { background: rgb(0 0 0 / 45%); }
   .opcoes-layout { flex-direction: column; align-items: stretch; }
   .opcoes-sidebar { width: 100%; position: static; }
 }
+
+/* Plano MERC: carrossel "Panorama do mercado" na Inicio (MERC-PAI-1).
+   Cores vem da paleta F360 (C4); o valor sempre leva seta e texto. */
+.carrossel-mercado { display: block; }
+.carrossel-mercado__moldura {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg, .5rem);
+  padding: .75rem 1rem;
+}
+.carrossel-mercado__topo { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; }
+.carrossel-mercado__titulo { font-size: 1rem; }
+.carrossel-mercado__controles { display: flex; gap: .25rem; }
+.carrossel-mercado__trilho { touch-action: pan-y; min-height: 6rem; }
+.carrossel-mercado__card[hidden] { display: none !important; }
+.carrossel-mercado__bolinhas { display: flex; justify-content: center; gap: .25rem; margin-top: .5rem; }
+.carrossel-mercado__bolinha {
+  width: 1.5rem; height: 1.5rem; padding: 0; border: 0; background: transparent;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.carrossel-mercado__bolinha::before {
+  content: ""; width: .6rem; height: .6rem; border-radius: 50%;
+  border: 1px solid var(--f360-texto-mudo); background: transparent;
+}
+.carrossel-mercado__bolinha[aria-current="true"]::before { background: var(--f360-info); border-color: var(--f360-info); }
+.carrossel-mercado__bolinha:focus-visible { outline: 2px solid var(--f360-info); outline-offset: 1px; border-radius: 50%; }
+@media (prefers-reduced-motion: no-preference) {
+  .carrossel-mercado__card { animation: carrossel-mercado-entrada .25s ease-out; }
+}
+@keyframes carrossel-mercado-entrada { from { opacity: .4; } to { opacity: 1; } }
+
+/* <ranking-tickers>: duas colunas; no celular, abas "Maiores | Menores". */
+.ranking-tickers { display: block; }
+.ranking-tickers__abas { display: none; gap: .25rem; margin-bottom: .5rem; border-bottom: 1px solid var(--bs-border-color); }
+.ranking-tickers__aba {
+  border: 0; background: transparent; color: var(--bs-body-color);
+  padding: .35rem .75rem; border-bottom: 2px solid transparent; font-size: .875rem;
+}
+.ranking-tickers__aba[aria-selected="true"] { border-bottom-color: var(--f360-info); font-weight: 600; }
+.ranking-tickers__colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.ranking-tickers__titulo { font-size: .875rem; margin-bottom: .35rem; }
+.ranking-tickers__lista { list-style: none; padding: 0; margin: 0; }
+.ranking-tickers__linha {
+  display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) auto; grid-template-areas: "pos ativo valor" ". barra barra";
+  column-gap: .5rem; align-items: baseline; padding: .2rem 0; font-size: .875rem;
+  border-bottom: 1px solid var(--f360-superficie-2);
+}
+.ranking-tickers__posicao { grid-area: pos; color: var(--f360-texto-mudo); text-align: right; font-variant-numeric: tabular-nums; }
+.ranking-tickers__ativo { grid-area: ativo; min-width: 0; display: flex; gap: .4rem; align-items: baseline; }
+.ranking-tickers__ticker { font-weight: 600; }
+.ranking-tickers__setor { color: var(--f360-texto-mudo); font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-tickers__valor { grid-area: valor; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ranking-tickers__valor--alta { color: var(--f360-compra-forte); }
+.ranking-tickers__valor--queda { color: var(--f360-venda); }
+.ranking-tickers__valor--neutro { color: var(--bs-body-color); }
+.ranking-tickers__trilho { grid-area: barra; display: block; height: .25rem; background: var(--f360-superficie-2); border-radius: 2px; overflow: hidden; }
+.ranking-tickers__barra { display: block; height: 100%; background: var(--f360-texto-mudo); }
+.ranking-tickers__barra.ranking-tickers__valor--alta { background: var(--f360-compra); }
+.ranking-tickers__barra.ranking-tickers__valor--queda { background: var(--f360-venda); }
+.ranking-tickers__barra.ranking-tickers__valor--neutro { background: var(--f360-info); }
+[data-bs-theme="dark"] .carrossel-mercado__moldura { background: var(--bs-tertiary-bg); }
+[data-bs-theme="dark"] .ranking-tickers__linha { border-bottom-color: var(--f360-superficie-2); }
+
+@media (max-width: 767px) {
+  .ranking-tickers__abas { display: flex; }
+  .ranking-tickers__colunas { grid-template-columns: 1fr; }
+  .ranking-tickers__coluna:not(.is-ativa) { display: none; }
+  .ranking-tickers__titulo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .carrossel-mercado__moldura { padding: .75rem; }
+}

@@ -65,6 +65,11 @@ try {
   assert.equal(carga.metodo, 'POST');
   assert.equal(carga.origin, undefined);
   assert.deepEqual(JSON.parse(carga.corpo), { tipo: 'ROTINA', solicitadaPor: 'PAINEL' });
+
+  // MERC-PAI-1: panorama do mercado vai ao gestor com a janela intacta.
+  const panorama = await fetch(`${base}/mercado/panorama?janela=21d`).then(resposta => resposta.json());
+  assert.equal(panorama.url, '/mercado/panorama?janela=21d');
+  assert.equal(panorama.metodo, 'GET');
 } finally {
   await fechar(frontend);
   await fechar(backend);

@@ -26,6 +26,8 @@ const ROTAS_PROXIADAS = [
   '/simulador',
   // Carteiras persistentes (gestor CARTDB-GES-1)
   '/carteiras',
+  // Panorama do mercado no carrossel da Inicio (gestor MERC-GES-1)
+  '/mercado',
 ];
 
 export function registrarProxy(app, backendUrl) {
