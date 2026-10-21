@@ -15,7 +15,7 @@ async function caso(nome, fn) { await fn(); casos++; console.log(`  ok  ${nome}`
 
 await caso('manifesto: ordem fixa do C5, tag e caminho de cada secao', () => {
   assert.deepEqual(manifesto.SECOES.map((s) => s.id),
-    ['cabecalho', 'decisao', 'grafico', 'valuation', 'fundamentos', 'proventos', 'opcoes', 'eventos', 'operacao', 'ia']);
+    ['cabecalho', 'decisao', 'grafico', 'valuation', 'fundamentos', 'proventos', 'insiders', 'opcoes', 'eventos', 'operacao', 'ia']);
   assert.equal(manifesto.tagDaSecao('ia'), 'secao-ia');
   assert.equal(manifesto.caminhoDaSecao('ia'), './secoes/SecaoIa.js');
   assert.equal(manifesto.caminhoDaSecao('cabecalho'), './secoes/SecaoCabecalho.js');
