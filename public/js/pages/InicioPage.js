@@ -16,7 +16,10 @@ import { htmlAlertasOperacionais } from '../components/inicio/AlertasOperacionai
 import '../components/LoadingSpinner.js';
 import '../components/cargas/AvisoDefasagem.js';
 import '../components/inicio/CarrosselMercado.js';
-import { cardPanoramaProvisorio } from '../components/inicio/cardPanoramaProvisorio.js';
+import { cardAltasQuedas } from '../components/inicio/cards/CardAltasQuedas.js';
+import { cardLiquidez } from '../components/inicio/cards/CardLiquidez.js';
+import { cardNegociacao } from '../components/inicio/cards/CardNegociacao.js';
+import { cardAmplitude } from '../components/inicio/cards/CardAmplitude.js';
 
 // Unica responsabilidade: a pagina Inicio (REQ-UX-7) - um resumo do que mudou:
 // saude dos dados, favoritos com variacao e comunicados da semana. Cada bloco
@@ -62,7 +65,7 @@ export class InicioPage extends BaseComponent {
 
     // Panorama do mercado (Plano MERC): cada card carrega e falha sozinho no carrossel.
     const carrossel = this.querySelector('carrossel-mercado');
-    if (carrossel) carrossel.cards = [cardPanoramaProvisorio()];
+    if (carrossel) carrossel.cards = [cardAltasQuedas(), cardLiquidez(), cardNegociacao(), cardAmplitude()];
 
     const favoritosP = listarFavoritos();
     const newsletterP = buscarNewsletter();

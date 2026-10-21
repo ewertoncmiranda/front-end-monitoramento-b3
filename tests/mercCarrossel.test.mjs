@@ -275,13 +275,16 @@ await caso('disconnectedCallback limpa timer e listeners', () => {
   assert.equal(c._ouvintes.filter((o) => o.tipo === 'keydown').length, 1, 'nem listeners');
 });
 
-await caso('Início: carrossel entre o aviso de defasagem e os alertas, com card provisório', () => {
+await caso('Início: carrossel entre o aviso de defasagem e os alertas, com os quatro cards reais', () => {
   const fonte = readFileSync(new URL('../public/js/pages/InicioPage.js', import.meta.url), 'utf8');
   const aviso = fonte.indexOf('<aviso-defasagem-cargas>');
   const carrossel = fonte.indexOf('<carrossel-mercado');
   const alertas = fonte.indexOf('data-alertas-operacionais');
   assert.ok(aviso >= 0 && aviso < carrossel && carrossel < alertas);
-  assert.match(fonte, /cardPanoramaProvisorio\(\)/);
+  assert.match(fonte, /cardAltasQuedas\(\)/);
+  assert.match(fonte, /cardLiquidez\(\)/);
+  assert.match(fonte, /cardNegociacao\(\)/);
+  assert.match(fonte, /cardAmplitude\(\)/);
 });
 
 console.log(`mercCarrossel.test.mjs ok (${casos} casos)`);
