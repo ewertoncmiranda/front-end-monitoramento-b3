@@ -22,8 +22,8 @@ const ITAU = {
 };
 const FC = { periodo: '2025-12-31', fonte: 'CVM', roe: 20, margem_liquida: 15, ebitda: 100 };
 
-async function renderizar(banco) {
-  const dados = { fundamentosCvm: FC, fundamentosHistorico: { pontos: [] }, banco };
+async function renderizar(banco, fundamentos = FC) {
+  const dados = { fundamentosCvm: fundamentos, fundamentosHistorico: { pontos: [] }, banco };
   const el = new SecaoFundamentos();
   el._contexto = { obter: async (k) => dados[k] ?? null };
   await el.carregar();
@@ -73,4 +73,14 @@ test('banco sem IF.data: aviso discreto com o motivo, sem painel', async () => {
   const html = await renderizar({ ehBanco: true, motivo: 'Sem dados do IF.data', ultimoTrimestre: null, serie: null });
   assert.ok(html.includes('Sem dados do IF.data') && html.includes('role="status"'));
   assert.doesNotMatch(html, /Índice de Basileia/);
+});
+
+test('integracao preserva plano financeiro com e sem painel IF.data', async () => {
+  for (const banco of [null, ITAU]) {
+    const html = await renderizar(banco, { ...FC, plano_contas: 'FINANCEIRO' });
+    assert.match(html, /data-nota-plano/);
+    assert.match(html, /data-metrica="lpa"/);
+    assert.doesNotMatch(html, /data-metrica="ebitda"|data-metrica="roic"/);
+    if (banco) assert.match(html, /Índice de Basileia/);
+  }
 });

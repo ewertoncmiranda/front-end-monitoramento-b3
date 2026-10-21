@@ -251,21 +251,27 @@ await caso('CardEventos: escapa texto externo (simbolo com caracteres especiais)
 });
 
 // ============================================================
-// InicioPage: carrossel com 4 cards (provisorio + 3 novos)
+// InicioPage: integração das quatro entregas MERC, sem o placeholder inicial.
 // ============================================================
-await caso('InicioPage: array do carrossel tem cardPanoramaProvisorio e os 3 novos cards', async () => {
+await caso('InicioPage: preserva os oito cards reais na integracao MERC', async () => {
   const { readFileSync } = await import('node:fs');
   const fonte = readFileSync(new URL('../public/js/pages/InicioPage.js', import.meta.url), 'utf8');
-  assert.match(fonte, /cardPanoramaProvisorio\(\)/);
+  const array = fonte.match(/carrossel\.cards\s*=\s*\[([^\]]+)\]/)?.[1];
+  assert.ok(array, 'cards conectados ao carrossel');
+  assert.deepEqual([...array.matchAll(/(card\w+)\(\)/g)].map((m) => m[1]), [
+    'cardSetoresEmpresas', 'cardAltasQuedas', 'cardLiquidez', 'cardNegociacao',
+    'cardAmplitude', 'cardVolumeAnormal', 'cardMacro', 'cardEventos',
+  ]);
+  assert.doesNotMatch(fonte, /cardPanoramaProvisorio/);
   assert.match(fonte, /cardVolumeAnormal\(\)/);
   assert.match(fonte, /cardMacro\(\)/);
   assert.match(fonte, /cardEventos\(\)/);
-  // Garante a ordem: provisorio primeiro
-  const idxProvisorio = fonte.indexOf('cardPanoramaProvisorio()');
+  // Os cards adicionais entram depois dos rankings e da amplitude.
+  const idxAmplitude = fonte.indexOf('cardAmplitude()');
   const idxVolume = fonte.indexOf('cardVolumeAnormal()');
   const idxMacro = fonte.indexOf('cardMacro()');
   const idxEventos = fonte.indexOf('cardEventos()');
-  assert.ok(idxProvisorio < idxVolume, 'provisório antes do volume');
+  assert.ok(idxAmplitude < idxVolume, 'amplitude antes do volume');
   assert.ok(idxVolume < idxMacro, 'volume antes do macro');
   assert.ok(idxMacro < idxEventos, 'macro antes do eventos');
 });

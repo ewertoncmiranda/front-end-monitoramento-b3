@@ -1013,23 +1013,23 @@ Ordem na tela, de cima para baixo:
 
 ### Status de execução (2026-10-21)
 
-Resultado de cada tarefa executada: estado, branch e observação. Os testes de cada branch passam; falta a integração dos PRs (conflitos aditivos esperados em `ficha360Api.js` e `manifesto.js` no painel).
+Resultado de cada tarefa executada: estado, branch e observação. As entregas foram integradas em `feature-consolidacao-painel`, preservando todos os commits originais e resolvendo os conflitos de código e testes. Regra permanente: uma feature, uma branch e vários commits; não criar branches por tarefa. Evidência em `docs/cons/CONSOLIDACAO-PAINEL.md`.
 
 | ID | Estado | Branch | Observação |
 |---|---|---|---|
-| MACRO-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-cons-macro-pai-2` |  |
-| MACRO-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-cons-macro-pai-2` |  |
-| MACRO-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-cons-macro-pai-2` |  |
-| MACRO-PAI-4 | IMPLEMENTADO (2026-10-21) | `feature-cons-macro-pai-4` | 34 verbetes e 24 fórmulas; links da seção `insiders` dependem da integração de FONTES-PAI-3 |
-| FONTES-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-cons-fontes-pai-1` |  |
-| FONTES-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-cons-fontes-pai-2` |  |
-| FONTES-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-cons-fontes-pai-3` |  |
-| FONTES-PAI-4 | IMPLEMENTADO (2026-10-21) | `feature-cons-fontes-pai-4` | filtro da tabela só pelo cadastro CVM, na página carregada |
-| FONTES-PAI-5 | IMPLEMENTADO (2026-10-21) | `feature-cons-macro-pai-2` |  |
-| MICRO-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-cons-micro-pai-1` |  |
-| MICRO-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-cons-micro-pai-2` |  |
-| MICRO-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-cons-micro-pai-3` | inclui a correção do plano de operação com a resposta real de /pregoes |
-| CONS-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-cons-pai-1` | /opcoes e /proventos no proxy |
+| MACRO-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MACRO-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MACRO-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MACRO-PAI-4 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` | 34 verbetes e 24 fórmulas; links da seção `insiders` dependem da integração de FONTES-PAI-3 |
+| FONTES-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| FONTES-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| FONTES-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| FONTES-PAI-4 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` | filtro da tabela só pelo cadastro CVM, na página carregada |
+| FONTES-PAI-5 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MICRO-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MICRO-PAI-2 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` |  |
+| MICRO-PAI-3 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` | inclui a correção do plano de operação com a resposta real de /pregoes |
+| CONS-PAI-1 | IMPLEMENTADO (2026-10-21) | `feature-consolidacao-painel` | /opcoes e /proventos no proxy |
 
 ## Plano MERC: carrossel "Panorama do mercado" na Início (2026-10-20)
 

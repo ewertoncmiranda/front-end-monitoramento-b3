@@ -2,6 +2,17 @@
 
 Instruções para agentes de código (Claude, Codex, outros). O plano e o backlog estão em `SPEC.md`; a coordenação entre repositórios, no hub `infra-b3-ecossytem/SPEC.md` (seção 1A).
 
+## Regra permanente de Git — UMA FEATURE, UMA BRANCH E VÁRIOS COMMITS (2026-10-21)
+
+Decisão expressa do usuário: **NUNCA MAIS CRIAR UMA BRANCH PARA CADA TAREFA. UMA FEATURE, UMA BRANCH E VÁRIOS COMMITS.**
+
+- Todas as tarefas, correções, testes e documentação da mesma feature usam a mesma branch por repositório e o mesmo PR.
+- Reutilizar a branch/worktree da feature. Não criar branches ou worktrees por item de backlog, tarefa, arquivo ou agente.
+- Separar entregas por commits. Integrar as alterações e resolver conflitos nessa branch antes de publicar.
+- Em trabalho paralelo explicitamente autorizado, coordenar a posse dos arquivos na mesma feature; paralelismo não autoriza ramificações por tarefa.
+- Esta decisão substitui orientações anteriores de fragmentar a mesma feature em branches/PRs por tarefa, inclusive nos planos CONS/MERC e em documentos históricos.
+
+
 ## Start único deste repositório
 
 `node server.js` no container (`painel-ativos-frontend`, porta 8082). Funcionalidade nova é tela, componente ou rota do próprio servidor.
