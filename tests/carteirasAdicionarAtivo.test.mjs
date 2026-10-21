@@ -1,152 +1,148 @@
-// CART-PAI-6 — testes de CarteiraAdicionarAtivo
+// Formulario "Adicionar acoes": quantidade, total estimado, preco do dia (CARTEIRAS-CARDS).
 import assert from 'node:assert/strict';
 
-// --- mocks mínimos de DOM ---
 globalThis.HTMLElement = class {
   innerHTML = '';
-  querySelector = () => ({ value: '', addEventListener: () => {} });
+  querySelector = () => null;
   querySelectorAll = () => [];
   addEventListener = () => {};
 };
-globalThis.customElements = { define() {} };
+globalThis.customElements = { define() {}, get() { return undefined; } };
 
-// Gestor simulado: PUT /carteiras/{id}/ativos/{simbolo}
 const chamadas = [];
-let statusGestor = 200;
+let statusGestor = 201;
+let velasPorUrl = () => [{ data: '2026-10-19', fechamento: 56.85 }, { data: '2026-10-20', fechamento: 58.21 }];
 globalThis.fetch = async (url, init = {}) => {
-  const corpo = init.body ? JSON.parse(init.body) : {};
-  chamadas.push({ url, metodo: init.method, corpo });
-  const simbolo = decodeURIComponent(url.split('/').pop());
-  return {
-    ok: statusGestor < 300,
-    status: statusGestor,
-    text: async () => JSON.stringify({ simbolo, dataEntrada: corpo.dataEntrada, capitalAlocado: corpo.capitalAlocado, naturezaCapital: 'ALOCACAO_SIMULADA_LEGADA' }),
-  };
+  const corpo = init.body ? JSON.parse(init.body) : null;
+  chamadas.push({ url, metodo: init.method || 'GET', corpo });
+  if (String(url).includes('/pregoes')) return { ok: true, status: 200, text: async () => JSON.stringify({ velas: velasPorUrl(url) }) };
+  return { ok: statusGestor < 300, status: statusGestor, text: async () => (statusGestor < 300 ? JSON.stringify({ id: 'op1' }) : JSON.stringify({ message: 'quantidade excede a posição' })) };
 };
 
-// importa apenas a classe; customElements.define já foi substituído
-const { CarteiraAdicionarAtivo } = await import(
-  '../public/js/components/carteiras/CarteiraAdicionarAtivo.js'
-);
+const { CarteiraAdicionarAtivo, validarCompra } = await import('../public/js/components/carteiras/CarteiraAdicionarAtivo.js');
+const { hojeLocal } = await import('../public/js/api/carteirasOperacoesApi.js');
 
 let casos = 0;
 async function caso(nome, fn) { await fn(); casos++; console.log(`  ok  ${nome}`); }
 
-// helper para criar uma instância sem precisar do DOM real
-function criarInstancia(busca = null) {
+// DOM falso: cada seletor devolve um elemento com value/textContent/hidden
+function criarInstancia({ quantidade = '', data = hojeLocal(), corretagem = '' } = {}) {
   const inst = Object.create(CarteiraAdicionarAtivo.prototype);
-  // inicializa o estado como o constructor faria
-  inst._carteiraId = null;
+  const els = {
+    '#quantidade': { value: String(quantidade) }, '#data-entrada': { value: data }, '#corretagem': { value: String(corretagem) },
+    '#preco': { value: '', readOnly: true }, '#preco-info': { textContent: '' }, '#btn-editar-preco': { hidden: true },
+    '#total-estimado': { textContent: '' }, '#msg-form': { className: '', textContent: '' }, '#btn-adicionar': { disabled: false },
+    '#seletor-ativo': { limpar() {}, setAttribute() {} },
+  };
+  inst.els = els;
+  inst.querySelector = (s) => els[s] ?? null;
+  inst._carteiraId = 'c1';
   inst._simbolo = '';
-  inst.querySelector = (seletor) => (seletor === '#seletor-ativo' ? busca : null);
+  inst._preco = { status: 'ok', valor: '', data: null, manual: false };
+  inst.eventos = [];
+  inst.dispatchEvent = (e) => { inst.eventos.push(e); return true; };
   return inst;
 }
+globalThis.CustomEvent = class { constructor(tipo, init) { this.type = tipo; this.detail = init?.detail; } };
 
-// ─── casos ───────────────────────────────────────────────────────────────────
-
-caso('setCarteiraId armazena id', () => {
-  const inst = criarInstancia();
-  inst.setCarteiraId('c1');
-  assert.equal(inst._carteiraId, 'c1');
+await caso('validarCompra: ticker, quantidade inteira > 0, data nao futura, estados do preco', () => {
+  const ok = { simbolo: 'PETR4', quantidade: '100', data: hojeLocal(), preco: '58.21', status: 'ok' };
+  assert.equal(validarCompra(ok), null);
+  assert.match(validarCompra({ ...ok, simbolo: '' }), /Selecione/);
+  for (const q of ['', '0', '-5', '1.5', 'abc']) assert.match(validarCompra({ ...ok, quantidade: q }), /inteiro maior que zero/, q);
+  assert.match(validarCompra({ ...ok, data: '' }), /data de entrada/);
+  assert.match(validarCompra({ ...ok, data: '2999-01-01' }), /futura/);
+  assert.match(validarCompra({ ...ok, status: 'carregando' }), /Aguarde/);
+  assert.match(validarCompra({ ...ok, status: 'sem-cotacao' }), /não tem cotação/);
+  assert.match(validarCompra({ ...ok, status: 'erro', preco: '' }), /preço do dia/);
+  assert.equal(validarCompra({ ...ok, status: 'erro', preco: '10' }), null, 'erro de rede + preco manual libera');
+  assert.match(validarCompra({ ...ok, preco: '0' }), /preço deve ser maior/);
 });
 
-caso('setCarteiraId da a busca uma chave por carteira e herda o ticker guardado', () => {
-  const atributos = {};
-  const busca = { simbolos: ['VALE3'], setAttribute: (n, v) => { atributos[n] = v; } };
-  const inst = criarInstancia(busca);
-  inst.setCarteiraId('c7');
-  assert.equal(atributos.chave, 'carteira-c7');
-  assert.equal(inst._simbolo, 'VALE3');
+await caso('preco do dia: busca o ultimo fechamento, rotula com a data e calcula o total em tempo real', async () => {
+  const f = criarInstancia({ quantidade: '100' });
+  f._simbolo = 'PETR4';
+  await f._carregarPreco();
+  assert.equal(f._preco.valor, '58.21');
+  assert.equal(f._preco.manual, false);
+  assert.equal(f.els['#preco'].value, '58.21');
+  assert.equal(f.els['#preco-info'].textContent, 'Fechamento de 20-10-2026');
+  assert.equal(f.els['#btn-editar-preco'].hidden, false);
+  assert.equal(f.els['#total-estimado'].textContent, 'R$ 5.821,00');
+  f.els['#quantidade'].value = '10';
+  f._atualizarTotal();
+  assert.equal(f.els['#total-estimado'].textContent, 'R$ 582,10');
+  f.els['#corretagem'].value = '4.9';
+  f._atualizarTotal();
+  assert.equal(f.els['#total-estimado'].textContent, 'R$ 587,00');
+  f.els['#quantidade'].value = '';
+  f._atualizarTotal();
+  assert.equal(f.els['#total-estimado'].textContent, '—');
 });
 
-caso('_validarCampos rejeita simbolo vazio', () => {
-  const inst = criarInstancia();
-  const err = inst._validarCampos('', '2026-01-10', 1000);
-  assert.ok(err, 'deve retornar mensagem de erro');
-  assert.match(err, /ativo/i);
+await caso('ticker sem cotacao bloqueia o envio; erro de rede tem mensagem propria', async () => {
+  velasPorUrl = () => [];
+  const f = criarInstancia({ quantidade: '10' });
+  f._simbolo = 'XXXX3';
+  await f._carregarPreco();
+  assert.equal(f._preco.status, 'sem-cotacao');
+  assert.match(f.els['#preco-info'].textContent, /sem cotação/);
+  const antes = chamadas.length;
+  await f._submeter();
+  assert.match(f.els['#msg-form'].textContent, /não tem cotação/);
+  assert.equal(chamadas.length, antes, 'nada enviado');
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('rede'); };
+  await f._carregarPreco();
+  assert.equal(f._preco.status, 'erro');
+  assert.match(f.els['#preco-info'].textContent, /Erro de rede/);
+  globalThis.fetch = realFetch;
+  velasPorUrl = () => [{ data: '2026-10-20', fechamento: 58.21 }];
 });
 
-caso('_validarCampos rejeita data futura', () => {
-  const inst = criarInstancia();
-  // usa uma data claramente futura (ano 9999)
-  const err = inst._validarCampos('PETR4', '9999-01-01', 1000);
-  assert.ok(err, 'deve retornar mensagem de erro');
-  assert.match(err, /futura/i);
+await caso('preco editado vira "preço informado manualmente"', () => {
+  const f = criarInstancia({ quantidade: '10' });
+  f._preco = { status: 'ok', valor: '60', data: null, manual: true };
+  f._atualizarPrecoInfo();
+  assert.equal(f.els['#preco-info'].textContent, 'Preço informado manualmente');
+  assert.equal(f.els['#btn-editar-preco'].hidden, true);
 });
 
-caso('_validarCampos rejeita capital zero', () => {
-  const inst = criarInstancia();
-  const err = inst._validarCampos('PETR4', '2026-01-10', 0);
-  assert.ok(err, 'deve retornar mensagem de erro');
-  assert.match(err, /capital|zero/i);
-});
-
-caso('_validarCampos rejeita capital negativo', () => {
-  const inst = criarInstancia();
-  const err = inst._validarCampos('PETR4', '2026-01-10', -50);
-  assert.ok(err, 'deve retornar mensagem de erro');
-  assert.match(err, /capital|zero/i);
-});
-
-caso('_validarCampos aceita dados validos', () => {
-  const inst = criarInstancia();
-  const err = inst._validarCampos('PETR4', '2026-01-10', 1000);
-  assert.equal(err, null, 'dados validos nao devem gerar erro');
-});
-
-// Formulario simulado: campos, botao, busca e area de erro.
-function instanciaComFormulario({ existentes = [] } = {}) {
-  const campos = {
-    '#data-entrada': { value: '2026-01-10' },
-    '#capital': { value: '500' },
-    '#btn-adicionar': { disabled: false },
-    '#seletor-ativo': { limpar() { this.limpo = true; } },
-    '#form-adicionar-ativo': { prepend(div) { this.erro = div.textContent; } },
-  };
-  const inst = Object.create(CarteiraAdicionarAtivo.prototype);
-  inst._simbolo = 'VALE3';
-  inst._carteiraId = 'c_test';
-  inst._existentes = existentes;
-  inst.querySelector = (sel) => campos[sel] ?? null;
-  inst.eventos = [];
-  inst.dispatchEvent = (e) => inst.eventos.push(e);
-  return { inst, campos };
-}
-globalThis.CustomEvent = class { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } };
-globalThis.document = { createElement: () => ({ className: '', textContent: '' }) };
-globalThis.window = { confirm: () => true };
-
-await caso('submeter grava no gestor, limpa a busca e emite ativo-adicionado', async () => {
+await caso('envio: registra COMPRA com quantidade, preco do dia e data; avisa que nao e ordem executada', async () => {
   chamadas.length = 0;
-  const { inst, campos } = instanciaComFormulario();
-  await inst._submeter();
-  assert.equal(chamadas.length, 1);
-  assert.equal(chamadas[0].metodo, 'PUT');
-  assert.equal(chamadas[0].url, '/carteiras/c_test/ativos/VALE3');
-  assert.deepEqual(chamadas[0].corpo, { dataEntrada: '2026-01-10', capitalAlocado: 500 });
-  assert.equal(campos['#seletor-ativo'].limpo, true);
-  assert.equal(inst.eventos[0].type, 'ativo-adicionado');
-  assert.equal(inst.eventos[0].detail.ativo.capital, 500);
+  statusGestor = 201;
+  const f = criarInstancia({ quantidade: '100', corretagem: '5' });
+  f._simbolo = 'PETR4';
+  await f._carregarPreco();
+  await f._submeter();
+  const post = chamadas.find((c) => c.metodo === 'POST');
+  assert.match(post.url, /\/carteiras\/c1\/operacoes$/);
+  assert.equal(post.corpo.tipo, 'COMPRA');
+  assert.equal(post.corpo.simbolo, 'PETR4');
+  assert.equal(post.corpo.quantidade, 100);
+  assert.equal(post.corpo.precoUnitario, 58.21);
+  assert.equal(post.corpo.custos, 5);
+  assert.match(post.corpo.chaveIdempotencia, /^compra-/);
+  assert.match(f.els['#msg-form'].textContent, /100 PETR4 a R\$ 58,21.*não ordem executada/);
+  assert.equal(f.eventos[0].type, 'ativo-adicionado');
+  assert.equal(f.eventos[0].detail.quantidade, 100);
+  assert.equal(f._simbolo, '', 'formulario limpo');
 });
 
-await caso('ticker ja na carteira: pede confirmacao; recusar nao grava', async () => {
+await caso('erro do gestor mostra o motivo e a mesma chave e reaproveitada no reenvio', async () => {
   chamadas.length = 0;
-  globalThis.window.confirm = () => false;
-  const { inst } = instanciaComFormulario({ existentes: ['VALE3'] });
-  await inst._submeter();
-  assert.equal(chamadas.length, 0);
-  assert.equal(inst.eventos.length, 0);
-  globalThis.window.confirm = () => true;
-});
-
-await caso('gestor recusa: mostra o motivo, nao emite evento e reabilita o botao', async () => {
   statusGestor = 400;
-  const { inst, campos } = instanciaComFormulario();
-  await inst._submeter();
-  assert.equal(inst.eventos.length, 0);
-  assert.match(campos['#form-adicionar-ativo'].erro, /recusou os dados/);
-  assert.equal(campos['#btn-adicionar'].disabled, false);
-  statusGestor = 200;
+  const f = criarInstancia({ quantidade: '100' });
+  f._simbolo = 'PETR4';
+  await f._carregarPreco();
+  await f._submeter();
+  assert.match(f.els['#msg-form'].textContent, /quantidade excede a posição/);
+  const k1 = chamadas.find((c) => c.metodo === 'POST').corpo.chaveIdempotencia;
+  await f._submeter();
+  const k2 = chamadas.filter((c) => c.metodo === 'POST')[1].corpo.chaveIdempotencia;
+  assert.equal(k1, k2);
+  assert.equal(f.els['#btn-adicionar'].disabled, false);
+  statusGestor = 201;
 });
 
-console.log(`\nTotal: ${casos} casos passaram.\n`);
+console.log(`carteirasAdicionarAtivo.test.mjs ok (${casos} casos)`);

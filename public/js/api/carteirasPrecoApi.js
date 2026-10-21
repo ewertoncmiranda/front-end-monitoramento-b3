@@ -13,19 +13,19 @@ export async function buscarPrecoNaData(simbolo, dataIso) {
   if (!velas || velas.length === 0) return null;
 
   // Correspondencia exata
-  const exata = velas.find((v) => v.dataIso === dataIso);
-  if (exata) return { dataEfetiva: exata.dataIso, preco: exata.fechamento };
+  const exata = velas.find((v) => dataDaVela(v) === dataIso);
+  if (exata) return { dataEfetiva: dataDaVela(exata), preco: Number(exata.fechamento) };
 
   // Data anterior mais recente (ultima vela com data <= dataIso)
-  const anteriores = velas.filter((v) => v.dataIso <= dataIso);
+  const anteriores = velas.filter((v) => dataDaVela(v) <= dataIso);
   if (anteriores.length > 0) {
     const maisRecente = anteriores[anteriores.length - 1];
-    return { dataEfetiva: maisRecente.dataIso, preco: maisRecente.fechamento };
+    return { dataEfetiva: dataDaVela(maisRecente), preco: Number(maisRecente.fechamento) };
   }
 
   // Nenhuma data anterior: usa a primeira disponivel
   const primeira = velas[0];
-  return { dataEfetiva: primeira.dataIso, preco: primeira.fechamento };
+  return { dataEfetiva: dataDaVela(primeira), preco: Number(primeira.fechamento) };
 }
 
 /**
@@ -42,4 +42,34 @@ export async function calcularRetornoAtivo(simbolo, dataEntradaIso) {
   if (!entrada || !atual) return null;
   const retorno = (atual.preco - entrada.preco) / entrada.preco;
   return { precoEntrada: entrada.preco, precoAtual: atual.preco, retorno };
+}
+
+const dataDaVela = (v) => v.dataIso ?? v.data;
+
+/** Dias (AAAA-MM-DD) antes de hoje. */
+function diasAtras(n) {
+  return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+}
+
+/** Ultimo fechamento do ativo: { preco, dataIso } ou null se nao houver cotacao. */
+export async function buscarUltimoFechamento(simbolo) {
+  const resposta = await buscarPregoes(simbolo, { de: diasAtras(15), intervalo: 'dia' });
+  const velas = (resposta?.velas || []).filter((v) => Number(v.fechamento) > 0);
+  if (!velas.length) return null;
+  const ultima = velas[velas.length - 1];
+  return { preco: Number(ultima.fechamento), dataIso: dataDaVela(ultima) };
+}
+
+/**
+ * Fechamentos desde `de`: { preco, dataIso, serie: [{dataIso, preco}] } ou null.
+ * Uma chamada serve preco atual e sparkline.
+ */
+export async function buscarSerieDesde(simbolo, de) {
+  const resposta = await buscarPregoes(simbolo, { de, intervalo: 'dia' });
+  const serie = (resposta?.velas || [])
+    .filter((v) => Number(v.fechamento) > 0)
+    .map((v) => ({ dataIso: dataDaVela(v), preco: Number(v.fechamento) }));
+  if (!serie.length) return null;
+  const ultima = serie[serie.length - 1];
+  return { preco: ultima.preco, dataIso: ultima.dataIso, serie };
 }

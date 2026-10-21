@@ -1,80 +1,56 @@
-// CART-PAI-5 — Cabecalho de uma carteira: patrimônio ponderado, retorno médio e CDI estimado.
+// Cabecalho de uma carteira: nome, estrategia e resumo (custo, valor atual,
+// resultado, melhor/pior, proventos). O resumo vem de carteira-posicoes (setResumo).
 import { BaseComponent } from '../base/BaseComponent.js';
 import { formatarMoeda, formatarPercentual } from '../../utils/numero.js';
 import { formatarData } from '../../utils/dataHora.js';
 import { escaparHtml } from '../../utils/html.js';
+import { infoResultado } from './CarteiraCardAtivo.js';
 
 // Nome, estrategia e cor vem do gestor e sao compartilhados pela instancia:
 // tudo escapado, e cor so entra no style se for #RGB/#RRGGBB.
 const corSegura = (cor) => (/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(cor)) ? cor : '#6c757d');
 
-// CDI anual aproximado usado para comparação (10,75% a.a.)
-const CDI_AA = 0.1075;
-const CDI_DIA = Math.pow(1 + CDI_AA, 1 / 252) - 1;
+const kpi = (rotulo, valor, extra = '') => `<div class="col-6 col-md-3 col-lg-auto"><small class="text-body-secondary d-block">${rotulo}</small>${valor}${extra}</div>`;
 
-/** Calcula CDI acumulado estimado desde a data de referência até hoje. */
-export function calcularCdiAcumulado(dataReferencia) {
-  const inicio = new Date(dataReferencia);
-  const hoje = new Date();
-  const diasCorridos = Math.max(0, (hoje - inicio) / (1000 * 60 * 60 * 24));
-  const diasUteis = diasCorridos * (252 / 365);
-  return Math.pow(1 + CDI_DIA, diasUteis) - 1;
-}
-
-/** Calcula patrimônio ponderado: Σ capital × (1 + retorno). */
-export function calcularPatrimonio(ativos) {
-  return ativos.reduce((acc, a) => {
-    const retorno = a.retorno ?? 0;
-    return acc + a.capital * (1 + retorno);
-  }, 0);
-}
-
-/** Calcula retorno médio ponderado: Σ (capital × retorno) / Σ capital. */
-export function calcularRetornoMedioPonderado(ativos) {
-  const totalCapital = ativos.reduce((acc, a) => acc + a.capital, 0);
-  if (totalCapital === 0) return 0;
-  const somaPonderada = ativos.reduce((acc, a) => {
-    const retorno = a.retorno ?? 0;
-    return acc + a.capital * retorno;
-  }, 0);
-  return somaPonderada / totalCapital;
+/** HTML dos indicadores do resumo; campos sem dado ficam fora ou com "—", nunca 0. */
+export function htmlResumo(r) {
+  if (!r) return '<div class="placeholder-glow"><span class="placeholder col-6"></span></div>';
+  const res = infoResultado(r.resultado, r.resultadoPct);
+  const ext = (p) => (p ? `<div class="small ${infoResultado(p.resultadoPct, p.resultadoPct).classe}">${escaparHtml(p.simbolo)} ${infoResultado(p.resultadoPct, p.resultadoPct).sinal}${formatarPercentual(Math.abs(p.resultadoPct), 2)}</div>` : '');
+  const partes = [
+    kpi('Valor investido (custo)', `<strong data-kpi="investido">${formatarMoeda(r.investido)}</strong>`),
+    kpi('Valor atual', `<strong data-kpi="valor-atual">${formatarMoeda(r.valorAtual)}</strong>`, r.dataUltimoPreco ? `<div class="small text-body-secondary">preço de ${formatarData(r.dataUltimoPreco)}</div>` : ''),
+    kpi('Resultado', `<strong class="${res.classe}" data-kpi="resultado"><span aria-hidden="true">${res.seta}</span> ${res.texto} (${res.textoPct})</strong>`, `<div class="small ${res.classe}">${res.rotulo}</div>`),
+    kpi('Melhor ativo', r.melhor ? `<strong>${escaparHtml(r.melhor.simbolo)}</strong>${ext(r.melhor)}` : '<strong>—</strong>'),
+    kpi('Pior ativo', r.pior ? `<strong>${escaparHtml(r.pior.simbolo)}</strong>${ext(r.pior)}` : '<strong>—</strong>'),
+    kpi('Ativos', `<strong data-kpi="ativos">${r.numeroAtivos}</strong>`, r.legados ? `<div class="small text-body-secondary">${r.legados} legado(s) (capital)</div>` : ''),
+  ];
+  if (r.proventosRecebidos !== null && r.proventosRecebidos !== undefined) {
+    partes.push(kpi('Proventos recebidos', `<strong data-kpi="proventos-recebidos">${formatarMoeda(r.proventosRecebidos)}</strong>`, r.yieldOnCostRecebido !== null ? `<div class="small">yield on cost ${formatarPercentual(r.yieldOnCostRecebido, 2)}</div>` : ''));
+    if (r.retornoTotal !== null) partes.push(kpi('Retorno total (com recebidos)', `<strong data-kpi="retorno-total">${formatarPercentual(r.retornoTotal, 2, { sinal: true })}</strong>`));
+  }
+  if (r.proventosEstimados !== null && r.proventosEstimados !== undefined) {
+    partes.push(kpi('Proventos estimados <span class="badge text-bg-warning">estimado</span>', `<strong data-kpi="proventos-estimados">${formatarMoeda(r.proventosEstimados)}</strong>`, '<div class="small text-body-secondary">bruto, não recebido</div>'));
+    if (r.retornoTotalComEstimados !== null) partes.push(kpi('Retorno total com estimados', `<strong>${formatarPercentual(r.retornoTotalComEstimados, 2, { sinal: true })}</strong>`));
+  }
+  const aviso = r.semPreco ? `<p class="small text-warning-emphasis mb-0 mt-2" role="note">${r.semPreco} ativo(s) sem cotação ficam fora do valor atual e do resultado.</p>` : '';
+  return `<div class="row g-2 mt-1" aria-live="polite">${partes.join('')}</div>${aviso}`;
 }
 
 export class CarteiraCabecalho extends BaseComponent {
   #carteira = null;
+  #resumo = null;
 
   template() {
     if (!this.#carteira) {
-      return `<div class="card mb-3 placeholder-glow">
-        <div class="card-body">
-          <span class="placeholder col-6"></span>
-        </div>
-      </div>`;
+      return `<div class="card mb-3 placeholder-glow"><div class="card-body"><span class="placeholder col-6"></span></div></div>`;
     }
-
     const c = this.#carteira;
-    const ativos = c.ativos ?? [];
-
-    const patrimonio = calcularPatrimonio(ativos);
-    const retornoMedio = calcularRetornoMedioPonderado(ativos);
-
-    // Data mais antiga de entrada nos ativos, ou criadaEm como fallback
-    const dataBase = ativos.length > 0
-      ? ativos.reduce((min, a) => {
-          const d = new Date(a.dataEntrada);
-          return d < min ? d : min;
-        }, new Date(ativos[0].dataEntrada))
-      : new Date(c.criadaEm);
-
-    const cdiAcumulado = calcularCdiAcumulado(dataBase);
-
-    const sinalRetorno = retornoMedio >= 0 ? '+' : '';
-
     return `<div class="card mb-3" style="border-left: 4px solid ${corSegura(c.cor)}">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start">
           <div>
-            <h5 class="card-title mb-1">${escaparHtml(c.nome ?? '')}</h5>
+            <h2 class="h5 card-title mb-1">${escaparHtml(c.nome ?? '')}</h2>
             ${c.estrategia ? `<span class="badge bg-secondary mb-2">${escaparHtml(c.estrategia)}</span>` : ''}
           </div>
           <div class="d-flex gap-2">
@@ -82,41 +58,19 @@ export class CarteiraCabecalho extends BaseComponent {
             <button class="btn btn-sm btn-outline-danger js-remover">Remover</button>
           </div>
         </div>
-        <div class="row g-2 mt-1">
-          <div class="col-auto">
-            <small class="text-muted d-block">Patrimônio</small>
-            <strong>${formatarMoeda(patrimonio)}</strong>
-          </div>
-          <div class="col-auto">
-            <small class="text-muted d-block">Retorno médio</small>
-            <strong>${sinalRetorno}${formatarPercentual(retornoMedio, 2)}</strong>
-          </div>
-          <div class="col-auto">
-            <small class="text-muted d-block">vs CDI est.</small>
-            <strong>${formatarPercentual(cdiAcumulado, 2)}</strong>
-          </div>
-          <div class="col-auto">
-            <small class="text-muted d-block">Criada em</small>
-            <span>${formatarData(c.criadaEm)}</span>
-          </div>
-        </div>
+        ${htmlResumo(this.#resumo)}
+        <p class="small text-body-secondary mb-0 mt-2">Criada em ${formatarData(c.criadaEm)}</p>
       </div>
     </div>`;
   }
 
   afterRender() {
-    const btnEditar = this.querySelector('.js-editar');
-    const btnRemover = this.querySelector('.js-remover');
-    if (btnEditar) {
-      btnEditar.addEventListener('click', () => {
-        this.dispatchEvent(new CustomEvent('editar-carteira', { bubbles: true, detail: { carteira: this.#carteira } }));
-      });
-    }
-    if (btnRemover) {
-      btnRemover.addEventListener('click', () => {
-        this.dispatchEvent(new CustomEvent('remover-carteira', { bubbles: true, detail: { carteira: this.#carteira } }));
-      });
-    }
+    this.querySelector('.js-editar')?.addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent('editar-carteira', { bubbles: true, detail: { carteira: this.#carteira } }));
+    });
+    this.querySelector('.js-remover')?.addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent('remover-carteira', { bubbles: true, detail: { carteira: this.#carteira } }));
+    });
   }
 
   /** Recebe um objeto Carteira e re-renderiza o cabeçalho. */
@@ -124,6 +78,12 @@ export class CarteiraCabecalho extends BaseComponent {
     this.#carteira = carteira;
     this.render();
   }
+
+  /** Resumo calculado por carteira-posicoes (resumirCarteira). */
+  setResumo(resumo) {
+    this.#resumo = resumo;
+    this.render();
+  }
 }
 
-customElements.define('carteira-cabecalho', CarteiraCabecalho);
+if (!customElements.get('carteira-cabecalho')) customElements.define('carteira-cabecalho', CarteiraCabecalho);
