@@ -30,6 +30,7 @@ const ROTAS = {
   diario: (s) => `/validacao/diario?simbolo=${s}&limite=60`,
   premioRisco: (s) => `/ativos/${s}/premio-risco`,
   banco: (s) => `/ativos/${s}/banco`,
+  datasEx: (s) => `/ativos/${s}/datas-ex`,
   pregoes: (s, hoje) => `/ativos/${s}/pregoes?intervalo=dia&de=${umAnoAtras(hoje)}`,
 };
 

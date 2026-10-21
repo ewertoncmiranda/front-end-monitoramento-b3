@@ -3,6 +3,8 @@
  * Função pura que calcula plano de trading a partir de analise, fundamentos, pregoes, backtest e opiniao.
  */
 
+import { alertaDataEx, alvoLiquido, custoDeExecucao, precoMedioDoDia } from './datasEx.js';
+
 /**
  * Calcula ATR (Average True Range) - média de 14 pregões.
  * ATR = max(máx - mín, |máx - fech_ant|, |mín - fech_ant|)
@@ -110,6 +112,41 @@ function calcularValorJusto(fundamentosCvm, analise) {
  * @returns {object} Plano de operação
  */
 export function montarPlano(dados) {
+  const normalizados = { ...dados, pregoes: normalizarPregoes(dados?.pregoes) };
+  return acrescentarExtras(montarPlanoBase(normalizados), normalizados);
+}
+
+/**
+ * Aceita array de velas OU objeto {velas}; completa max/min a partir de
+ * maxima/minima sem perder os campos originais. Invalido vira null.
+ */
+function normalizarPregoes(pregoes) {
+  const lista = Array.isArray(pregoes) ? pregoes : Array.isArray(pregoes?.velas) ? pregoes.velas : null;
+  if (!lista) return null;
+  return lista.map((v) => (v && typeof v === 'object' ? { ...v, max: v.max ?? v.maxima, min: v.min ?? v.minima } : v));
+}
+
+/**
+ * MICRO-PAI-3: avisos e custos opcionais. Sem datasEx/ofertas/precoMedio o plano
+ * sai exatamente como antes (nenhuma chave nova). Nunca altera acao/rr/motivos.
+ */
+function acrescentarExtras(plano, dados) {
+  const extras = {};
+  const alerta = alertaDataEx(dados.datasEx, dados.hoje ?? new Date());
+  if (alerta) extras.alertaDataEx = alerta;
+  const custo = custoDeExecucao(dados.pregoes);
+  if (custo) {
+    extras.custoExecucao = custo;
+    const preco = dados.analise?.preco_atual ?? null;
+    const liquido = alvoLiquido(plano.alvo, preco, plano.upside_pct, custo.idaEVoltaPct);
+    if (liquido) extras.alvoLiquido = liquido;
+  }
+  const medio = precoMedioDoDia(dados.pregoes);
+  if (medio !== null && plano.entrada) extras.entradaPrecoMedio = medio;
+  return Object.keys(extras).length ? { ...plano, ...extras } : plano;
+}
+
+function montarPlanoBase(dados) {
   const { analise, fundamentosCvm, pregoes, backtest, opiniao } = dados;
   
   const precoAtual = analise?.preco_atual ?? null;
