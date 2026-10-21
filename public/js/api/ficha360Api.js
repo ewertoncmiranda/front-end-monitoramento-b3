@@ -26,6 +26,7 @@ const ROTAS = {
   backtest: () => '/validacao/backtest',
   diario: (s) => `/validacao/diario?simbolo=${s}&limite=60`,
   premioRisco: (s) => `/ativos/${s}/premio-risco`,
+  banco: (s) => `/ativos/${s}/banco`,
   pregoes: (s, hoje) => `/ativos/${s}/pregoes?intervalo=dia&de=${umAnoAtras(hoje)}`,
 };
 
