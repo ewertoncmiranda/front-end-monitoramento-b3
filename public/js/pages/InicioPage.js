@@ -20,6 +20,7 @@ import { cardAltasQuedas } from '../components/inicio/cards/CardAltasQuedas.js';
 import { cardLiquidez } from '../components/inicio/cards/CardLiquidez.js';
 import { cardNegociacao } from '../components/inicio/cards/CardNegociacao.js';
 import { cardAmplitude } from '../components/inicio/cards/CardAmplitude.js';
+import { cardSetoresEmpresas } from '../components/inicio/cards/CardSetoresEmpresas.js';
 
 // Unica responsabilidade: a pagina Inicio (REQ-UX-7) - um resumo do que mudou:
 // saude dos dados, favoritos com variacao e comunicados da semana. Cada bloco
@@ -65,7 +66,7 @@ export class InicioPage extends BaseComponent {
 
     // Panorama do mercado (Plano MERC): cada card carrega e falha sozinho no carrossel.
     const carrossel = this.querySelector('carrossel-mercado');
-    if (carrossel) carrossel.cards = [cardAltasQuedas(), cardLiquidez(), cardNegociacao(), cardAmplitude()];
+    if (carrossel) carrossel.cards = [cardSetoresEmpresas(), cardAltasQuedas(), cardLiquidez(), cardNegociacao(), cardAmplitude()];
 
     const favoritosP = listarFavoritos();
     const newsletterP = buscarNewsletter();
